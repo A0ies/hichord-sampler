@@ -299,6 +299,7 @@ details[open] summary h2::after{content:" −"}
 
 <script>
 "use strict";
+const PAGE_VERSION='2026-11-10.4';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -381,7 +382,7 @@ let unmuteEl=null;
 // "playback" it lets the app keep sound on the iPhone speaker while the HiChord (a USB audio device) is plugged in.
 const playbackSession = () => inApp() ? 'play-and-record' : 'playback';
 function keepAudibleInSilentMode(){
-  if(setAudioSessionType(playbackSession())) console.log('audio session:', navigator.audioSession.type);
+  if(setAudioSessionType(playbackSession())) console.log('audio session:', navigator.audioSession.type, '· page', PAGE_VERSION, inApp()?'(app)':'(browser)');
   if(inApp()) return;   // the app's native side handles the rest; a playing <audio> element would switch the session back
   // belt and braces in Safari: the silent <audio> trick also works where audioSession is ignored
   if(unmuteEl || !/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) || !('ontouchend' in document)) return;
