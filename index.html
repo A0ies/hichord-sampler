@@ -72,7 +72,7 @@ h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)
 .samplehead .meta{font-family:var(--mono);font-size:12px;color:var(--dim)}
 .seg{display:inline-flex;border:2px solid var(--ink);border-radius:999px;overflow:hidden;flex-wrap:wrap}
 .seg button{border:none;border-radius:0;padding:5px 12px}
-.wave{position:relative;width:100%;height:170px;background:var(--panel);border-radius:12px;overflow:hidden;touch-action:none}
+.wave{position:relative;width:100%;height:170px;background:var(--panel);border-radius:12px;overflow:hidden;touch-action:pan-y}
 .wave canvas{width:100%;height:100%;display:block}
 .wave .hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim);pointer-events:none;text-align:center;padding:16px}
 .wave.drag{outline:3px dashed var(--acc);outline-offset:-3px}
@@ -884,9 +884,10 @@ function drawWave(){
 }
 function loop(){ drawWave(); requestAnimationFrame(loop); }
 function wavePos(e){ const r=cv.getBoundingClientRect(); return clamp((e.clientX-r.left)/r.width,0,1); }
-wv.addEventListener('pointerdown',e=>{ const t=tracks[sel]; if(!t.buffer) return; const f=wavePos(e); dragH=Math.abs(f-t.start)<Math.abs(f-t.end)?'start':'end'; wv.setPointerCapture(e.pointerId); moveH(f); });
+wv.addEventListener('pointerdown',e=>{ const t=tracks[sel]; if(!t.buffer) return; const f=wavePos(e); dragH=Math.abs(f-t.start)<Math.abs(f-t.end)?'start':'end'; wv.setPointerCapture(e.pointerId); if(e.pointerType==='mouse') moveH(f); });
 wv.addEventListener('pointermove',e=>{ if(dragH) moveH(wavePos(e)); });
 wv.addEventListener('pointerup',()=>{ if(dragH){ dragH=null; computeSlices(tracks[sel]); renderTrack(); } });
+wv.addEventListener('pointercancel',()=>{ if(dragH){ dragH=null; computeSlices(tracks[sel]); renderTrack(); } });
 function moveH(f){ const t=tracks[sel]; if(dragH==='start') t.start=Math.min(f,t.end-0.005); else t.end=Math.max(f,t.start+0.005); }
 ['dragenter','dragover'].forEach(ev=>wv.addEventListener(ev,e=>{e.preventDefault();wv.classList.add('drag');}));
 ['dragleave','drop'].forEach(ev=>wv.addEventListener(ev,e=>{e.preventDefault();wv.classList.remove('drag');}));
