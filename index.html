@@ -377,9 +377,13 @@ function setAudioSessionType(type){
   return false;
 }
 let unmuteEl=null;
+// In the iPhone app the session stays "play-and-record": it ignores the silent switch too, and unlike
+// "playback" it lets the app keep sound on the iPhone speaker while the HiChord (a USB audio device) is plugged in.
+const playbackSession = () => inApp() ? 'play-and-record' : 'playback';
 function keepAudibleInSilentMode(){
-  if(setAudioSessionType('playback')) console.log('audio session:', navigator.audioSession.type);
-  // belt and braces on iPhone/iPad: the silent <audio> trick also works where audioSession is ignored
+  if(setAudioSessionType(playbackSession())) console.log('audio session:', navigator.audioSession.type);
+  if(inApp()) return;   // the app's native side handles the rest; a playing <audio> element would switch the session back
+  // belt and braces in Safari: the silent <audio> trick also works where audioSession is ignored
   if(unmuteEl || !/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) || !('ontouchend' in document)) return;
   const sr=8000, n=sr/2, buf=new ArrayBuffer(44+n*2), v=new DataView(buf), w=(o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
   w(0,'RIFF'); v.setUint32(4,36+n*2,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
@@ -406,6 +410,9 @@ function initAudio(){
   dlyLp.type='lowpass'; dlyLp.frequency.value=3200; dlyFb.gain.value=S.dlyFb; dlyOut.gain.value=0.8;
   dlyIn.connect(delay); delay.connect(dlyLp).connect(dlyFb).connect(delay); dlyLp.connect(dlyOut).connect(preFx);
   updateDelayTime();
+  // an inaudible signal (-90 dB) keeps iOS audio output switched on between takes
+  const keep=ctx.createConstantSource(), kg=ctx.createGain(); keep.offset.value=1; kg.gain.value=0.00003;
+  keep.connect(kg).connect(ctx.destination); keep.start();
 }
 function setDrive(d){ const n=2048, c=new Float32Array(n), k=1+d*14; for(let i=0;i<n;i++){ const x=i/(n-1)*2-1; c[i]=Math.tanh(k*x)/Math.tanh(k); } tape.curve=c; }
 let irT;
@@ -503,12 +510,13 @@ function setTempo(bpm, fromClock){
   if(!fromClock && S.sendTempo && HC.connected && !clockLive()) hcSendTempo();
   save();
 }
-function startTransport(withCountIn){
-  if(S.playing) return;
+async function startTransport(withCountIn){
+  if(S.playing || S.starting) return;
+  if(ctx.state!=='running'){ S.starting=true; try{ await ctx.resume(); }catch(e){} await new Promise(r=>setTimeout(r,150)); S.starting=false; if(S.playing) return; }
   console.log(`[diag] start: state ${ctx.state} t ${ctx.currentTime.toFixed(3)} base ${(ctx.baseLatency||0).toFixed(3)} out ${(ctx.outputLatency||0).toFixed(3)}`);
   ctx.resume();
-  t0=ctx.currentTime+0.08; b0 = withCountIn ? -4 : 0; schedBeat=b0;
-  S.playing=true; renderTransport();
+  t0=ctx.currentTime+0.1; b0 = withCountIn ? -4 : 0; schedBeat=b0;
+  S.playing=true; tick(); renderTransport();
 }
 function stopTransport(){
   if(!S.playing) return;
@@ -541,7 +549,7 @@ function diagTick(){
 function tick(){
   if(!S.playing || !ctx) return;
   diagTick();
-  const until = beatAt(ctx.currentTime + 0.12);
+  const until = beatAt(ctx.currentTime + 0.2);
   if(until<=schedBeat) return;
   scheduleRange(schedBeat, until);
   schedBeat = until;
@@ -559,8 +567,12 @@ function scheduleRange(a, b){
       for(const e of evs){
         const abs=base+e.pos;
         if(abs>=lo && abs<b){
-          const when=timeAt(abs), dur=e.dur*60/S.bpm;
-          DIAG.sched++; { const late=ctx.currentTime-when; if(late>0){ DIAG.late++; DIAG.maxLate=Math.max(DIAG.maxLate,late); } }
+          let when=timeAt(abs), dur=e.dur*60/S.bpm;
+          DIAG.sched++;
+          const late=ctx.currentTime-when;
+          if(late>0){ DIAG.late++; DIAG.maxLate=Math.max(DIAG.maxLate,late);
+            if(late>dur-0.03) continue;          // already over
+            when=ctx.currentTime; dur-=late; }   // a hiccup: play the rest of the note instead of dropping it
           if(Ly.out!=='hc') playNote(Ly, e.note, e.vel, when, dur);
           if(Ly.out!=='app') hcPlay(Ly, e.note, e.vel, when, dur);
         }
@@ -852,7 +864,7 @@ async function toggleMic(){
     const rec=new MediaRecorder(stream), chunks=[]; rec.ondataavailable=e=>chunks.push(e.data);
     mic={rec,Ly:selLayer(),started:performance.now()}; renderDetail();
     rec.onstop=async()=>{
-      stream.getTracks().forEach(x=>x.stop()); srcN.disconnect(); const target=mic.Ly; mic=null; setAudioSessionType('playback');
+      stream.getTracks().forEach(x=>x.stop()); srcN.disconnect(); const target=mic.Ly; mic=null; setAudioSessionType(playbackSession());
       try{ const b=await ctx.decodeAudioData(await new Blob(chunks).arrayBuffer()); const tr=trimSilence(b);
         if(!tr) toast('No sound was recorded'); else setCustom(target, tr, 'Mic '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})); }
       catch(e){ toast('Could not read the recording'); }
@@ -863,7 +875,7 @@ async function toggleMic(){
       const m=document.querySelector('#micMeter i'); if(m) m.style.width=Math.min(100,p*140)+'%';
       if(performance.now()-mic.started>8000) mic.rec.stop(); else requestAnimationFrame(meter); };
     meter();
-  }catch(e){ setAudioSessionType('playback'); toast('No access to the microphone'); }
+  }catch(e){ setAudioSessionType(playbackSession()); toast('No access to the microphone'); }
 }
 function trimSilence(b){
   const m=mono(b); let peak=0; for(const x of m) peak=Math.max(peak,Math.abs(x)); if(peak<0.003) return null;
@@ -1115,6 +1127,7 @@ function drawPos(){
 }
 let edLastNotes=-1;
 function frame(){
+  tick();
   if(ED.open){
     // redraw while the loop plays (playhead) or when recording adds notes
     const n=edLy().events.length;

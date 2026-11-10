@@ -39,21 +39,36 @@ final class AudioRouter: NSObject, WKScriptMessageHandler {
         return AVAudioSession.sharedInstance().currentRoute.outputs.contains { other.contains($0.portType) }
     }
 
+    /// Look at the route as it really is (WebKit can change the session underneath us) and fix it.
     func apply() {
         let s = AVAudioSession.sharedInstance()
+        let outs = s.currentRoute.outputs
+        let soundOnUSB = outs.contains { $0.portType == .usbAudio }
         let wantSpeaker = usbConnected && !allowUSBOutput && !otherOutput
-        if wantSpeaker != forcedSpeaker {
-            do {
-                try s.overrideOutputAudioPort(wantSpeaker ? .speaker : .none)
-                forcedSpeaker = wantSpeaker
-            } catch {
-                print("[audio] override failed: \(error)")
+        do {
+            if wantSpeaker && soundOnUSB {
+                // overriding to the speaker only works in play-and-record
+                if s.category != .playAndRecord {
+                    try s.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothA2DP])
+                }
+                try s.overrideOutputAudioPort(.speaker)
+                forcedSpeaker = true
+            } else if !wantSpeaker && forcedSpeaker {
+                try s.overrideOutputAudioPort(.none)
+                forcedSpeaker = false
             }
+        } catch {
+            print("[audio] routing failed: \(error)")
         }
         report()
     }
 
     @objc private func routeChanged(_ note: Notification) {
+        let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt ?? 0
+        let reason = AVAudioSession.RouteChangeReason(rawValue: raw)
+        let names: [AVAudioSession.RouteChangeReason: String] = [.newDeviceAvailable: "new device", .oldDeviceUnavailable: "device gone",
+            .categoryChange: "category change", .override: "override", .routeConfigurationChange: "configuration"]
+        print("[audio] route change: \(reason.flatMap { names[$0] } ?? String(raw)), category \(AVAudioSession.sharedInstance().category.rawValue)")
         DispatchQueue.main.async { self.apply() }
     }
 
