@@ -11,6 +11,7 @@ Open it at https://a0ies.github.io/hichord-sampler/ (Chrome or Edge), or use the
 - **Timing, live.** Per layer: quantize (1/4 to 1/16 triplets), strength, swing, nudge, note length, humanize, octave. Your original timing is never changed; Quantize Off brings it back. Tempo changes re-time every layer at once.
 - **Instruments.** FM keys, soft piano, warm pad, strings, organ, soft lead, sub bass, pluck, glass bell and a drum kit that follows the HiChord's drum pads. Or use your own sound from the microphone or an audio file.
 - **Loop.** 1 to 16 bars, ×2 to double, count-in and click.
+- **Note editor (piano roll).** Edit notes per layer like in Ableton: double-click/double-tap to add, drag to move in time and pitch, drag an edge to lengthen or shorten, drag empty space to select, Alt-drag to copy, a velocity lane, snap from 1/4 to 1/32, quantize, duplicate, undo/redo and keyboard shortcuts (⌫, ⌘D, ⌘A, ⌘Z, arrows, Q, B). On a phone: one finger pans, two fingers zoom, Draw adds with a single tap.
 - **HiChord.** Notes always come in over USB MIDI. Connect HiChord to also see and set its key, scale, octave, play mode and sound, follow its tempo or send yours, and let its start/stop run the loop.
 - The session (notes and settings) is kept in the browser between visits; your own sounds are not.
 

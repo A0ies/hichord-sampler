@@ -137,6 +137,19 @@ details[open] summary h2::after{content:" −"}
 .meter{height:6px;width:70px;background:var(--line);border-radius:3px;overflow:hidden;display:inline-block}
 .meter i{display:block;height:100%;width:0;background:var(--acc)}
 .hidden{display:none!important}
+/* piano roll editor */
+.editor{position:fixed;inset:0;background:var(--bg);z-index:15;display:flex;flex-direction:column;
+  padding:calc(8px + var(--st)) calc(10px + var(--sr)) calc(8px + var(--sb)) calc(10px + var(--sl))}
+.etool{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px}
+.etool button{padding:4px 11px;font-size:13px}
+.etool select{padding:3px 6px;font-size:13px}
+.etool .vel{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim)}
+.etool .vel input{width:110px}
+.etool .info{font-family:var(--mono);font-size:12px;color:var(--dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 200px}
+.ebanner{font-size:12px;color:var(--dim);background:var(--panel);border-radius:10px;padding:6px 10px;margin-bottom:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ebanner button{padding:3px 10px;font-size:12px}
+#edCanvas{flex:1;min-height:0;width:100%;display:block;border-radius:10px;touch-action:none;background:var(--panel);cursor:default}
+.layer .edit{padding:2px 9px;font-size:12px}
 @media (max-width:560px){
   .params{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
   .wrap .pads{grid-template-columns:repeat(4,1fr)}
@@ -204,6 +217,7 @@ details[open] summary h2::after{content:" −"}
       <div class="row" style="margin-bottom:10px">
         <h2 id="detailTitle" style="margin:0">Layer 1</h2>
         <div class="spacer"></div>
+        <button id="editBtn" class="on">Edit notes</button>
         <button id="clearBtn">Clear layer</button>
       </div>
       <div class="tabs" id="tabs"></div>
@@ -236,6 +250,35 @@ details[open] summary h2::after{content:" −"}
       <div class="pads" id="pads"></div>
     </details>
   </section>
+</div>
+<div class="editor hidden" id="editor" role="dialog" aria-label="Note editor">
+  <div class="etool">
+    <button id="edDone" class="on">Done</button>
+    <select id="edLayer" aria-label="Layer"></select>
+    <button id="edPlay" aria-label="Play / stop">▶</button>
+    <button id="edRec" aria-label="Record" style="color:var(--rec);border-color:var(--rec)">●</button>
+    <div class="spacer"></div>
+    <span class="sub">Snap</span>
+    <select id="edSnap" aria-label="Snap"></select>
+    <button id="edDraw" title="Draw mode (B): a single tap adds a note">✎ Draw</button>
+    <button id="edZoomOut" aria-label="Zoom out">−</button>
+    <button id="edFit" title="Fit the loop">Fit</button>
+    <button id="edZoomIn" aria-label="Zoom in">+</button>
+    <button id="edUndo" title="Undo (⌘Z)">↶</button>
+    <button id="edRedo" title="Redo (⇧⌘Z)">↷</button>
+  </div>
+  <div class="etool">
+    <span class="info" id="edInfo"></span>
+    <label class="vel">Velocity <input type="range" id="edVel" min="1" max="127" step="1"></label>
+    <button id="edQuant" title="Snap the selected notes to the grid">Quantize</button>
+    <button id="edDup" title="Duplicate (⌘D)">Duplicate</button>
+    <button id="edDel" title="Delete (⌫)">Delete</button>
+  </div>
+  <div class="ebanner hidden" id="edBake">
+    <span>This layer's timing settings move the notes when they play (outlines).</span>
+    <button id="edBakeBtn">Apply to notes</button>
+  </div>
+  <canvas id="edCanvas"></canvas>
 </div>
 <div class="toast" id="toast"></div>
 <input type="file" id="fileIn" accept="audio/*" class="hidden">
@@ -770,6 +813,7 @@ function renderLayers(){
         <span class="recdot"></span>
         <span class="nm">${instName(Ly)}</span>
         <span class="cnt" id="cnt${i}">${Ly.events.length?Ly.events.length+' notes':'empty'}</span>
+        <button class="edit" data-act="edit" aria-label="Edit the notes of layer ${i+1}">Edit</button>
         <button class="ms m ${Ly.mute?'on':''}" data-act="mute" aria-label="Mute layer ${i+1}">M</button>
         <button class="ms s ${Ly.solo?'on':''}" data-act="solo" aria-label="Solo layer ${i+1}">S</button>
       </div>
@@ -782,6 +826,7 @@ function renderLayerMeta(){ layers.forEach((Ly,i)=>{ const c=$('cnt'+i); if(c) c
 $('layers').addEventListener('click',e=>{
   const el=e.target.closest('.layer'); if(!el) return; const i=+el.dataset.i, Ly=layers[i];
   const act=e.target.dataset.act;
+  if(act==='edit'){ openEditor(i); return; }
   if(act==='mute'){ Ly.mute=!Ly.mute; layers.forEach(applyLayer); renderLayers(); save(); return; }
   if(act==='solo'){ Ly.solo=!Ly.solo; layers.forEach(applyLayer); renderLayers(); save(); return; }
   selectLayer(i);
@@ -901,7 +946,15 @@ function drawPos(){
   $('pos').innerHTML=`<b>${bar+1}.${beat+1}</b>${S.rec?`recording into layer ${S.sel+1}`:'playing'}`;
   vis.forEach((c,k)=>{ c.firstChild.style.width = k<bar?'100%':k===bar?((p%4)/4*100)+'%':'0'; });
 }
-function frame(){ if(S.playing){ drawPos(); drawAll(); } requestAnimationFrame(frame); }
+let edLastNotes=-1;
+function frame(){
+  if(ED.open){
+    // redraw while the loop plays (playhead) or when recording adds notes
+    const n=edLy().events.length;
+    if(S.playing || n!==edLastNotes){ edLastNotes=n; if(!ED.drag) edDraw(); }
+  } else if(S.playing){ drawPos(); drawAll(); }
+  requestAnimationFrame(frame);
+}
 function flash(Ly){ const el=document.querySelector(`.layer[data-i="${layers.indexOf(Ly)}"] .num`); if(!el) return; el.style.textDecoration='underline'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.textDecoration='',120); }
 
 /* test chords: the seven chords of C major, like the HiChord's buttons */
@@ -914,6 +967,358 @@ function padUp(k){ if(!padOn[k]) return; delete padOn[k]; padNotes(CHORDS[k]).fo
 $('pads').innerHTML=CHORDS.map((c,k)=>`<button class="pad" data-k="${k}">${c[0]}<small>${k+1} · ${c[3]}</small></button>`).join('');
 $('pads').addEventListener('pointerdown',e=>{ const b=e.target.closest('.pad'); if(b){ b.setPointerCapture(e.pointerId); padDown(+b.dataset.k); } });
 ['pointerup','pointercancel'].forEach(t=>$('pads').addEventListener(t,e=>{ const b=e.target.closest('.pad'); if(b) padUp(+b.dataset.k); }));
+
+/* ============ piano roll editor ============ */
+const SNAPS=[['off','Off',0],['1/4','1/4',1],['1/8','1/8',0.5],['1/16','1/16',0.25],['1/32','1/32',0.125],['1/8T','1/8T',1/3],['1/16T','1/16T',1/6]];
+const KEYW=46, RULER=20, MINLEN=1/32;
+let VELH=64;   // the velocity lane gets smaller on short screens (phone in landscape)
+const ED={ open:false, li:0, snap:'1/16', draw:false, ppb:60, rowH:16, sx:0, sy:0, sel:new Set(), hist:[], fut:[],
+  drag:null, pointers:new Map(), lastLen:0, lastTap:null };
+const edCv=$('edCanvas');
+const edLy = () => layers[ED.li];
+const snapGrid = () => SNAPS.find(s=>s[0]===ED.snap)[2];
+const snapB = (b, free) => { const g=snapGrid(); return g&&!free ? Math.round(b/g)*g : b; };
+const edDims = () => ({ W:edCv.clientWidth, H:edCv.clientHeight, rollH:edCv.clientHeight-RULER-VELH });
+const xOf = b => KEYW + b*ED.ppb - ED.sx;
+const beatOfX = x => (x-KEYW+ED.sx)/ED.ppb;
+const yOf = n => RULER + (127-n)*ED.rowH - ED.sy;
+const noteOfY = y => clamp(127-Math.floor((y-RULER+ED.sy)/ED.rowH),0,127);
+const isBlack = n => [1,3,6,8,10].includes(mod(n,12));
+const timingActive = Ly => (Ly.q!=='off' && Ly.strength>0) || Ly.nudge || Ly.humanize || Ly.gate!==1;
+const fmtPos = b => `${Math.floor(b/4)+1}.${Math.floor(mod(b,4))+1}.${Math.floor(mod(b,1)*4+1e-6)+1}`;
+const fmtLen = d => { const s=d*4; return Math.abs(s-Math.round(s))<1e-6 ? `${Math.round(s)}/16` : `${d.toFixed(3)} beats`; };
+
+function openEditor(i){
+  if(i!=null && i!==S.sel) selectLayer(i);
+  ED.li=S.sel; ED.open=true; ED.sel.clear(); ED.hist=[]; ED.fut=[];
+  $('editor').classList.remove('hidden');
+  if(matchMedia('(pointer:coarse)').matches) ED.rowH=20;
+  edResize(); edFit(); edCenterPitch(); edRenderTools(); edDraw();
+}
+function closeEditor(){
+  ED.open=false; ED.drag=null; ED.pointers.clear(); $('editor').classList.add('hidden');
+  renderLayers(); save();
+}
+function edResize(){
+  const dpr=devicePixelRatio||1, {W,H}=edDims();
+  VELH = H < 380 ? 40 : 64;
+  edCv.width=Math.round(W*dpr); edCv.height=Math.round(H*dpr);
+}
+function edClamp(){
+  const {W,rollH}=edDims();
+  ED.ppb=clamp(ED.ppb, 8, 600);
+  ED.sx=clamp(ED.sx, 0, Math.max(0, loopLen()*ED.ppb + 60 - (W-KEYW)));
+  ED.sy=clamp(ED.sy, 0, Math.max(0, 128*ED.rowH - rollH));
+}
+function edFit(){ const {W}=edDims(); ED.ppb=(W-KEYW-10)/loopLen(); ED.sx=0; edClamp(); }
+function edZoom(f, cx){
+  const {W}=edDims(); cx = cx ?? (KEYW+(W-KEYW)/2);
+  const b=beatOfX(cx); ED.ppb*=f; edClamp(); ED.sx=b*ED.ppb-(cx-KEYW); edClamp(); edDraw();
+}
+function edCenterPitch(){
+  const evs=edLy().events, {rollH}=edDims();
+  let mid=60; if(evs.length){ let lo=127, hi=0; evs.forEach(e=>{ lo=Math.min(lo,e.note); hi=Math.max(hi,e.note); }); mid=(lo+hi)/2; }
+  ED.sy=(127-mid)*ED.rowH - rollH/2; edClamp();
+}
+function edPush(){ ED.hist.push(JSON.stringify(edLy().events)); if(ED.hist.length>150) ED.hist.shift(); ED.fut=[]; }
+function edUndo(){ if(!ED.hist.length) return; ED.fut.push(JSON.stringify(edLy().events)); edLy().events=JSON.parse(ED.hist.pop()); edAfterChange(); }
+function edRedo(){ if(!ED.fut.length) return; ED.hist.push(JSON.stringify(edLy().events)); edLy().events=JSON.parse(ED.fut.pop()); edAfterChange(); }
+function edAfterChange(){
+  const ids=new Set(edLy().events.map(e=>e.id)); [...ED.sel].forEach(id=>{ if(!ids.has(id)) ED.sel.delete(id); });
+  renderLayerMeta(); edRenderTools(); edDraw(); save();
+}
+const edSelected = () => edLy().events.filter(e=>ED.sel.has(e.id));
+function edAudition(note, vel){ if(ctx) playNote(edLy(), note, vel||100, ctx.currentTime, 0.25); }
+
+function edHit(x,y){
+  const evs=edLy().events;
+  for(let k=evs.length-1;k>=0;k--){
+    const e=evs[k], x0=xOf(e.beat), x1=xOf(e.beat+e.dur), y0=yOf(e.note);
+    if(y>=y0 && y<y0+ED.rowH && x>=x0-2 && x<=x1+2){
+      const w=x1-x0, edge=Math.max(5, Math.min(12, w*0.3));
+      return { e, zone: x>x1-edge ? 'resize-r' : (x<x0+edge && w>18) ? 'resize-l' : 'move' };
+    }
+  }
+  return null;
+}
+function edVelHit(x){
+  const {H}=edDims(); let best=null, bd=9;
+  for(const e of edLy().events){ const d=Math.abs(xOf(e.beat)-x); const pref=ED.sel.has(e.id)?-1:0; if(d+pref<bd){ bd=d+pref; best=e; } }
+  return best;
+}
+function edAddNote(x,y){
+  const g=snapGrid(), L=loopLen();
+  let b=beatOfX(x); b = g ? Math.floor(b/g)*g : b; b=clamp(b,0,L-MINLEN);
+  const e={ id:evId++, beat:b, dur: ED.lastLen>0 ? ED.lastLen : (g||0.25), note:noteOfY(y), vel:100, take:0 };
+  edLy().events.push(e); ED.sel.clear(); ED.sel.add(e.id); edAudition(e.note, e.vel);
+  return e;
+}
+function edDeleteSel(){ if(!ED.sel.size) return; edPush(); edLy().events=edLy().events.filter(e=>!ED.sel.has(e.id)); ED.sel.clear(); edAfterChange(); }
+function edDuplicate(){
+  const s=edSelected(); if(!s.length) return; edPush();
+  const lo=Math.min(...s.map(e=>e.beat)), hi=Math.max(...s.map(e=>e.beat+e.dur)), span=snapB(hi-lo)||hi-lo;
+  ED.sel.clear();
+  s.forEach(e=>{ const c={...e, id:evId++, beat:e.beat+span, take:0}; if(c.beat<loopLen()){ edLy().events.push(c); ED.sel.add(c.id); } });
+  edAfterChange();
+}
+function edQuantizeSel(){
+  const g=snapGrid()||0.25, s=ED.sel.size?edSelected():edLy().events; if(!s.length) return; edPush();
+  s.forEach(e=>{ e.beat=mod(Math.round(e.beat/g)*g, loopLen()); }); edAfterChange();
+}
+function edNudgeSel(db, dn){
+  const s=edSelected(); if(!s.length) return; edPush();
+  const L=loopLen();
+  if(dn && s.every(e=>e.note+dn>=0 && e.note+dn<=127)) s.forEach(e=>e.note+=dn);
+  if(db && s.every(e=>e.beat+db>=0 && e.beat+db<L)) s.forEach(e=>e.beat+=db);
+  if(dn && s.length) edAudition(s[0].note, s[0].vel);
+  edAfterChange();
+}
+function edBake(){
+  const Ly=edLy(); edPush();
+  Ly.events.forEach(e=>{ e.beat=effPos(Ly,e); e.dur=Math.max(MINLEN, e.dur*Ly.gate); });
+  Ly.q='off'; Ly.strength=1; Ly.swing=0; Ly.nudge=0; Ly.humanize=0; Ly.gate=1;
+  renderDetail(); edAfterChange(); toast('Timing applied to the notes');
+}
+
+/* pointer gestures */
+function edPos(e){ const r=edCv.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
+edCv.addEventListener('pointerdown', e=>{
+  if(!ctx) return;
+  try{ edCv.setPointerCapture(e.pointerId); }catch(err){}
+  const p=edPos(e); ED.pointers.set(e.pointerId,p);
+  if(ED.pointers.size===2){
+    if(ED.drag && ED.drag.pushed && !ED.drag.changed) ED.hist.pop();
+    const [a,b]=[...ED.pointers.values()];
+    ED.drag={ type:'pinch', d0:Math.hypot(a.x-b.x,a.y-b.y)||1, ppb0:ED.ppb, mx:(a.x+b.x)/2, my:(a.y+b.y)/2, sx0:ED.sx, sy0:ED.sy, b0:beatOfX((a.x+b.x)/2) };
+    return;
+  }
+  if(ED.pointers.size>2) return;
+  const {x,y}=p, {H}=edDims();
+  const touch = e.pointerType!=='mouse';
+  if(y>=RULER && y<H-VELH && x<KEYW){ edAudition(noteOfY(y)); ED.drag={type:'none'}; return; }
+  if(y<RULER){ ED.drag={type:'pan', x0:x, y0:y, sx0:ED.sx, sy0:ED.sy}; return; }
+  if(y>=H-VELH){
+    const ev=edVelHit(x); if(!ev){ ED.drag={type:'none'}; return; }
+    if(!ED.sel.has(ev.id)){ ED.sel.clear(); ED.sel.add(ev.id); }
+    edPush(); ED.drag={ type:'vel', anchor:ev, y0:y, pushed:true, changed:false, orig:new Map(edSelected().map(s=>[s.id,s.vel])) };
+    edRenderTools(); edDraw(); return;
+  }
+  const hit=edHit(x,y);
+  if(hit){
+    const multi=e.shiftKey||e.metaKey||e.ctrlKey;
+    if(multi){ if(ED.sel.has(hit.e.id)){ ED.sel.delete(hit.e.id); edRenderTools(); edDraw(); ED.drag={type:'none'}; return; } ED.sel.add(hit.e.id); }
+    else if(!ED.sel.has(hit.e.id)){ ED.sel.clear(); ED.sel.add(hit.e.id); }
+    edPush();
+    let anchor=hit.e;
+    if(e.altKey && hit.zone==='move'){   // Alt-drag copies, like in Ableton
+      const copies=edSelected().map(s=>({...s, id:evId++, take:0})); edLy().events.push(...copies);
+      const map=new Map(edSelected().map((s,k)=>[s.id,copies[k]])); anchor=map.get(hit.e.id);
+      ED.sel=new Set(copies.map(c=>c.id));
+    }
+    ED.drag={ type:hit.zone, anchor, x0:x, y0:y, pushed:true, changed:false, lastDn:0,
+      orig:new Map(edSelected().map(s=>[s.id,{beat:s.beat,dur:s.dur,note:s.note}])) };
+    edAudition(anchor.note, anchor.vel); edRenderTools(); edDraw(); return;
+  }
+  // empty space
+  const now=performance.now(), lt=ED.lastTap, dbl = lt && now-lt.t<350 && Math.hypot(x-lt.x,y-lt.y)<24;
+  ED.lastTap={t:now,x,y};
+  if(ED.draw || dbl){
+    edPush(); const n=edAddNote(x,y); ED.lastTap=null;
+    ED.drag={ type:'resize-r', anchor:n, x0:xOf(n.beat+n.dur), y0:y, pushed:true, changed:true, created:true,
+      orig:new Map([[n.id,{beat:n.beat,dur:n.dur,note:n.note}]]) };
+    edRenderTools(); edDraw(); renderLayerMeta(); return;
+  }
+  if(touch){ ED.drag={ type:'pan', x0:x, y0:y, sx0:ED.sx, sy0:ED.sy, tap:true }; return; }
+  if(!(e.shiftKey||e.metaKey)) ED.sel.clear();
+  ED.drag={ type:'marquee', x0:x, y0:y, x1:x, y1:y, base:new Set(ED.sel) };
+  edRenderTools(); edDraw();
+});
+edCv.addEventListener('pointermove', e=>{
+  if(!ED.pointers.has(e.pointerId)){ // hover cursor for the mouse
+    if(e.pointerType==='mouse' && !ED.drag){ const p=edPos(e), h=edHit(p.x,p.y); edCv.style.cursor = h ? (h.zone==='move'?'grab':'ew-resize') : (ED.draw?'crosshair':'default'); }
+    return;
+  }
+  const p=edPos(e); ED.pointers.set(e.pointerId,p);
+  const d=ED.drag; if(!d) return;
+  const {x,y}=p, free=e.metaKey, L=loopLen();   // hold ⌘ to place off the grid, like in Ableton
+  if(d.type==='pinch'){
+    const [a,b]=[...ED.pointers.values()]; if(!b) return;
+    const dist=Math.hypot(a.x-b.x,a.y-b.y)||1, mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    ED.ppb=d.ppb0*dist/d.d0; edClamp(); ED.sx=d.b0*ED.ppb-(mx-KEYW); ED.sy=d.sy0-(my-d.my); edClamp(); edDraw(); return;
+  }
+  if(d.type==='pan'){ ED.sx=d.sx0-(x-d.x0); ED.sy=d.sy0-(y-d.y0); if(Math.hypot(x-d.x0,y-d.y0)>6) d.tap=false; edClamp(); edDraw(); return; }
+  if(d.type==='marquee'){
+    d.x1=x; d.y1=y;
+    const b0=beatOfX(Math.min(d.x0,x)), b1=beatOfX(Math.max(d.x0,x)), n0=noteOfY(Math.max(d.y0,y)), n1=noteOfY(Math.min(d.y0,y));
+    ED.sel=new Set(d.base); edLy().events.forEach(ev=>{ if(ev.beat<b1 && ev.beat+ev.dur>b0 && ev.note>=n0 && ev.note<=n1) ED.sel.add(ev.id); });
+    edRenderTools(); edDraw(); return;
+  }
+  if(d.type==='vel'){
+    const delta=Math.round(-(y-d.y0)/(VELH-10)*127);   // relative: drag up = louder
+    edSelected().forEach(s=>{ s.vel=clamp(d.orig.get(s.id)+delta,1,127); });
+    d.changed=true; edRenderTools(); edDraw(); return;
+  }
+  const o=d.orig.get(d.anchor.id), dxB=(x-d.x0)/ED.ppb, sel=edSelected();
+  if(d.type==='move'){
+    let db=snapB(o.beat+dxB, free)-o.beat;
+    let dn=Math.round(-(y-d.y0)/ED.rowH);
+    const os=sel.map(s=>d.orig.get(s.id));
+    db=clamp(db, -Math.min(...os.map(q=>q.beat)), L-MINLEN-Math.max(...os.map(q=>q.beat)));
+    dn=clamp(dn, -Math.min(...os.map(q=>q.note)), 127-Math.max(...os.map(q=>q.note)));
+    sel.forEach(s=>{ const q=d.orig.get(s.id); s.beat=q.beat+db; s.note=q.note+dn; });
+    if(dn!==d.lastDn){ d.lastDn=dn; edAudition(d.anchor.note, d.anchor.vel); }
+    if(db||dn) d.changed=true;
+  } else if(d.type==='resize-r'){
+    const g=snapGrid(), min=(g&&!free)?g:MINLEN;
+    const newDur=Math.max(min, snapB(o.beat+o.dur+dxB, free)-o.beat), dd=newDur-o.dur;
+    sel.forEach(s=>{ const q=d.orig.get(s.id); s.dur=Math.max(min, q.dur+dd); });
+    if(dd) d.changed=true;
+  } else if(d.type==='resize-l'){
+    let ns=snapB(o.beat+dxB, free); ns=Math.min(ns, o.beat+o.dur-MINLEN); let ds=ns-o.beat;
+    ds=Math.max(ds, -Math.min(...sel.map(s=>d.orig.get(s.id).beat)));
+    sel.forEach(s=>{ const q=d.orig.get(s.id); const nb=Math.min(q.beat+ds, q.beat+q.dur-MINLEN); s.dur=q.beat+q.dur-nb; s.beat=nb; });
+    if(ds) d.changed=true;
+  }
+  edRenderTools(); edDraw();
+});
+function edPointerEnd(e){
+  ED.pointers.delete(e.pointerId);
+  const d=ED.drag; if(!d) return;
+  if(d.type==='pinch'){ if(ED.pointers.size===0) ED.drag=null; return; }
+  if(ED.pointers.size) return;
+  if(d.pushed && !d.changed) ED.hist.pop();
+  if(d.type==='pan' && d.tap){ ED.sel.clear(); edRenderTools(); }
+  if(d.created) ED.lastLen=d.anchor.dur;   // drawing a note sets the length of the next one
+  if(d.changed||d.created){ renderLayerMeta(); save(); }
+  ED.drag=null; edDraw();
+}
+edCv.addEventListener('pointerup', edPointerEnd);
+edCv.addEventListener('pointercancel', edPointerEnd);
+edCv.addEventListener('wheel', e=>{
+  e.preventDefault();
+  if(e.ctrlKey||e.metaKey){ edZoom(Math.exp(-e.deltaY*0.01), edPos(e).x); return; }
+  ED.sx += e.shiftKey ? e.deltaY : e.deltaX; if(!e.shiftKey) ED.sy += e.deltaY; edClamp(); edDraw();
+},{passive:false});
+
+/* drawing */
+function edDraw(){
+  if(!ED.open) return;
+  const dpr=devicePixelRatio||1, {W,H}=edDims();
+  if(edCv.width!==Math.round(W*dpr)||edCv.height!==Math.round(H*dpr)) edResize();
+  const g=edCv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  const C={ bg:cssVar('--panel'), bg2:cssVar('--bg'), ink:cssVar('--ink'), dim:cssVar('--dim'), line:cssVar('--line'), acc:cssVar('--acc'), col:cssVar('--l'+ED.li) };
+  const L=loopLen(), Ly=edLy(), rollBottom=H-VELH;
+  g.fillStyle=C.bg; g.fillRect(0,0,W,H);
+  // pitch rows
+  g.save(); g.beginPath(); g.rect(KEYW,RULER,W-KEYW,rollBottom-RULER); g.clip();
+  const nTop=noteOfY(RULER), nBot=noteOfY(rollBottom-1);
+  for(let n=nBot;n<=nTop;n++){
+    const y=yOf(n);
+    if(isBlack(n)){ g.fillStyle=C.bg2; g.globalAlpha=0.55; g.fillRect(KEYW,y,W-KEYW,ED.rowH); g.globalAlpha=1; }
+    if(mod(n,12)===0){ g.fillStyle=C.line; g.fillRect(KEYW,y+ED.rowH-1,W-KEYW,1); }
+  }
+  // grid lines
+  const sg=snapGrid(), b0=Math.max(0,beatOfX(KEYW)), b1=beatOfX(W);
+  if(sg && sg*ED.ppb>=7){ g.fillStyle=C.line; g.globalAlpha=0.6; for(let b=Math.ceil(b0/sg)*sg;b<=b1;b+=sg) g.fillRect(Math.round(xOf(b)),RULER,1,rollBottom-RULER); g.globalAlpha=1; }
+  for(let b=Math.ceil(b0);b<=b1;b++){ g.fillStyle = b%4===0 ? C.dim : C.line; g.fillRect(Math.round(xOf(b)),RULER,1,rollBottom-RULER); }
+  // past the loop end
+  const xe=xOf(L); if(xe<W){ g.fillStyle=C.bg2; g.globalAlpha=0.7; g.fillRect(xe,RULER,W-xe,rollBottom-RULER); g.globalAlpha=1; }
+  // where notes really play, when the layer's timing settings move them
+  if(timingActive(Ly)){
+    g.strokeStyle=C.col; g.globalAlpha=0.6; g.setLineDash([3,3]);
+    Ly.events.forEach(e=>{ const p=effPos(Ly,e); if(Math.abs(p-e.beat)<1e-3 && Ly.gate===1) return;
+      g.strokeRect(xOf(p)+0.5, yOf(e.note)+1.5, Math.max(3,e.dur*Ly.gate*ED.ppb)-1, ED.rowH-3); });
+    g.setLineDash([]); g.globalAlpha=1;
+  }
+  // notes
+  g.font=`600 ${Math.min(11,ED.rowH-5)}px JetBrains Mono, monospace`; g.textBaseline='middle';
+  Ly.events.forEach(e=>{
+    const x=xOf(e.beat), w=Math.max(3,e.dur*ED.ppb), y=yOf(e.note);
+    if(x>W||x+w<KEYW||y>rollBottom||y+ED.rowH<RULER) return;
+    const s=ED.sel.has(e.id);
+    g.fillStyle=C.col; g.globalAlpha=0.35+0.65*(e.vel/127); g.fillRect(x+0.5,y+1,w-1,ED.rowH-2); g.globalAlpha=1;
+    g.strokeStyle= s ? C.ink : C.col; g.lineWidth= s ? 2 : 1; g.strokeRect(x+0.5,y+1,w-1,ED.rowH-2);
+    if(w>30 && ED.rowH>=14){ g.fillStyle= s? C.ink : '#fff'; g.fillText(noteName(e.note), x+4, y+ED.rowH/2+0.5); }
+  });
+  // playhead
+  if(S.playing && ctx){ const b=beatAt(ctx.currentTime); if(b>=0){ g.fillStyle=C.ink; g.fillRect(Math.round(xOf(mod(b,L)))-1,RULER,2,rollBottom-RULER); } }
+  // marquee
+  const d=ED.drag;
+  if(d && d.type==='marquee'){ g.strokeStyle=C.acc; g.fillStyle=C.acc; g.globalAlpha=0.12; g.fillRect(Math.min(d.x0,d.x1),Math.min(d.y0,d.y1),Math.abs(d.x1-d.x0),Math.abs(d.y1-d.y0)); g.globalAlpha=1; g.lineWidth=1; g.strokeRect(Math.min(d.x0,d.x1)+0.5,Math.min(d.y0,d.y1)+0.5,Math.abs(d.x1-d.x0),Math.abs(d.y1-d.y0)); }
+  g.restore();
+  // ruler
+  g.fillStyle=C.bg; g.fillRect(KEYW,0,W-KEYW,RULER);
+  g.save(); g.beginPath(); g.rect(KEYW,0,W-KEYW,RULER); g.clip();
+  g.font='600 11px JetBrains Mono, monospace'; g.textBaseline='middle';
+  for(let b=Math.ceil(b0);b<=b1;b++){ const x=Math.round(xOf(b));
+    if(b%4===0){ g.fillStyle=C.ink; g.fillRect(x,RULER-8,1,8); if(b<L) g.fillText(String(b/4+1), x+4, RULER/2); }
+    else if(ED.ppb>18){ g.fillStyle=C.dim; g.fillRect(x,RULER-4,1,4); } }
+  g.restore();
+  g.fillStyle=C.line; g.fillRect(KEYW,RULER-1,W-KEYW,1);
+  // keyboard
+  g.save(); g.beginPath(); g.rect(0,RULER,KEYW,rollBottom-RULER); g.clip();
+  for(let n=nBot;n<=nTop;n++){ const y=yOf(n);
+    g.fillStyle = isBlack(n) ? C.ink : C.bg2; g.fillRect(0,y,KEYW-2,ED.rowH-1);
+    if(mod(n,12)===0 && ED.rowH>=11){ g.fillStyle=C.dim; g.font='600 10px JetBrains Mono, monospace'; g.fillText(noteName(n), 4, y+ED.rowH/2); } }
+  g.restore();
+  g.fillStyle=C.bg; g.fillRect(0,0,KEYW,RULER);
+  // velocity lane
+  g.fillStyle=C.bg2; g.fillRect(KEYW,rollBottom,W-KEYW,VELH); g.fillStyle=C.line; g.fillRect(KEYW,rollBottom,W-KEYW,1);
+  g.fillStyle=C.dim; g.font='600 10px JetBrains Mono, monospace'; g.fillText('VEL', 6, rollBottom+VELH/2);
+  g.save(); g.beginPath(); g.rect(KEYW,rollBottom,W-KEYW,VELH); g.clip();
+  const top=rollBottom+6, vh=VELH-10;
+  Ly.events.forEach(e=>{ const x=xOf(e.beat); if(x<KEYW-4||x>W) return; const h=vh*e.vel/127, s=ED.sel.has(e.id);
+    g.fillStyle= s ? C.ink : C.col; g.fillRect(x, top+vh-h, 2, h); g.beginPath(); g.arc(x+1, top+vh-h, s?4:3, 0, TAU); g.fill(); });
+  g.restore();
+}
+function edRenderTools(){
+  const Ly=edLy(), s=edSelected();
+  $('edLayer').innerHTML=layers.map((l,i)=>`<option value="${i}" ${i===ED.li?'selected':''}>Layer ${i+1} · ${instName(l)}</option>`).join('');
+  $('edSnap').innerHTML=SNAPS.map(([k,l])=>`<option value="${k}" ${k===ED.snap?'selected':''}>${l}</option>`).join('');
+  $('edDraw').classList.toggle('on',ED.draw);
+  $('edPlay').textContent = S.playing ? '■' : '▶';
+  $('edRec').classList.toggle('on',S.rec); $('edRec').style.color = S.rec?'#fff':'var(--rec)';
+  $('edUndo').disabled=!ED.hist.length; $('edRedo').disabled=!ED.fut.length;
+  ['edDup','edDel'].forEach(id=>$(id).disabled=!s.length);
+  $('edQuant').disabled=!Ly.events.length;
+  $('edVel').disabled=!s.length; if(s.length) $('edVel').value=Math.round(s.reduce((a,e)=>a+e.vel,0)/s.length);
+  $('edInfo').textContent = s.length===1 ? `${noteName(s[0].note)} · start ${fmtPos(s[0].beat)} · length ${fmtLen(s[0].dur)} · velocity ${s[0].vel}`
+    : s.length ? `${s.length} notes selected`
+    : Ly.events.length ? (matchMedia('(pointer:coarse)').matches ? 'Double-tap to add · drag a note to move · drag its end to resize · two fingers to zoom' : 'Double-click to add · drag to move · drag the end to resize · drag empty space to select · Alt-drag to copy')
+    : 'No notes yet: double-tap (or Draw) to add one, or record from the HiChord';
+  $('edBake').classList.toggle('hidden', !timingActive(Ly));
+}
+$('edDone').onclick=closeEditor;
+$('edLayer').onchange=e=>{ selectLayer(+e.target.value); ED.li=S.sel; ED.sel.clear(); ED.hist=[]; ED.fut=[]; edCenterPitch(); edRenderTools(); edDraw(); };
+$('edSnap').onchange=e=>{ ED.snap=e.target.value; edDraw(); };
+$('edDraw').onclick=()=>{ ED.draw=!ED.draw; edRenderTools(); };
+$('edZoomIn').onclick=()=>edZoom(1.5); $('edZoomOut').onclick=()=>edZoom(1/1.5); $('edFit').onclick=()=>{ edFit(); edDraw(); };
+$('edUndo').onclick=edUndo; $('edRedo').onclick=edRedo;
+$('edDup').onclick=edDuplicate; $('edDel').onclick=edDeleteSel; $('edQuant').onclick=edQuantizeSel;
+$('edBakeBtn').onclick=edBake;
+$('edPlay').onclick=()=>{ S.playing?stopTransport():startTransport(false); edRenderTools(); };
+$('edRec').onclick=()=>{ setRec(!S.rec); edRenderTools(); };
+let velPushed=false;
+$('edVel').addEventListener('input',e=>{ if(!velPushed){ edPush(); velPushed=true; } edSelected().forEach(s=>s.vel=+e.target.value); edDraw(); edRenderTools(); });
+$('edVel').addEventListener('change',()=>{ velPushed=false; save(); renderLayerMeta(); });
+$('editBtn').onclick=()=>openEditor();
+function edKey(e){
+  const k=e.key, mod2=e.metaKey||e.ctrlKey;
+  if(k==='Escape'){ if(ED.sel.size){ ED.sel.clear(); edRenderTools(); edDraw(); } else closeEditor(); }
+  else if(k==='Delete'||k==='Backspace') edDeleteSel();
+  else if(mod2 && (k==='z'||k==='Z')) e.shiftKey?edRedo():edUndo();
+  else if(mod2 && (k==='d'||k==='D')) edDuplicate();
+  else if(mod2 && (k==='a'||k==='A')){ ED.sel=new Set(edLy().events.map(x=>x.id)); edRenderTools(); edDraw(); }
+  else if(k==='ArrowUp') edNudgeSel(0, e.shiftKey?12:1);
+  else if(k==='ArrowDown') edNudgeSel(0, e.shiftKey?-12:-1);
+  else if(k==='ArrowLeft') edNudgeSel(-(snapGrid()||0.25), 0);
+  else if(k==='ArrowRight') edNudgeSel(snapGrid()||0.25, 0);
+  else if(k==='b'||k==='B'){ ED.draw=!ED.draw; edRenderTools(); }
+  else if(k==='q'||k==='Q') edQuantizeSel();
+  else if(e.code==='Space'){ S.playing?stopTransport():startTransport(false); edRenderTools(); }
+  else return;
+  e.preventDefault();
+}
 
 /* controls */
 $('playBtn').onclick=()=>{ if(!ctx) return; S.playing?stopTransport():startTransport(false); };
@@ -936,7 +1341,9 @@ $('themeBtn').onclick=()=>{ const r=document.documentElement, dark=r.dataset.the
   r.dataset.theme=dark?'light':'dark'; try{localStorage.setItem('hcl-theme',r.dataset.theme);}catch(e){} drawAll(); };
 try{ const th=localStorage.getItem('hcl-theme'); if(th) document.documentElement.dataset.theme=th; }catch(e){}
 addEventListener('keydown',e=>{
-  if(e.repeat||['INPUT','SELECT'].includes(e.target.tagName)||!ctx) return;
+  if(['INPUT','SELECT'].includes(e.target.tagName)||!ctx) return;
+  if(ED.open){ edKey(e); return; }
+  if(e.repeat) return;
   if(e.code==='Space'){ e.preventDefault(); S.playing?stopTransport():startTransport(false); }
   else if(e.key==='r'||e.key==='R') setRec(!S.rec);
   else if(e.key==='z'||e.key==='Z') undoTake();
@@ -945,7 +1352,7 @@ addEventListener('keydown',e=>{
   else { const k=+e.key-1; if(k>=0&&k<7) padDown(k); }
 });
 addEventListener('keyup',e=>{ const k=+e.key-1; if(k>=0&&k<7) padUp(k); });
-addEventListener('resize',()=>{ if(layers.length) drawAll(); });
+addEventListener('resize',()=>{ if(layers.length) drawAll(); if(ED.open){ edResize(); edClamp(); edDraw(); } });
 
 $('startBtn').onclick=async()=>{
   initAudio();
