@@ -5,14 +5,6 @@ import WebKit
 
 @main
 struct HiChordSamplerApp: App {
-    init() {
-        // Play through the speaker even when the ring/silent switch is on; allow the mic.
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playAndRecord, mode: .default,
-                                 options: [.defaultToSpeaker, .allowBluetoothA2DP, .mixWithOthers])
-        try? session.setActive(true)
-    }
-
     var body: some Scene {
         WindowGroup {
             SamplerWebView()
@@ -31,6 +23,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
     static let remoteURL = URL(string: "https://a0ies.github.io/hichord-sampler/")!
 
     private let bridge = MIDIBridge()
+    private let audio = AudioRouter()
     private var webView: WKWebView!
     private var triedRemote = false
     private var downloadURLs: [ObjectIdentifier: URL] = [:]
@@ -50,6 +43,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
             content.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
         content.add(bridge, name: "midi")
+        content.add(audio, name: "audio")
         config.userContentController = content
 
         webView = WKWebView(frame: .zero, configuration: config)
@@ -69,6 +63,8 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         ])
         bridge.webView = webView
         bridge.start()
+        audio.webView = webView
+        audio.start()
 
         triedRemote = true
         var request = URLRequest(url: Self.remoteURL, cachePolicy: .reloadRevalidatingCacheData, timeoutInterval: 8)

@@ -236,7 +236,14 @@ details[open] summary h2::after{content:" −"}
     </section>
 
     <section class="card">
-      <h2>Room and output</h2>
+      <h2>Sound check</h2>
+      <div class="row">
+        <button id="testBtn">▶ Test sound</button>
+        <span class="stat"><span class="dot" id="audioDot"></span><span id="audioStatus">audio not started</span></span>
+      </div>
+      <p class="hint" id="routeInfo"></p>
+      <label class="check hidden" id="usbOutRow" style="margin-top:8px"><input type="checkbox" id="usbOutChk"> Send the app's sound to the HiChord's USB port (for recording on another device)</label>
+      <h2 style="margin-top:18px">Room and output</h2>
       <div class="params" id="pGlobal"></div>
       <div class="row" style="margin-top:12px">
         <button id="bounceBtn" title="Record what you hear to an audio file">● Record output</button>
@@ -384,7 +391,8 @@ function newLayerData(i){
   const inst=DEFAULT_INST[i]||'keys', L=LIB[inst];
   return { inst, customName:null, root:L.root, events:[], takes:0,
     q: inst==='drums'?'1/16':'off', strength:1, swing:0, nudge:0, gate:1, oct:0, semis:0, humanize:0,
-    a:L.a, r:L.r, cutoff:1, reso:0.1, vol:0.8, pan:0, rev: inst==='pad'||inst==='bell'?0.35:0.18, dly:0, mute:false, solo:false };
+    a:L.a, r:L.r, cutoff:1, reso:0.1, vol:0.8, pan:0, rev: inst==='pad'||inst==='bell'?0.35:0.18, dly:0, mute:false, solo:false,
+    out:'app' };   // 'app' = the app's instrument, 'hc' = the HiChord plays it, 'both'
 }
 function attachNodes(Ly){
   Ly.filter=ctx.createBiquadFilter(); Ly.filter.type='lowpass';
@@ -474,7 +482,7 @@ function startTransport(withCountIn){
 function stopTransport(){
   if(!S.playing) return;
   if(S.rec) setRec(false);
-  S.playing=false; stopAllVoices(); renderTransport(); drawPos(); drawAll();
+  S.playing=false; stopAllVoices(); hcAllOff(); renderTransport(); drawPos(); drawAll();
 }
 function setRec(on){
   if(on===S.rec) return;
@@ -509,7 +517,11 @@ function scheduleRange(a, b){
       const base=n*L;
       for(const e of evs){
         const abs=base+e.pos;
-        if(abs>=lo && abs<b) playNote(Ly, e.note, e.vel, timeAt(abs), e.dur*60/S.bpm);
+        if(abs>=lo && abs<b){
+          const when=timeAt(abs), dur=e.dur*60/S.bpm;
+          if(Ly.out!=='hc') playNote(Ly, e.note, e.vel, when, dur);
+          if(Ly.out!=='app') hcPlay(Ly, e.note, e.vel, when, dur);
+        }
       }
     }
   }
@@ -615,6 +627,7 @@ function handleMsg(d, fromHC){
     return;
   }
   if(S.input!=='all' && String(ch)!==S.input) return;
+  if(fromHC && (type===0x90||type===0x80) && hcIsEcho(d[1])) return;   // our own loop notes coming back from the HiChord
   if(type===0x90 && d[2]>0) liveOn(d[1],d[2]);
   else if(type===0x80 || type===0x90) liveOff(d[1]);
 }
@@ -679,6 +692,58 @@ function hcIncomingCC(cc,v){
   else if(cc===HC.CC.PRESET){ s.preset=v; k='preset'; }
   else if(cc===HC.CC.SCALE){ s.scale=v; k='scale'; }
   if(k){ renderHCState(k); if(k!=='bpm') renderHCControls(); }
+}
+
+/* loops played by the HiChord itself: notes go out over USB MIDI (its MIDI IN is on after Connect) */
+const hcSentAt = new Map();   // note -> performance.now() of the last note we sent
+let hcHeld = new Set();
+function hcPlay(Ly, note, vel, when, dur){
+  if(!HC.connected || !HC.out) return;
+  const n=clamp(note+12*Ly.oct+Ly.semis,0,127), v=clamp(Math.round(vel*Ly.vol/0.8),1,127);
+  const tOn=performance.now()+Math.max(0,(when-ctx.currentTime)*1000), tOff=tOn+Math.max(30,dur*1000);
+  try{ HC.out.send([0x90,n,v], tOn); HC.out.send([0x80,n,0], tOff); }catch(e){ return; }
+  hcSentAt.set(n, tOff); hcHeld.add(n);
+}
+function hcIsEcho(note){ const t=hcSentAt.get(note); return t!=null && performance.now()-t < 150 && performance.now() > t-60000; }
+function hcAllOff(){ if(HC.connected && hcHeld.size){ hcHeld.forEach(n=>hcSend([0x80,n,0])); hcSend([0xB0,123,0]); hcHeld.clear(); } }
+
+/* ============ sound check ============ */
+let audioRoute=null;
+const inApp = () => !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.audio);
+window.__nativeAudio = {
+  route(r){ audioRoute=r; renderAudioStatus(); },
+  resume(){ if(ctx && ctx.state!=='running') ctx.resume().then(renderAudioStatus); },
+};
+function renderAudioStatus(){
+  if(!ctx){ return; }
+  const st=ctx.state, ok=st==='running';
+  $('audioDot').className='dot'+(ok?' ok':' live');
+  $('audioStatus').textContent = ok ? `audio running · ${Math.round(ctx.sampleRate/1000)} kHz` : `audio ${st} · tap anywhere to wake it`;
+  if(audioRoute){
+    const outs=audioRoute.outputs.map(o=>o.name).join(', ')||'none';
+    const toUSB=audioRoute.outputs.some(o=>/usb/i.test(o.type));
+    $('routeInfo').innerHTML = `Sound goes to: <b>${outs}</b>` +
+      (toUSB ? ' — the HiChord does not play this; switch the option below off, or set the HiChord\'s MIDI OUT to SYNTH.' :
+       audioRoute.forcedSpeaker ? ' (moved from the HiChord\'s USB audio to the iPhone speaker)' : '');
+    $('usbOutRow').classList.toggle('hidden', !audioRoute.usb);
+    $('usbOutChk').checked = !!audioRoute.allowUSB;
+  } else {
+    $('routeInfo').textContent = inApp() ? '' : 'In the browser, sound goes to your computer\'s current output.';
+  }
+}
+function testSound(){
+  if(!ctx) return;
+  ctx.resume().then(()=>{
+    const Ly=selLayer(), t=ctx.currentTime+0.03;
+    [60,64,67].forEach((n,k)=>playNote(Ly, n, 100, t+k*0.12, 0.6));
+    // listen to our own output to tell whether sound really leaves the engine
+    const an=ctx.createAnalyser(); an.fftSize=2048; limiter.connect(an); const buf=new Float32Array(an.fftSize); let peak=0;
+    const iv=setInterval(()=>{ an.getFloatTimeDomainData(buf); for(const x of buf) peak=Math.max(peak,Math.abs(x)); },30);
+    setTimeout(()=>{ clearInterval(iv); limiter.disconnect(an);
+      console.log('test sound peak', peak.toFixed(3), 'state', ctx.state, 'route', JSON.stringify(audioRoute));
+      toast(peak>0.01 ? `The app makes sound (layer ${S.sel+1}). Hear nothing? Check the volume buttons and "Sound goes to".` : 'The audio engine is silent: tap Start again or restart the app');
+      renderAudioStatus(); }, 900);
+  });
 }
 
 /* ============ own sounds: microphone or audio file as a layer's instrument ============ */
@@ -748,7 +813,7 @@ function toggleBounce(){
 
 /* ============ the session is kept between visits ============ */
 const SAVE_KEY='hichord-looper-v1';
-const LAYER_KEYS=['inst','root','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','r','cutoff','reso','vol','pan','rev','dly','mute','solo'];
+const LAYER_KEYS=['inst','root','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out'];
 let saveT;
 function save(){ clearTimeout(saveT); saveT=setTimeout(()=>{
   try{ localStorage.setItem(SAVE_KEY, JSON.stringify({ v:1,
@@ -874,6 +939,12 @@ function renderDetail(){
     param(grid,'Pan',()=>Ly.pan,v=>{Ly.pan=v;applyLayer(Ly);},-1,1,0.01,v=>v===0?'centre':(v<0?'L ':'R ')+Math.round(Math.abs(v)*100));
     param(grid,'Reverb',()=>Ly.rev,v=>{Ly.rev=v;applyLayer(Ly);},0,1,0.01,pct);
     param(grid,'Delay',()=>Ly.dly,v=>{Ly.dly=v;applyLayer(Ly);},0,1,0.01,pct);
+    segParam(grid,'Plays on',[['app','App'],['hc','HiChord'],['both','Both']],()=>Ly.out,v=>{
+      Ly.out=v; if(v!=='app' && !HC.connected) toast('Connect the HiChord first, then this layer plays on it');
+      if(v!=='hc') hcAllOff(); renderDetail(); });
+    const h=document.createElement('p'); h.className='hint';
+    h.textContent='"HiChord" sends this layer\'s notes to the HiChord, which plays them with its own sound (volume and pan stay with the app).';
+    host.appendChild(h);
   }
 }
 $('tabs').onclick=e=>{ const t=e.target.dataset.t; if(t){ S.tab=t; renderDetail(); save(); } };
@@ -1321,7 +1392,16 @@ function edKey(e){
 }
 
 /* controls */
-$('playBtn').onclick=()=>{ if(!ctx) return; S.playing?stopTransport():startTransport(false); };
+$('playBtn').onclick=()=>{
+  if(!ctx) return;
+  if(S.playing){ stopTransport(); return; }
+  startTransport(false);
+  if(!layers.some(Ly=>Ly.events.length && audible(Ly))) toast(S.metro ? 'No notes yet, so you only hear the click: press ● and play on the HiChord' : 'No notes yet: press ● and play on the HiChord');
+};
+$('testBtn').onclick=testSound;
+$('usbOutChk').onchange=e=>{ if(inApp()) window.webkit.messageHandlers.audio.postMessage({cmd:'usbOutput', on:e.target.checked}); };
+// iOS can pause the audio engine (route change, call, other app): any tap wakes it again
+addEventListener('pointerdown',()=>{ if(ctx && ctx.state!=='running') ctx.resume().then(renderAudioStatus); }, true);
 $('recBtn').onclick=()=>{ if(!ctx) return; setRec(!S.rec); };
 $('undoBtn').onclick=undoTake;
 $('clearBtn').onclick=clearLayer;
@@ -1370,6 +1450,9 @@ $('startBtn').onclick=async()=>{
   $('overlay').classList.add('hidden');
   renderBarsSeg(); renderTempo(); renderTransport(); renderLayers(); renderDetail(); renderGlobal(); renderSync(); renderHC();
   await ctx.resume();
+  ctx.onstatechange=()=>{ console.log('audio state', ctx.state); renderAudioStatus(); };
+  renderAudioStatus();
+  if(inApp()) window.webkit.messageHandlers.audio.postMessage({cmd:'route'});
   initMIDI(false);
   frame();
   if(layers.some(Ly=>Ly.events.length)) toast('Your last session is back');
