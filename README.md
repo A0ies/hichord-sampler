@@ -9,7 +9,7 @@ A browser sampler for the HiChord pocket synth, in the spirit of [fm1-sampler](h
 - Sources: built-in sounds, audio files, microphone (with auto-tune).
 - Export for HiChord: a mono WAV of up to 1.4 s to upload with the official Companion App.
 
-Use Chrome or Edge on a computer or Android. iOS browsers have no Web MIDI, so on iPhone only the test chords work.
+Use Chrome or Edge on a computer or Android. On iPhone, use the app in `ios/` (iOS browsers have no Web MIDI).
 
 ## HiChord control
 

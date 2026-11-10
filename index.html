@@ -42,7 +42,17 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;padding-bott
 .dot.ok{background:var(--ok)}
 .spacer{flex:1}
 main{display:grid;grid-template-columns:230px 1fr;gap:18px;margin-top:16px}
-@media (max-width:820px){main{grid-template-columns:1fr}}
+main>*{min-width:0}
+@media (max-width:820px){main{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:520px){
+  .wrap{padding:12px 16px}
+  .params{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+  .wrap .pads{grid-template-columns:repeat(4,1fr)}
+  .seg{flex-wrap:nowrap;max-width:100%;overflow-x:auto}
+  .seg button{padding:5px 9px;font-size:13px}
+  .track{min-width:210px}
+  .samplehead .title{font-size:20px}
+}
 .tracks{display:flex;flex-direction:column;gap:6px}
 @media (max-width:820px){.tracks{flex-direction:row;overflow-x:auto;padding-bottom:4px}.track{min-width:170px}}
 .track{display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;border:2px solid transparent}
@@ -104,7 +114,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 <div class="overlay" id="overlay">
   <div class="box">
     <h1>HiChord <span>Sampler</span></h1>
-    <p>Your HiChord is the controller, this page makes the sound. Connect the HiChord over USB-C, turn the HiChord's volume wheel down and press start. Works in Chrome or Edge.</p>
+    <p>Your HiChord is the controller, this page makes the sound. Connect the HiChord over USB-C, turn the HiChord's volume wheel down and press start. Works in Chrome or Edge, and in the HiChord Sampler iPhone app.</p>
     <button id="startBtn">Start audio and MIDI</button>
   </div>
 </div>
