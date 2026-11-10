@@ -91,6 +91,13 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .meter{height:6px;width:70px;background:var(--line);border-radius:3px;overflow:hidden}
 .meter i{display:block;height:100%;width:0;background:var(--acc)}
 .hidden{display:none!important}
+.meter.wide{width:100%;max-width:420px;height:8px}
+.hcstate{display:flex;flex-wrap:wrap;gap:8px}
+.hcstate div{background:var(--panel);border-radius:10px;padding:8px 12px;min-width:84px}
+.hcstate small{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.hcstate b{font-family:var(--mono);font-size:15px}
+.hcstate b.flash{color:var(--acc)}
+.p select{width:100%}
 </style>
 </head>
 <body>
@@ -148,6 +155,25 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
       <div class="section"><h2>Envelope and filter</h2><div class="params" id="pEnv"></div></div>
       <div class="section"><h2>Mix</h2><div class="params" id="pMix"></div></div>
       <div class="section"><h2>Global</h2><div class="params" id="pGlobal"></div></div>
+
+      <div class="section hc">
+        <h2>HiChord</h2>
+        <div class="row" style="margin-bottom:12px">
+          <button id="hcConnect">Connect HiChord</button>
+          <span class="stat"><span class="dot" id="hcDot"></span><span id="hcStatus">not connected</span></span>
+        </div>
+        <div class="hcstate" id="hcState"></div>
+        <div id="hcControls" class="hidden">
+          <div class="params" id="pHiChord" style="margin:14px 0"></div>
+          <div class="row" style="margin-bottom:10px">
+            <button id="hcSendSample" title="Send the selected track's window to the HiChord as its User Sample">Send sample to HiChord</button>
+            <button id="hcSendKit" title="Send the first 7 slices of a Kit track to the HiChord's User Kit pads">Send kit to HiChord</button>
+            <button id="hcRandom" title="Let the HiChord pick a random sound">Random sound</button>
+            <label class="stat"><input type="checkbox" id="hcEcho"> test chords also play the HiChord</label>
+          </div>
+          <div class="meter wide hidden" id="hcProgress"><i></i></div>
+        </div>
+      </div>
 
       <div class="section">
         <h2>Test chords (keys 1–7) — played on the selected track’s channel</h2>
@@ -405,12 +431,14 @@ function stopAll(t){ (t?[t]:tracks).forEach(tr=>{ tr.voices.slice().forEach(v=>r
 /* ---------- MIDI ---------- */
 let midi=null, clockTimes=[], lastClock=0;
 function tracksFor(ch){ return tracks.filter(t=>t.ch===0 || t.ch===ch); } // ch 0 = all channels, -1 = off
-function handleMsg(data, ts){
+function handleMsg(data, ts, fromHC){
   const st=data[0];
   if(st===0xF8){ onClock(ts); return; }
   if(st===0xFA||st===0xFB){ setTransport(true); return; }
   if(st===0xFC){ setTransport(false); return; }
+  if(st===0xF0){ hcSysex(data); return; }
   if(st>=0xF0) return;
+  if((st&0xF0)===0xB0 && fromHC && data[1]!==64 && data[1]<120){ hcIncomingCC(data[1],data[2]); return; }
   const type=st&0xF0, ch=(st&0x0F)+1;
   if(ctx.state!=='running') ctx.resume();
   if(type===0x90 && data[2]>0){ tracksFor(ch).forEach(t=>noteOn(t,data[1],data[2])); }
@@ -453,7 +481,179 @@ function refreshInputs(first){
 }
 function bindInputs(){
   const want=$('midiIn').value;
-  for(const i of midi.inputs.values()) i.onmidimessage = (want==='all'||want===i.id) ? (e=>handleMsg(e.data, e.timeStamp)) : null;
+  for(const i of midi.inputs.values()){
+    const isHC=/hichord/i.test(i.name);
+    // the HiChord input always feeds the HiChord panel; notes only when the input is selected
+    i.onmidimessage = (want==='all'||want===i.id) ? (e=>handleMsg(e.data, e.timeStamp, isHC))
+      : isHC ? (e=>{ const s=e.data[0]; if(s===0xF0||(s&0xF0)===0xB0) handleMsg(e.data, e.timeStamp, true); }) : null;
+  }
+  hcLost();
+}
+
+/* ---------- HiChord control (protocol as used by the official Companion App) ---------- */
+const HC = {
+  out:null, inp:null, connected:false, pendingBpmHi:null, busy:false, waitAck:null,
+  state:{ key:null, octave:null, bpm:null, mode:null, preset:null, scale:null },
+  CC:{ BPM:20, BPM_LO:50, KEY:21, OCTAVE:22, PRESET:24, ATTACK:25, DECAY:26, SUSTAIN:27, RELEASE:28,
+       CUTOFF:29, RESO:30, REVERB:31, CHORUS:32, DELAY_ON:37, DELAY_RATE:38, REVERB_ON:41, CHORUS_ON:42,
+       MODE:46, FILTER_ON:47, RANDOM_SOUND:57, SCALE:103, HANDSHAKE:127 }
+};
+const HC_PRESETS = [[0,'Sine'],[1,'Saw'],[2,'Triangle'],[3,'Square'],[4,'FM EPiano'],[6,'FM Wow'],[9,'Strings'],[10,'Clarinet'],
+  [12,'Acoustic'],[13,'Brass'],[14,'Piano'],[15,'Vibraphone'],[17,'Vox Ahh'],[18,'Retro EP'],[19,'Harp'],[21,'Humming'],
+  [22,'Robbo'],[23,'Shutter'],[24,'Flute'],[25,'Mic Sample'],[26,'User Sample'],[27,'SawSquare'],[29,'Ocean'],
+  [33,'Buzz Org'],[34,'Organ'],[35,'Tine EP']];
+const HC_SCALES = ['Major','Minor','Harm. minor','Mel. minor','Maj. pentatonic','Min. pentatonic','Blues','Dorian','Mixolydian','Lydian'];
+const HC_MODES = ['Play','Strum','Lead','Drone','Arp','Repeat','Drum'];
+const HC_OCT = {0:'+1',1:'0',2:'−1',3:'+2'};          // device value -> label
+const HC_OCT_LIST = [[2,'−1'],[1,'0'],[0,'+1'],[3,'+2']];
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+function hcSend(bytes){ if(HC.out) try{ HC.out.send(bytes); }catch(e){ console.warn('MIDI send failed',e); } }
+function hcCC(cc,v){ hcSend([0xB0,cc,clamp(Math.round(v),0,127)]); }
+
+async function hcConnect(){
+  if(HC.connected){ hcDisconnect(); return; }
+  if(!navigator.requestMIDIAccess){ toast('This browser has no Web MIDI'); return; }
+  try{ midi = await navigator.requestMIDIAccess({sysex:true}); }
+  catch(e){ toast('MIDI with SysEx was blocked — allow it in the browser'); return; }
+  midi.onstatechange = refreshInputs; refreshInputs(true);
+  const outs=[...midi.outputs.values()], ins=[...midi.inputs.values()];
+  HC.out = outs.find(o=>/hichord/i.test(o.name)) || null;
+  HC.inp = ins.find(i=>/hichord/i.test(i.name)) || null;
+  if(!HC.out){ toast('No HiChord found. Plug it in over USB-C and try again.'); hcRender(); return; }
+  HC.connected = true;
+  hcCC(HC.CC.HANDSHAKE,1);                 // unlocks the HiChord's own CCs and turns MIDI IN on
+  setTimeout(()=>hcCC(HC.CC.HANDSHAKE,1),300);
+  hcRender(); toast('HiChord connected');
+}
+function hcDisconnect(){
+  if(HC.out) hcCC(HC.CC.HANDSHAKE,0);
+  HC.connected=false; HC.out=null; HC.inp=null; hcRender();
+}
+function hcLost(){ if(HC.connected && HC.out && HC.out.state==='disconnected'){ HC.connected=false; HC.out=null; hcRender(); toast('HiChord disconnected'); } }
+
+/* messages from the HiChord: CC echoes of its own controls, and SysEx replies */
+function hcIncomingCC(cc, v){
+  const s=HC.state; let k=null;
+  if(cc===HC.CC.BPM){ HC.pendingBpmHi=v; return; }
+  if(cc===HC.CC.BPM_LO){ if(HC.pendingBpmHi!=null){ s.bpm=(HC.pendingBpmHi<<7)|v; HC.pendingBpmHi=null; k='bpm'; } }
+  else if(cc===HC.CC.KEY && v<=11){ s.key=v; k='key'; }
+  else if(cc===HC.CC.OCTAVE && v<=3){ s.octave=v; k='octave'; }
+  else if(cc===HC.CC.MODE){ s.mode=v; k='mode'; }
+  else if(cc===HC.CC.PRESET){ s.preset=v; k='preset'; }
+  else if(cc===HC.CC.SCALE){ s.scale=v; k='scale'; }
+  if(k){ hcRenderState(k); if(k!=='bpm') hcRenderControls(); }
+}
+function hcSysex(d){
+  // d = F0 7D cmd ... F7
+  if(d[1]!==0x7D) return;
+  const cmd=d[2];
+  if(cmd===0x07 && HC.waitAck){ const ok=d[3]===1; HC.waitAck(ok); HC.waitAck=null; }
+}
+
+function hcRenderState(flashKey){
+  const s=HC.state, P=Object.fromEntries(HC_PRESETS);
+  const cells=[['key','Key',s.key!=null?NOTE[s.key]:'—'],['scale','Scale',s.scale!=null?(HC_SCALES[s.scale]||s.scale):'—'],
+    ['octave','Octave',s.octave!=null?HC_OCT[s.octave]:'—'],['bpm','Tempo',s.bpm!=null?s.bpm:'—'],
+    ['mode','Mode',s.mode!=null?(HC_MODES[s.mode]||s.mode):'—'],['preset','Sound',s.preset!=null?(P[s.preset]||'#'+s.preset):'—']];
+  $('hcState').innerHTML = cells.map(([k,l,v])=>`<div><small>${l}</small><b class="${k===flashKey?'flash':''}">${v}</b></div>`).join('');
+}
+function hcSelect(host,label,options,get,set){
+  const d=document.createElement('div'); d.className='p';
+  d.innerHTML=`<label><span>${label}</span></label><select aria-label="${label}">${options.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`;
+  const s=d.querySelector('select'); const g=get(); if(g!=null) s.value=g; else s.selectedIndex=-1;
+  s.onchange=()=>set(+s.value); host.appendChild(d);
+}
+const hcLocal = { cutoff:80, reso:20, reverb:40, attack:5, release:40, bpm:100 };
+function hcRenderControls(){
+  const p=$('pHiChord'); if(!p) return; p.innerHTML='';
+  const s=HC.state;
+  hcSelect(p,'Sound',HC_PRESETS,()=>s.preset,v=>{ s.preset=v; hcCC(HC.CC.PRESET,v); hcRenderState('preset'); });
+  hcSelect(p,'Key',NOTE.map((n,i)=>[i,n]),()=>s.key,v=>{ s.key=v; hcCC(HC.CC.KEY,v); hcRenderState('key'); });
+  hcSelect(p,'Scale',HC_SCALES.map((n,i)=>[i,n]),()=>s.scale,v=>{ s.scale=v; hcCC(HC.CC.SCALE,v); hcRenderState('scale'); });
+  hcSelect(p,'Octave',HC_OCT_LIST,()=>s.octave,v=>{ s.octave=v; hcCC(HC.CC.OCTAVE,v); hcRenderState('octave'); });
+  hcSelect(p,'Mode',HC_MODES.map((n,i)=>[i,n]),()=>s.mode,v=>{ s.mode=v; hcCC(HC.CC.MODE,v); hcRenderState('mode'); });
+  param(p,'Tempo',()=>s.bpm||hcLocal.bpm,v=>{ hcLocal.bpm=v; },40,240,1,v=>v+' bpm',e=>{ const b=+e.target.value; s.bpm=b; hcCC(HC.CC.BPM,b>>7); hcCC(HC.CC.BPM_LO,b&127); hcRenderState('bpm'); });
+  param(p,'Filter',()=>hcLocal.cutoff,v=>{ hcLocal.cutoff=v; hcCC(HC.CC.FILTER_ON,127); hcCC(HC.CC.CUTOFF,v); },0,127,1,v=>v);
+  param(p,'Resonance',()=>hcLocal.reso,v=>{ hcLocal.reso=v; hcCC(HC.CC.RESO,v); },0,127,1,v=>v);
+  param(p,'Reverb',()=>hcLocal.reverb,v=>{ hcLocal.reverb=v; hcCC(HC.CC.REVERB_ON,v>0?127:0); hcCC(HC.CC.REVERB,v); },0,127,1,v=>v);
+  param(p,'Attack',()=>hcLocal.attack,v=>{ hcLocal.attack=v; hcCC(HC.CC.ATTACK,v); },0,127,1,v=>v);
+  param(p,'Release',()=>hcLocal.release,v=>{ hcLocal.release=v; hcCC(HC.CC.RELEASE,v); },0,127,1,v=>v);
+}
+function hcRender(){
+  $('hcConnect').textContent = HC.connected?'Disconnect':'Connect HiChord';
+  $('hcConnect').classList.toggle('on',HC.connected);
+  $('hcDot').className='dot'+(HC.connected?' ok':'');
+  $('hcStatus').textContent = HC.connected ? `connected to ${HC.out.name}` : 'not connected';
+  $('hcControls').classList.toggle('hidden',!HC.connected);
+  hcRenderState(); if(HC.connected) hcRenderControls();
+}
+
+/* sample transfer: 48 kHz mono 16-bit, 3 bytes per sample, 150 samples per SysEx */
+async function hcPrepare(t, off, dur, maxLen){
+  const SR=48000, rate=Math.pow(2,t.tune/12);
+  const n=Math.min(maxLen, Math.ceil(dur/rate*SR));
+  const oc=new OfflineAudioContext(1,n,SR);
+  const s=oc.createBufferSource(); s.buffer=t.buffer; s.playbackRate.value=rate; s.connect(oc.destination); s.start(0,off,dur);
+  const d=(await oc.startRendering()).getChannelData(0);
+  let pk=0; for(const x of d) pk=Math.max(pk,Math.abs(x)); const g=pk>0?0.89/pk:1;
+  const fi=96, fo=Math.min(480,n>>2), out=new Int16Array(n);
+  for(let i=0;i<n;i++){ let v=d[i]*g; if(i<fi) v*=i/fi; if(i>n-fo) v*=(n-i)/fo; v=clamp(v,-1,1); out[i]=v<0?v*32768:v*32767; }
+  return out;
+}
+function hcChecksum(a){ let sum=0; for(let i=0;i<a.length;i++){ sum+= (a[i]&0xFFFF); sum=((sum<<1)|(sum>>>31))>>>0; } return sum>>>0; }
+const n21 = n => [(n>>14)&0x7F,(n>>7)&0x7F,n&0x7F];
+const n35 = c => [(c>>>28)&0x7F,(c>>>21)&0x7F,(c>>>14)&0x7F,(c>>>7)&0x7F,c&0x7F];
+async function hcStream(header, int16, progressFrom, progressTo){
+  const CH=150, total=Math.ceil(int16.length/CH);
+  for(let i=0;i<total;i++){
+    const off=i*CH, msg=[0xF0,0x7D,...header,...n21(off)];
+    const end=Math.min(off+CH,int16.length);
+    for(let j=off;j<end;j++){ const v=int16[j]; msg.push((v>>9)&0x7F,(v>>2)&0x7F,v&0x03); }
+    msg.push(0xF7); hcSend(msg);
+    hcProgress(progressFrom+(progressTo-progressFrom)*(i+1)/total);
+    await sleep(4);
+  }
+}
+function hcProgress(f){ const m=$('hcProgress'); m.classList.toggle('hidden',f==null); if(f!=null) m.firstChild.style.width=Math.round(f*100)+'%'; }
+async function hcSendSample(){
+  const t=tracks[sel];
+  if(!HC.connected){ toast('Connect the HiChord first'); return; }
+  if(!t.buffer){ toast('This track has no sample'); return; }
+  if(HC.busy) return; HC.busy=true;
+  try{
+    const B=t.buffer.duration, int16=await hcPrepare(t, t.start*B, (t.end-t.start)*B, 65536);
+    const sum=hcChecksum(int16);
+    hcSend([0xF0,0x7D,0x03,...n21(int16.length),clamp(t.root,0,127),0xF7]);
+    await sleep(100);
+    await hcStream([0x04], int16, 0, 1);
+    await sleep(50);
+    const ack=new Promise(r=>{ HC.waitAck=r; setTimeout(()=>{ if(HC.waitAck){ HC.waitAck=null; r(null); } },3000); });
+    hcSend([0xF0,0x7D,0x05,...n35(sum),0xF7]);
+    const ok=await ack;
+    if(ok===false) toast('The sample did not arrive cleanly — send it again');
+    else { hcCC(HC.CC.PRESET,26); HC.state.preset=26; hcRenderState('preset'); hcRenderControls();
+      toast(`Sent ${(int16.length/48000).toFixed(2)} s to the HiChord (User Sample, root ${noteName(t.root)})${ok?'':' — no confirmation received'}`); }
+  }catch(e){ console.error(e); toast('Sending failed'); }
+  hcProgress(null); HC.busy=false;
+}
+async function hcSendKit(){
+  const t=tracks[sel];
+  if(!HC.connected){ toast('Connect the HiChord first'); return; }
+  if(!t.buffer){ toast('This track has no sample'); return; }
+  if(t.mode!=='kit'){ toast('Switch this track to Kit mode first'); return; }
+  if(HC.busy) return; HC.busy=true;
+  try{
+    const sl=t.slices.slice(0,7);
+    for(let k=0;k<sl.length;k++){
+      const int16=await hcPrepare(t, sl[k].start, sl[k].end-sl[k].start, 24000), sum=hcChecksum(int16);
+      hcSend([0xF0,0x7D,0x0B,k,...n21(int16.length),0xF7]); await sleep(50);
+      await hcStream([0x0C,k], int16, k/sl.length, (k+1)/sl.length);
+      await sleep(50); hcSend([0xF0,0x7D,0x0D,k,...n35(sum),0xF7]); await sleep(150);
+    }
+    toast(`Sent ${sl.length} pads to the HiChord's User Kit`);
+  }catch(e){ console.error(e); toast('Sending failed'); }
+  hcProgress(null); HC.busy=false;
 }
 
 /* ---------- mic sampling ---------- */
@@ -688,8 +888,9 @@ const IV={maj:[0,4,7],min:[0,3,7],dim:[0,3,6]};
 const padNotes = c => [48+c[1], ...IV[c[2]].map(x=>60+c[1]+x)];
 function padCh(){ const ch=tracks[sel].ch; return ch>0?ch:1; }
 let padState={};
-function padDown(k){ if(padState[k]) return; const ch=padCh(); padState[k]=ch; padNotes(CHORDS[k]).forEach(n=>handleMsg([0x90|(ch-1),n,100])); $('pads').children[k].classList.add('on'); }
-function padUp(k){ const ch=padState[k]; if(!ch) return; delete padState[k]; padNotes(CHORDS[k]).forEach(n=>handleMsg([0x80|(ch-1),n,0])); $('pads').children[k].classList.remove('on'); }
+const hcEcho = () => HC.connected && $('hcEcho').checked;
+function padDown(k){ if(padState[k]) return; const ch=padCh(); padState[k]=ch; padNotes(CHORDS[k]).forEach(n=>{ handleMsg([0x90|(ch-1),n,100]); if(hcEcho()) hcSend([0x90,n,100]); }); $('pads').children[k].classList.add('on'); }
+function padUp(k){ const ch=padState[k]; if(!ch) return; delete padState[k]; padNotes(CHORDS[k]).forEach(n=>{ handleMsg([0x80|(ch-1),n,0]); if(HC.connected) hcSend([0x80,n,0]); }); $('pads').children[k].classList.remove('on'); }
 $('pads').innerHTML=CHORDS.map((c,k)=>`<button class="pad" data-k="${k}">${c[0]}<small>${k+1} · ${c[3]}</small></button>`).join('');
 $('pads').addEventListener('pointerdown',e=>{ const b=e.target.closest('.pad'); if(b){ b.setPointerCapture(e.pointerId); padDown(+b.dataset.k); } });
 $('pads').addEventListener('pointerup',e=>{ const b=e.target.closest('.pad'); if(b) padUp(+b.dataset.k); });
@@ -708,6 +909,11 @@ $('exportBtn').onclick=exportForHiChord;
 $('recBtn').onclick=toggleRec;
 $('panicBtn').onclick=()=>stopAll();
 $('midiIn').onchange=bindInputs;
+$('hcConnect').onclick=hcConnect;
+$('hcSendSample').onclick=hcSendSample;
+$('hcSendKit').onclick=hcSendKit;
+$('hcRandom').onclick=()=>hcCC(HC.CC.RANDOM_SOUND,127);
+hcRender();
 $('themeBtn').onclick=()=>{
   const r=document.documentElement, dark = r.dataset.theme ? r.dataset.theme==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
   r.dataset.theme = dark?'light':'dark'; try{ localStorage.setItem('hcs-theme', r.dataset.theme); }catch(e){}
