@@ -382,6 +382,9 @@ button.icon svg{display:block}
 .layer .meta{display:flex;gap:8px;align-items:baseline;white-space:nowrap;overflow:hidden}
 .layer .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .layer.sel .tag.t-target,.layer.sel.recording .tag.t-rec{display:inline}
+/* landscape and wide screens: the settings of the selected layer are always shown beside the list,
+   so the per-layer settings button is not needed there */
+@media (min-width:780px){ .layer .open{display:none} }
 /* toast with an action */
 .toast{display:flex;align-items:center;gap:12px}
 .toast.act{pointer-events:auto}
@@ -593,7 +596,7 @@ button.icon svg{display:block}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.14';
+const PAGE_VERSION='2026-11-10.15';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
