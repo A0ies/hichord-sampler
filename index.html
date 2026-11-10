@@ -647,7 +647,7 @@ button.danger{color:var(--rec-text)}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.16';
+const PAGE_VERSION='2026-11-10.17';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -897,7 +897,7 @@ function setRec(on){
     S.rec=true; Ly.takes=(Ly.takes||0)+1; S.curTake=Ly.takes;
     if(!S.playing) startTransport(S.countIn);
   } else {
-    const now=recBeat(); for(const [note,h] of held) closeNote(Ly, note, h, now);
+    const now=recBeat(); for(const [note,list] of held) list.forEach(h=>closeNote(Ly, note, h, now));
     held.clear(); S.rec=false; writeSave();
   }
   renderTransport();
@@ -986,21 +986,25 @@ function effEvents(Ly){
 }
 
 /* ============ live input & recording ============ */
-const held = new Map();   // note -> {beat, vel}
+/* Each pitch keeps a queue of open presses. The HiChord can send a new chord's note-on before the
+   previous chord's note-off for a shared note (and Repeat/Arp retrigger a key), so a note-off must
+   end the oldest open press of that pitch, never the newest. */
+const held = new Map();   // note -> [{beat, vel, chord}]
+const qPush=(m,k,v)=>{ const a=m.get(k); if(a) a.push(v); else m.set(k,[v]); };
+const qShift=(m,k)=>{ const a=m.get(k); if(!a) return undefined; const v=a.shift(); if(!a.length) m.delete(k); return v; };
 let evId = 1;
 function recBeat(){ const lat=(ctx.outputLatency||0)+(ctx.baseLatency||0); return beatAt(ctx.currentTime - lat - S.recOffset/1000); }
 function liveOn(note, vel){
   if(!ctx) return;
   if(ctx.state!=='running') ctx.resume();
   const Ly=selLayer();
-  const old=Ly.live.get(note); if(old) releaseVoice(old, ctx.currentTime, 0.03);
-  Ly.live.set(note, playNote(Ly, note, vel, ctx.currentTime, null));
+  qPush(Ly.live, note, playNote(Ly, note, vel, ctx.currentTime, null));
   midiSeen(note, vel);
   if(S.rec && S.playing){
     const b=Math.max(0, recBeat());   // chords played during the count-in land on beat 1
-    held.set(note,{beat:b, vel, chord:chordFor(b)});
+    qPush(held, note, {beat:b, vel, chord:chordFor(b)});
   } else {
-    capHeld.set(note,{ t:ctx.currentTime-latency(), beat: S.playing ? recBeat() : null, vel });
+    qPush(capHeld, note, { t:ctx.currentTime-latency(), beat: S.playing ? recBeat() : null, vel });
   }
 }
 /* notes that start together belong to one chord, so the editor can move them as one */
@@ -1019,7 +1023,7 @@ function ensureChords(Ly){
 const capHeld=new Map(), capBuf=[];
 const latency=()=> (ctx.outputLatency||0)+(ctx.baseLatency||0)+S.recOffset/1000;
 function capEnd(note){
-  const c=capHeld.get(note); if(!c) return; capHeld.delete(note);
+  const c=qShift(capHeld, note); if(!c) return;
   const tEnd=ctx.currentTime-latency();
   capBuf.push({ t:c.t, tEnd, beat:c.beat, endBeat: c.beat!=null && S.playing ? recBeat() : null, note, vel:c.vel });
   while(capBuf.length && ctx.currentTime-capBuf[0].tEnd > 120) capBuf.shift();
@@ -1047,19 +1051,19 @@ function capture(){
 }
 function renderCapture(){ const b=$('captureBtn'); if(b){ b.disabled=!capBuf.length; b.classList.toggle('ready', capBuf.length>0); $('captureLbl').textContent='capture'; b.dataset.count = capBuf.length>99 ? '99+' : (capBuf.length||''); } }
 /* MIDI monitor: shows that notes really arrive */
-let midiCount=0, midiLast='', monT=0;
+let midiCount=0, midiOffs=0, midiLast='', monT=0;
 function midiSeen(note, vel){
   midiCount++; midiLast=`${noteName(note)} vel ${vel}`;
   if(!monT) monT=requestAnimationFrame(()=>{ monT=0;
-    $('midiMon').textContent=`Notes in: ${midiCount} · last ${midiLast} · ${S.rec&&S.playing?`recording into layer ${S.sel+1}`:'not recording — tap ● to record, or Capture afterwards'}`; });
+    $('midiMon').textContent=`Notes in: ${midiCount} on / ${midiOffs} off · last ${midiLast} · ${S.rec&&S.playing?`recording into layer ${S.sel+1}`:'not recording — tap ● to record, or Capture afterwards'}`; });
 }
 function liveOff(note){
   if(!ctx) return;
-  const Ly=selLayer(), v=Ly.live.get(note);
+  const Ly=selLayer(), v=qShift(Ly.live, note);
   if(v && !v.one) releaseVoice(v, ctx.currentTime);
-  Ly.live.delete(note);
-  const h=held.get(note);
-  if(h){ held.delete(note); closeNote(Ly, note, h, recBeat()); }
+  midiOffs++;
+  const h=qShift(held, note);
+  if(h) closeNote(Ly, note, h, recBeat());
   capEnd(note);
 }
 function closeNote(Ly, note, h, endBeat){
@@ -1108,7 +1112,7 @@ function handleMsg(d, fromHC){
     return;
   }
   if(S.input!=='all' && String(ch)!==S.input) return;
-  if(fromHC && (type===0x90||type===0x80) && hcIsEcho(d[1])) return;   // our own loop notes coming back from the HiChord
+  if(fromHC && (type===0x90||type===0x80) && hcIsEcho(d[1], type===0x90 && d[2]>0)) return;   // our own loop notes coming back from the HiChord
   if(type===0x90 && d[2]>0) liveOn(d[1],d[2]);
   else if(type===0x80 || type===0x90) liveOff(d[1]);
 }
@@ -1197,9 +1201,17 @@ function hcPlay(Ly, note, vel, when, dur){
   const n=clamp(note+12*Ly.oct+Ly.semis,0,127), v=clamp(Math.round(vel*Ly.vol/0.8),1,127);
   const tOn=performance.now()+Math.max(0,(when-ctx.currentTime)*1000), tOff=tOn+Math.max(30,dur*1000);
   try{ HC.out.send([0x90,n,v], tOn); HC.out.send([0x80,n,0], tOff); }catch(e){ return; }
-  hcSentAt.set(n, tOff); hcHeld.add(n);
+  qPush(hcSentAt, 'on'+n, tOn); qPush(hcSentAt, 'off'+n, tOff); hcHeld.add(n);
 }
-function hcIsEcho(note){ const t=hcSentAt.get(note); return t!=null && performance.now()-t < 150 && performance.now() > t-60000; }
+/* a note from the HiChord is our own echo only if it arrives within 80 ms of a note we sent */
+function hcIsEcho(note, isOn){
+  const k=(isOn?'on':'off')+note, list=hcSentAt.get(k); if(!list) return false;
+  const now=performance.now();
+  while(list.length && list[0] < now-80) list.shift();          // forget sends that got no echo
+  if(list.length && Math.abs(list[0]-now) <= 80){ list.shift(); if(!list.length) hcSentAt.delete(k); return true; }
+  if(!list.length) hcSentAt.delete(k);
+  return false;
+}
 function hcAllOff(){ if(HC.connected && hcHeld.size){ hcHeld.forEach(n=>hcSend([0x80,n,0])); hcSend([0xB0,123,0]); hcHeld.clear(); } }
 
 /* ============ sound check ============ */
@@ -1576,7 +1588,7 @@ function selectLayer(i){
   if(i===S.sel) return;
   const wasRec=S.rec;
   if(wasRec) setRec(false);
-  layers.forEach(Ly=>{ Ly.live.forEach(v=>releaseVoice(v,ctx.currentTime)); Ly.live.clear(); });
+  layers.forEach(Ly=>{ Ly.live.forEach(list=>list.forEach(v=>releaseVoice(v,ctx.currentTime))); Ly.live.clear(); });
   S.sel=i;
   if(wasRec) setRec(true);   // keep recording, now into the new layer
   renderLayers(); renderDetail(); save();
