@@ -336,8 +336,41 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 @media (max-width:420px){
   .tbar .big{width:50px;height:50px}
   .tool{min-width:42px;padding:4px 2px}
-  #loopBtn{min-width:54px}
+  #loopBtn{min-width:52px}
+  .tbar{gap:4px;padding-left:max(10px,calc(var(--sl) + 6px));padding-right:max(10px,calc(var(--sr) + 6px))}
+  .posbox{min-width:82px;padding:6px 8px 7px}
 }
+/* point 4: hierarchy */
+button.primary{background:var(--dark-key);color:var(--dark-key-ink);padding:9px 16px}
+button.primary::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--acc);margin-right:7px;vertical-align:1px}
+button.danger{color:var(--rec)}
+.danger-row{margin-bottom:12px;padding:10px;border-radius:10px;background:color-mix(in srgb,var(--rec) 8%,transparent)}
+.panic-row{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+button.wide{width:100%;justify-content:center;padding:11px}
+.tool.ready{color:var(--acc)}
+.tool.ready small{color:var(--acc);font-weight:600}
+.tool{position:relative}
+.tool.ready::after{content:attr(data-count);position:absolute;top:0;right:2px;min-width:17px;height:17px;padding:0 4px;border-radius:5px;background:var(--acc);color:#fff;font:600 10px/17px var(--mono);text-align:center}
+/* point 5: the state of the transport */
+.posbox{position:relative}
+.led{position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:50%;background:#333}
+.led.blink{animation:led .28s ease-out}
+.led.blink.down{animation-name:leddown}
+@keyframes led{0%{background:var(--screen-ink);box-shadow:0 0 6px var(--screen-ink)}100%{background:#333}}
+@keyframes leddown{0%{background:var(--acc);box-shadow:0 0 8px var(--acc)}100%{background:#333}}
+body[data-state="playing"] .tbar{background:color-mix(in srgb,var(--enc2) 14%,var(--panel))}
+body[data-state="playing"] .posbox .bars i u{background:var(--enc2)}
+body[data-state="count"] .tbar,body[data-state="recording"] .tbar{background:color-mix(in srgb,var(--rec) 18%,var(--panel))}
+body[data-state="recording"] .posbox{box-shadow:inset 0 0 0 2px var(--rec)}
+body[data-state="recording"] .posbox .pos{color:var(--rec)}
+.countin{position:fixed;left:0;right:0;top:0;bottom:var(--tbarh);z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;opacity:0;transition:opacity .15s}
+.countin.show{opacity:1}
+.countin b{font-family:var(--mono);font-weight:500;font-size:min(42vw,220px);line-height:1;color:var(--screen-ink);
+  background:var(--screen);border-radius:28px;padding:10px 46px 18px;box-shadow:inset 0 0 0 3px var(--lc,var(--rec)),0 10px 40px rgba(0,0,0,.35)}
+.countin small{margin-top:14px;font-family:var(--mono);font-size:13px;color:var(--screen-ink);background:var(--screen);border-radius:8px;padding:6px 12px;text-transform:lowercase}
+.countin.pulse b{animation:countpulse .45s ease-out}
+@keyframes countpulse{0%{transform:scale(1.12)}100%{transform:scale(1)}}
 /* sheets */
 .backdrop{background:rgba(0,0,0,.35)}
 .sheet{background:var(--bg);border-radius:16px 16px 0 0}
@@ -398,9 +431,13 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
         <button class="icon close" data-close aria-label="Close"></button>
       </div>
       <div class="row" style="margin-bottom:12px">
-        <button id="editBtn" class="on">Edit notes</button>
-        <button id="clearBtn">Clear notes</button>
-        <button id="removeBtn">Remove layer</button>
+        <button id="editBtn" class="primary">Edit notes</button>
+        <div class="spacer"></div>
+        <button id="moreBtn" aria-expanded="false" aria-controls="moreRow">more ▾</button>
+      </div>
+      <div class="row danger-row hidden" id="moreRow">
+        <button id="clearBtn" class="danger">Clear notes</button>
+        <button id="removeBtn" class="danger">Remove layer</button>
       </div>
       <div class="tabs" id="tabs"></div>
       <div id="detail"></div>
@@ -411,7 +448,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
   <footer class="tbar">
     <button class="big play" id="playBtn" aria-label="Play / stop (space)"><svg viewBox="0 0 24 24" id="playIcon"><path d="M7 4l13 8-13 8z"/></svg></button>
     <button class="big rec" id="recBtn" aria-label="Record into the selected layer (R)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg><span class="recnum" id="recNum">1</span></button>
-    <div class="posbox">
+    <div class="posbox"><span class="led" id="beatLed"></span>
       <div class="pos" id="pos"><b>1.1</b>stopped</div>
       <div class="bars" id="barsVis"></div>
     </div>
@@ -422,6 +459,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 
 <div class="backdrop" id="backdrop"></div>
+<div class="countin" id="countIn" aria-live="assertive"></div>
 
 <!-- tempo and loop -->
 <section class="sheet" id="loopSheet" aria-label="Tempo and loop">
@@ -443,7 +481,9 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
     <label class="check"><input type="checkbox" id="metroChk" checked> Click</label>
     <label class="check"><input type="checkbox" id="countChk" checked> Count-in</label>
     <div class="spacer"></div>
-    <button id="panicBtn" title="Stop all sounding notes">Panic</button>
+  </div>
+  <div class="row panic-row">
+    <button id="panicBtn" class="danger wide" title="Stop all sounding notes">■ stop all sound (panic)</button>
   </div>
 </section>
 
@@ -521,7 +561,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.9';
+const PAGE_VERSION='2026-11-10.11';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -902,7 +942,7 @@ function capture(){
   toast(`Captured ${added} notes into layer ${S.sel+1}`);
   if(!S.playing) startTransport(false);
 }
-function renderCapture(){ const b=$('captureBtn'); if(b){ b.disabled=!capBuf.length; $('captureLbl').textContent = capBuf.length ? `Capture ${capBuf.length}` : 'Capture'; } }
+function renderCapture(){ const b=$('captureBtn'); if(b){ b.disabled=!capBuf.length; b.classList.toggle('ready', capBuf.length>0); $('captureLbl').textContent='capture'; b.dataset.count = capBuf.length>99 ? '99+' : (capBuf.length||''); } }
 /* MIDI monitor: shows that notes really arrive */
 let midiCount=0, midiLast='', monT=0;
 function midiSeen(note, vel){
@@ -1302,6 +1342,7 @@ $('settingsBtn').innerHTML=ic('cog',''); $('themeBtn').innerHTML=ic('theme','');
 document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close',''));
 $('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(b) addLayer(b.dataset.k); };
 $('removeBtn').onclick=removeLayer;
+$('moreBtn').onclick=()=>{ const r=$('moreRow'), open=r.classList.toggle('hidden')===false; $('moreBtn').setAttribute('aria-expanded',open); $('moreBtn').textContent= open?'less ▴':'more ▾'; };
 
 /* sheets */
 const isWide = () => matchMedia('(min-width:780px)').matches;
@@ -1429,14 +1470,41 @@ function drawRoll(Ly,i){
   if(S.playing){ const b=beatAt(ctx.currentTime); if(b>=0){ g.fillStyle=cssVar('--screen-ink'); g.fillRect(mod(b,L)/L*W-1,0,1.5,H); } }
 }
 function drawAll(){ layers.forEach(drawRoll); }
+/* the state of the transport, shown everywhere: bar colour, display, beat light, big count-in */
+let lastBeatShown=null, lastState='';
+function setState(st){
+  if(st===lastState) return; lastState=st;
+  document.body.dataset.state=st;   // stopped | playing | count | recording
+}
 function drawPos(){
   const vis=[...$('barsVis').children];
-  if(!S.playing){ $('pos').innerHTML=`<b>1.1</b>${S.rec?'recording':'stopped'}`; vis.forEach(c=>c.firstChild.style.width='0'); return; }
+  if(!S.playing){ setState('stopped'); $('pos').innerHTML=`<b>1.1</b>stopped`; vis.forEach(c=>c.firstChild.style.width='0'); showCount(null); return; }
   const b=beatAt(ctx.currentTime);
-  if(b<0){ $('pos').innerHTML=`<b>${Math.ceil(-b)}</b>count-in`; vis.forEach(c=>c.firstChild.style.width='0'); return; }
+  if(b<0){
+    const n=Math.ceil(-b); setState('count');
+    $('pos').innerHTML=`<b>${n}</b>count-in`; vis.forEach(c=>c.firstChild.style.width='0');
+    showCount(n); beatLight(Math.floor(b)); return;
+  }
+  showCount(null);
+  setState(S.rec?'recording':'playing');
   const L=loopLen(), p=mod(b,L), bar=Math.floor(p/4), beat=Math.floor(p%4);
-  $('pos').innerHTML=`<b>${bar+1}.${beat+1}</b>${S.rec?`recording into layer ${S.sel+1}`:'playing'}`;
+  $('pos').innerHTML=`<b>${bar+1}.${beat+1}</b>${S.rec?`rec · layer ${S.sel+1}`:'playing'}`;
   vis.forEach((c,k)=>{ c.firstChild.style.width = k<bar?'100%':k===bar?((p%4)/4*100)+'%':'0'; });
+  beatLight(Math.floor(b));
+}
+function beatLight(k){
+  if(k===lastBeatShown) return; lastBeatShown=k;
+  const l=$('beatLed'); l.classList.toggle('down', mod(k,4)===0);
+  l.classList.remove('blink'); void l.offsetWidth; l.classList.add('blink');
+}
+let countShown=null;
+function showCount(n){
+  if(n===countShown) return; countShown=n;
+  const o=$('countIn');
+  if(n==null){ o.classList.remove('show'); return; }
+  o.innerHTML=`<b>${n}</b><small>${S.rec?`recording into layer ${S.sel+1} starts on 1`:'count-in'}</small>`;
+  o.style.setProperty('--lc',`var(--l${S.sel})`);
+  o.classList.add('show'); o.classList.remove('pulse'); void o.offsetWidth; o.classList.add('pulse');
 }
 let edLastNotes=-1;
 function frame(){
@@ -1445,7 +1513,8 @@ function frame(){
     // redraw while the loop plays (playhead) or when recording adds notes
     const n=edLy().events.length;
     if(S.playing || n!==edLastNotes){ edLastNotes=n; if(!ED.drag) edDraw(); }
-  } else if(S.playing){ drawPos(); drawAll(); }
+  } else if(S.playing){ drawAll(); }
+  if(S.playing) drawPos();
   requestAnimationFrame(frame);
 }
 function flash(Ly){ const el=document.querySelector(`.layer[data-i="${layers.indexOf(Ly)}"] .num`); if(!el) return; el.style.textDecoration='underline'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.textDecoration='',120); }
