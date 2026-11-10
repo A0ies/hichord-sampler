@@ -104,7 +104,10 @@ final class MIDIBridge: NSObject, WKScriptMessageHandler {
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let cmd = body["cmd"] as? String else { return }
         switch cmd {
+        case "log":
+            print("[web \(body["level"] as? String ?? "log")] \(body["text"] as? String ?? "")")
         case "init":
+            print("[midi] init: \(MIDIGetNumberOfSources()) sources, \(MIDIGetNumberOfDestinations()) destinations")
             start()
             refresh()
         case "send":

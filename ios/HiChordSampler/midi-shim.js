@@ -8,6 +8,17 @@
   if (!handler) return;
   const post = (m) => handler.postMessage(m);
 
+  // Forward console output and errors to the native log (visible in Xcode's console).
+  ['log', 'warn', 'error'].forEach((level) => {
+    const orig = console[level].bind(console);
+    console[level] = (...args) => {
+      try { post({ cmd: 'log', level, text: args.map((a) => (a instanceof Error ? a.stack || a.message : typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ') }); } catch (e) { /* ignore */ }
+      orig(...args);
+    };
+  });
+  window.addEventListener('error', (e) => post({ cmd: 'log', level: 'error', text: `${e.message} @ ${e.filename}:${e.lineno}` }));
+  window.addEventListener('unhandledrejection', (e) => post({ cmd: 'log', level: 'error', text: 'Unhandled rejection: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason) }));
+
   class Emitter {
     constructor() { this._l = {}; }
     addEventListener(t, f) { (this._l[t] = this._l[t] || []).push(f); }

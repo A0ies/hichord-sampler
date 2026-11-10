@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HiChord Sampler</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -27,11 +27,11 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px}
 button,select,input{font:inherit;color:inherit}
 button{background:none;border:2px solid var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer;font-weight:500;white-space:nowrap}
-button:hover{background:var(--acc-soft)}
+@media (hover:hover){button:hover{background:var(--acc-soft)}}
 button.on{background:var(--acc);border-color:var(--acc);color:#fff}
 button:disabled{opacity:.4;cursor:default}
 select{background:var(--bg);border:2px solid var(--line);border-radius:8px;padding:5px 8px}
-.wrap{max-width:1180px;margin:0 auto;padding:16px}
+.wrap{max-width:1180px;margin:0 auto;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;padding-bottom:14px;border-bottom:2px solid var(--ink)}
 .logo{font-weight:700;font-size:20px;letter-spacing:-.02em}
 .logo span{color:var(--acc)}
@@ -96,7 +96,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .overlay h1 span{color:var(--acc)}
 .overlay p{color:var(--dim);line-height:1.55}
 .overlay button{font-size:16px;padding:10px 22px;margin-top:8px}
-.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px)}
 .toast.show{opacity:1}
 .meter{height:6px;width:70px;background:var(--line);border-radius:3px;overflow:hidden}
 .meter i{display:block;height:100%;width:0;background:var(--acc)}
@@ -202,7 +202,7 @@ const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const noteName = n => NOTE[((n%12)+12)%12] + (Math.floor(n/12)-1);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 let toastT;
-function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+function toast(msg){ console.log('toast:', msg); const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 
 /* ---------- audio graph ---------- */

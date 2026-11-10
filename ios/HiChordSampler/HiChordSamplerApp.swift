@@ -17,7 +17,6 @@ struct HiChordSamplerApp: App {
         WindowGroup {
             SamplerWebView()
                 .ignoresSafeArea(edges: .bottom)
-                .background(Color(red: 0.07, green: 0.07, blue: 0.06))
         }
     }
 }
@@ -38,7 +37,9 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.06, alpha: 1)
+        view.backgroundColor = UIColor { $0.userInterfaceStyle == .dark
+            ? UIColor(red: 0.07, green: 0.07, blue: 0.06, alpha: 1)
+            : UIColor(red: 0.95, green: 0.94, blue: 0.91, alpha: 1) }
 
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
@@ -56,7 +57,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         webView.uiDelegate = self
         webView.isOpaque = false
         webView.backgroundColor = view.backgroundColor
-        webView.scrollView.contentInsetAdjustmentBehavior = .automatic
+        webView.scrollView.contentInsetAdjustmentBehavior = .never   // the page pads itself with env(safe-area-inset-*)
         if #available(iOS 16.4, *) { webView.isInspectable = true }
         webView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(webView)
