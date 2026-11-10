@@ -505,6 +505,7 @@ function setTempo(bpm, fromClock){
 }
 function startTransport(withCountIn){
   if(S.playing) return;
+  console.log(`[diag] start: state ${ctx.state} t ${ctx.currentTime.toFixed(3)} base ${(ctx.baseLatency||0).toFixed(3)} out ${(ctx.outputLatency||0).toFixed(3)}`);
   ctx.resume();
   t0=ctx.currentTime+0.08; b0 = withCountIn ? -4 : 0; schedBeat=b0;
   S.playing=true; renderTransport();
@@ -528,8 +529,18 @@ function setRec(on){
 }
 
 /* lookahead scheduler */
+const DIAG={late:0,maxLate:0,sched:0,maxGap:0,lastTick:0,pass:null};
+function diagTick(){
+  const now=performance.now(); if(DIAG.lastTick) DIAG.maxGap=Math.max(DIAG.maxGap, now-DIAG.lastTick); DIAG.lastTick=now;
+  const p=Math.floor(beatAt(ctx.currentTime)/loopLen());
+  if(p!==DIAG.pass){
+    if(DIAG.pass!==null) console.log(`[diag] pass ${DIAG.pass}: notes ${DIAG.sched}, late ${DIAG.late} (max ${Math.round(DIAG.maxLate*1000)} ms), longest tick gap ${Math.round(DIAG.maxGap)} ms, state ${ctx.state}`);
+    Object.assign(DIAG,{late:0,maxLate:0,sched:0,maxGap:0,pass:p});
+  }
+}
 function tick(){
   if(!S.playing || !ctx) return;
+  diagTick();
   const until = beatAt(ctx.currentTime + 0.12);
   if(until<=schedBeat) return;
   scheduleRange(schedBeat, until);
@@ -549,6 +560,7 @@ function scheduleRange(a, b){
         const abs=base+e.pos;
         if(abs>=lo && abs<b){
           const when=timeAt(abs), dur=e.dur*60/S.bpm;
+          DIAG.sched++; { const late=ctx.currentTime-when; if(late>0){ DIAG.late++; DIAG.maxLate=Math.max(DIAG.maxLate,late); } }
           if(Ly.out!=='hc') playNote(Ly, e.note, e.vel, when, dur);
           if(Ly.out!=='app') hcPlay(Ly, e.note, e.vel, when, dur);
         }
@@ -1549,6 +1561,27 @@ function edKey(e){
   else return;
   e.preventDefault();
 }
+
+/* self test: plays two layers and measures, per beat, whether sound leaves the engine */
+async function selfTest(){
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  $('startBtn').click(); await wait(800);
+  setTempo(120); S.bars=1; S.metro=false; S.countIn=true; renderBarsSeg();
+  layers.forEach(Ly=>{ Ly.events=[]; Ly.mute=false; Ly.solo=false; Ly.out='app'; });
+  layers[0].events=[60,64,67].map((n,k)=>({id:900+k,beat:0,dur:1.9,note:n,vel:100,take:1,chord:900}));
+  layers[1].events=[48].map((n,k)=>({id:910+k,beat:2,dur:1.9,note:n,vel:100,take:1,chord:910}));
+  layers.forEach(applyLayer);
+  const an=ctx.createAnalyser(); an.fftSize=1024; limiter.connect(an); const buf=new Float32Array(an.fftSize);
+  const measure=async(label, beats)=>{ const per=new Array(beats).fill(0), end=performance.now()+beats*500+300;
+    while(performance.now()<end){ an.getFloatTimeDomainData(buf); let pk=0; for(const x of buf) pk=Math.max(pk,Math.abs(x));
+      const b=Math.floor(beatAt(ctx.currentTime)); if(b>=0&&b<beats) per[b]=Math.max(per[b],pk); await wait(20); }
+    console.log(`[selftest] ${label}: peak per beat ${per.map(v=>v.toFixed(2)).join(' ')}`); };
+  console.log('[selftest] A: press Play'); startTransport(false); await measure('Play, 2 passes', 8); stopTransport();
+  await wait(4000);   // idle, like a pause between takes
+  console.log('[selftest] B: record on layer 3 after a pause'); selectLayer(2); setRec(true); await wait(2000); await measure('Record, 2 passes', 8); setRec(false); stopTransport();
+  console.log('[selftest] done');
+}
+if(location.hash==='#selftest') setTimeout(selfTest, 500);
 
 /* controls */
 $('playBtn').onclick=()=>{

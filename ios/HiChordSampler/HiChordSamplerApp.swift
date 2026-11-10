@@ -71,7 +71,11 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         audio.start()
 
         triedRemote = true
-        var request = URLRequest(url: Self.remoteURL, cachePolicy: .reloadRevalidatingCacheData, timeoutInterval: 8)
+        // `-selftest` (a launch argument, for development) runs the page's built-in audio self test
+        var url = Self.remoteURL
+        if ProcessInfo.processInfo.arguments.contains("-selftest"),
+           let u = URL(string: Self.remoteURL.absoluteString + "#selftest") { url = u }
+        var request = URLRequest(url: url, cachePolicy: .reloadRevalidatingCacheData, timeoutInterval: 8)
         request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
         webView.load(request)
     }
