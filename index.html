@@ -129,7 +129,7 @@ details[open] summary h2::after{content:" −"}
 .pad small{display:block;font-family:var(--mono);font-size:10px;color:var(--dim);font-weight:400;margin-top:2px}
 .pad.on small{color:#fff}
 
-.overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10;
+.overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:30;
   padding:calc(16px + var(--st)) calc(16px + var(--sr)) calc(16px + var(--sb)) calc(16px + var(--sl))}
 .overlay .box{max-width:460px}
 .overlay h1{font-size:34px;letter-spacing:-.03em;margin:0 0 8px}
@@ -396,7 +396,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.6';
+const PAGE_VERSION='2026-11-10.7';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
