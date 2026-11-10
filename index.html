@@ -371,6 +371,31 @@ body[data-state="recording"] .posbox .pos{color:var(--rec)}
 .countin small{margin-top:14px;font-family:var(--mono);font-size:13px;color:var(--screen-ink);background:var(--screen);border-radius:8px;padding:6px 12px;text-transform:lowercase}
 .countin.pulse b{animation:countpulse .45s ease-out}
 @keyframes countpulse{0%{transform:scale(1.12)}100%{transform:scale(1)}}
+/* phase 2: touch targets of at least 44 pt, centred icons */
+button{min-height:38px}
+.layer .ms,.layer .open{min-width:44px;min-height:40px;width:44px;height:40px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.layer .open svg{width:20px;height:20px;display:block}
+button.icon{width:44px;height:44px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+button.icon svg{display:block}
+.seg button{min-height:36px}
+.layer canvas{cursor:pointer}
+.layer .meta{display:flex;gap:8px;align-items:baseline;white-space:nowrap;overflow:hidden}
+.layer .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.layer.sel .tag.t-target,.layer.sel.recording .tag.t-rec{display:inline}
+/* toast with an action */
+.toast{display:flex;align-items:center;gap:12px}
+.toast.act{pointer-events:auto}
+.toast button{min-height:30px;padding:4px 10px;background:#2c2c2c;color:var(--acc);box-shadow:none;font-weight:600}
+/* alert line */
+.alert{position:sticky;top:calc(56px + var(--st));z-index:4;margin:0 max(14px,calc(var(--sr) + 8px)) 8px max(14px,calc(var(--sl) + 8px));
+  display:flex;align-items:center;gap:10px;background:var(--screen);color:var(--screen-ink);border-radius:10px;padding:8px 8px 8px 12px;font-family:var(--mono);font-size:12px}
+.alert #alertMsg{flex:1;min-width:0}
+.alert button{min-height:32px;padding:4px 10px;background:var(--acc);color:#fff;box-shadow:none}
+.in-app #overlay{display:none}
+.in-app #overlay.force{display:flex}
+/* long-press menu */
+.menulist{display:flex;flex-direction:column;gap:8px}
+.menulist button{min-height:48px;justify-content:flex-start;text-align:left;font-size:13px;padding:10px 16px}
 /* sheets */
 .backdrop{background:rgba(0,0,0,.35)}
 .sheet{background:var(--bg);border-radius:16px 16px 0 0}
@@ -400,6 +425,7 @@ body[data-state="recording"] .posbox .pos{color:var(--rec)}
 </style>
 </head>
 <body>
+<script>if(window.__isHiChordApp) document.documentElement.classList.add('in-app');</script>
 <div class="overlay" id="overlay">
   <div class="box">
     <h1>HiChord <span>Looper</span></h1>
@@ -417,6 +443,7 @@ body[data-state="recording"] .posbox .pos{color:var(--rec)}
     <button class="icon" id="settingsBtn" aria-label="Settings"></button>
   </header>
 
+  <div class="alert hidden" id="alert" role="status"><span class="dot live"></span><span id="alertMsg"></span><button id="alertBtn" class="hidden"></button></div>
   <main class="main">
     <section class="layerpane">
       <div class="layers" id="layers"></div>
@@ -454,11 +481,17 @@ body[data-state="recording"] .posbox .pos{color:var(--rec)}
     </div>
     <button class="tool" id="loopBtn" aria-label="Tempo and loop settings"><b id="bpmMini">100</b><small>bpm</small><small><span id="barsMini">4 bars</span></small></button>
     <button class="tool" id="captureBtn" title="Keep what you just played without recording (C)" disabled><svg viewBox="0 0 24 24"><path d="M12 3v11m0 0-4-4m4 4 4-4M5 17v3h14v-3"/></svg><small id="captureLbl">Capture</small></button>
-    <button class="tool" id="undoBtn" title="Remove the last take of the selected layer (Z)"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2"/></svg><small>Undo</small></button>
+    <button class="tool" id="undoBtn" title="Undo (Z) · hold for redo (⇧Z)"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2"/></svg><small>Undo</small></button>
   </footer>
 </div>
 
 <div class="backdrop" id="backdrop"></div>
+<!-- long-press menu for a layer -->
+<section class="sheet" id="menuSheet" aria-label="Layer actions">
+  <div class="grab"></div>
+  <div class="row sheethead"><h2 style="margin:0" id="menuTitle">layer</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
+  <div class="menulist" id="menuList"></div>
+</section>
 <div class="countin" id="countIn" aria-live="assertive"></div>
 
 <!-- tempo and loop -->
@@ -561,7 +594,7 @@ body[data-state="recording"] .posbox .pos{color:var(--rec)}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.11';
+const PAGE_VERSION='2026-11-10.13';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -569,7 +602,24 @@ const noteName = n => NOTE[((n%12)+12)%12] + (Math.floor(n/12)-1);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const mod = (a,n) => ((a%n)+n)%n;
 let toastT;
-function toast(msg){ console.log('toast:', msg); const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+function toast(msg, action, fn){
+  console.log('toast:', msg);
+  const t=$('toast'); t.innerHTML=''; const sp=document.createElement('span'); sp.textContent=msg; t.appendChild(sp);
+  if(action){ const b=document.createElement('button'); b.textContent=action; b.onclick=()=>{ t.classList.remove('show'); fn(); }; t.appendChild(b); }
+  t.classList.toggle('act', !!action); t.classList.add('show'); clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('show'), action?4500:2600);
+}
+/* problems that stay until they are solved get a line under the header, with the fix as a button */
+const ALERTS=new Map();
+function setAlert(key, msg, action, fn){ ALERTS.set(key,{msg,action,fn}); renderAlert(); }
+function clearAlert(key){ if(ALERTS.delete(key)) renderAlert(); }
+function renderAlert(){
+  const el=$('alert'); if(!el) return;
+  const last=[...ALERTS.values()].pop();
+  el.classList.toggle('hidden', !last); if(!last) return;
+  $('alertMsg').textContent=last.msg; const b=$('alertBtn');
+  b.classList.toggle('hidden', !last.action); b.textContent=last.action||''; b.onclick=()=>last.fn&&last.fn();
+}
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 
 /* ============ state ============ */
@@ -795,7 +845,7 @@ function setRec(on){
     if(!S.playing) startTransport(S.countIn);
   } else {
     const now=recBeat(); for(const [note,h] of held) closeNote(Ly, note, h, now);
-    held.clear(); S.rec=false; save();
+    held.clear(); S.rec=false; writeSave();
   }
   renderTransport();
 }
@@ -971,12 +1021,11 @@ function undoTake(){
   const n=Ly.events.length; Ly.events=Ly.events.filter(e=>(e.take||0)!==last);
   toast(`Removed the last take (${n-Ly.events.length} notes)`); renderLayers(); save();
 }
-let clearArm=0;
 function clearLayer(){
-  const Ly=selLayer(); if(!Ly.events.length) return;
-  if(Date.now()-clearArm>2500){ clearArm=Date.now(); $('clearBtn').textContent='Tap again to clear'; setTimeout(()=>$('clearBtn').textContent='Clear notes',2500); return; }
+  const Ly=selLayer(); if(!Ly.events.length){ toast('this layer has no notes'); return; }
+  flushSave();
   Ly.events=[]; Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05));
-  $('clearBtn').textContent='Clear notes'; clearArm=0; renderLayers(); save(); toast(`Notes of layer ${S.sel+1} cleared`);
+  closeSheets(); renderLayers(); writeSave(); toast(`notes of layer ${S.sel+1} cleared`, 'undo', undo);
 }
 function setBars(n){
   S.bars=n; renderBarsSeg(); renderLayers(); save();
@@ -1036,8 +1085,14 @@ function bindInputs(){
   ins.forEach(i=>{ const isHC=/hichord/i.test(i.name); i.onmidimessage=e=>handleMsg(e.data, isHC); });
   const hc=ins.find(i=>/hichord/i.test(i.name));
   $('midiDot').className='dot'+(hc?' ok':ins.length?' live':'');
-  $('midiStatus').textContent = hc ? 'HiChord in' : ins.length ? `${ins.length} MIDI input${ins.length>1?'s':''}` : 'no MIDI device';
-  if(HC.connected && HC.out && HC.out.state==='disconnected'){ HC.connected=false; HC.out=null; renderHC(); toast('HiChord disconnected'); }
+  $('midiStatus').textContent = HC.connected ? 'hichord connected' : hc ? 'hichord in' : ins.length ? `${ins.length} midi input${ins.length>1?'s':''}` : 'no midi device';
+  if(HC.connected && HC.out && HC.out.state==='disconnected'){
+    HC.connected=false; HC.out=null; renderHC();
+    setAlert('hc','hichord disconnected — plug it back in', autoConnect()?null:'reconnect', ()=>hcConnect());
+  }
+  // plugged in (again): connect by itself
+  const hcOut=[...midi.outputs.values()].find(o=>/hichord/i.test(o.name) && o.state!=='disconnected');
+  if(hcOut && !HC.connected && !HC.connecting && autoConnect() && ctx) hcConnect({auto:true});
 }
 
 /* ============ HiChord remote (CC map as used by the official Companion App) ============ */
@@ -1050,16 +1105,24 @@ const HC_OCT={0:'+1',1:'0',2:'−1',3:'+2'}, HC_OCT_LIST=[[2,'−1'],[1,'0'],[0,
 function hcSend(b){ if(HC.out) try{ HC.out.send(b); }catch(e){ console.warn(e); } }
 function hcCC(cc,v){ hcSend([0xB0,cc,clamp(Math.round(v),0,127)]); }
 function hcSendTempo(){ const b=Math.round(S.bpm); hcCC(HC.CC.BPM,b>>7); hcCC(HC.CC.BPM_LO,b&127); }
-async function hcConnect(){
-  if(HC.connected){ hcCC(HC.CC.HANDSHAKE,0); HC.connected=false; HC.out=null; renderHC(); return; }
-  if(!ctx){ toast('Press Start first'); return; }
-  if(!(await initMIDI(true))){ toast('MIDI access was blocked'); return; }
-  HC.out=[...midi.outputs.values()].find(o=>/hichord/i.test(o.name))||null;
-  if(!HC.out){ toast('No HiChord found. Plug it in over USB-C and try again.'); return; }
-  HC.connected=true;
-  hcCC(HC.CC.HANDSHAKE,1); setTimeout(()=>hcCC(HC.CC.HANDSHAKE,1),300);
-  if(S.sendTempo && !clockLive()) setTimeout(hcSendTempo,400);
-  renderHC(); toast('HiChord connected');
+/* connect automatically in the iPhone app, and in the browser once you have connected before */
+const autoConnect = () => { try{ return inApp() || localStorage.getItem('hcl-auto')==='1'; }catch(e){ return inApp(); } };
+async function hcConnect(opts={}){
+  if(HC.connected && !opts.auto){ hcCC(HC.CC.HANDSHAKE,0); HC.connected=false; HC.out=null; HC.wanted=false; try{localStorage.setItem('hcl-auto','0');}catch(e){} renderHC(); return; }
+  if(HC.connected || HC.connecting) return;
+  if(!ctx){ toast('press start first'); return; }
+  HC.connecting=true;
+  try{
+    if(!(await initMIDI(true))){ setAlert('midi','midi access is blocked — allow it in the browser settings'); return; }
+    clearAlert('midi');
+    HC.out=[...midi.outputs.values()].find(o=>/hichord/i.test(o.name))||null;
+    if(!HC.out){ if(!opts.auto) setAlert('hc','no hichord found — plug it in over usb-c','try again',()=>hcConnect()); return; }
+    HC.connected=true; HC.wanted=true; clearAlert('hc');
+    try{ localStorage.setItem('hcl-auto','1'); }catch(e){}
+    hcCC(HC.CC.HANDSHAKE,1); setTimeout(()=>hcCC(HC.CC.HANDSHAKE,1),300);
+    if(S.sendTempo && !clockLive()) setTimeout(hcSendTempo,400);
+    renderHC(); toast('hichord connected');
+  } finally { HC.connecting=false; }
 }
 function hcIncomingCC(cc,v){
   const s=HC.state; let k=null;
@@ -1098,6 +1161,7 @@ function renderAudioStatus(){
   const st=ctx.state, ok=st==='running';
   $('audioDot').className='dot'+(ok?' ok':' live');
   $('audioStatus').textContent = ok ? `audio running · ${Math.round(ctx.sampleRate/1000)} kHz` : `audio ${st} · tap anywhere to wake it`;
+  if(ok) clearAlert('audio'); else setAlert('audio','audio is paused','resume',()=>ctx.resume().then(renderAudioStatus));
   if(audioRoute){
     const outs=audioRoute.outputs.map(o=>o.name).join(', ')||'none';
     const toUSB=audioRoute.outputs.some(o=>/usb/i.test(o.type));
@@ -1195,11 +1259,75 @@ function toggleBounce(){
 const SAVE_KEY='hichord-looper-v1';
 const LAYER_KEYS=['inst','root','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown'];
 let saveT;
-function save(){ clearTimeout(saveT); saveT=setTimeout(()=>{
-  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({ v:1,
+function sessionData(){
+  return { v:1,
     S:{bpm:S.bpm,bars:S.bars,metro:S.metro,countIn:S.countIn,sel:S.sel,followClock:S.followClock,sendTempo:S.sendTempo,hcTransport:S.hcTransport,input:S.input,recOffset:S.recOffset,revSize:S.revSize,revLevel:S.revLevel,dlyDiv:S.dlyDiv,dlyFb:S.dlyFb,drive:S.drive,volume:S.volume,tab:S.tab},
-    layers: layers.map(Ly=>Object.fromEntries(LAYER_KEYS.map(k=>[k,Ly[k]]))) })); }catch(e){}
-},400); }
+    layers: layers.map(Ly=>Object.fromEntries(LAYER_KEYS.map(k=>[k,Ly[k]]))) };
+}
+/* history: what counts as a change for undo (not which layer or tab you look at) */
+function histData(d){ const S2={...d.S}; delete S2.sel; delete S2.tab; delete S2.metro; delete S2.countIn; return JSON.stringify({S:S2, layers:d.layers}); }
+const HIST={undo:[],redo:[],last:null,applying:false};
+function commitHistory(d){
+  const snap=histData(d);
+  if(HIST.applying || S.rec) return;          // a whole take becomes one step when recording stops
+  if(HIST.last!==null && snap!==HIST.last){ HIST.undo.push(HIST.last); if(HIST.undo.length>120) HIST.undo.shift(); HIST.redo=[]; }
+  HIST.last=snap; renderUndo();
+}
+function writeSave(){
+  clearTimeout(saveT); saveT=null;
+  const d=sessionData();
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch(e){}
+  commitHistory(d);
+}
+function save(){ clearTimeout(saveT); saveT=setTimeout(writeSave,400); }
+function flushSave(){ if(saveT) writeSave(); }
+function describeChange(aJ,bJ){
+  const a=JSON.parse(aJ), b=JSON.parse(bJ);
+  if(a.S.bpm!==b.S.bpm) return 'tempo';
+  if(a.S.bars!==b.S.bars) return 'loop length';
+  for(let i=0;i<a.layers.length;i++){
+    const x=a.layers[i], y=b.layers[i]; if(JSON.stringify(x)===JSON.stringify(y)) continue;
+    if(x.shown!==y.shown) return `layer ${i+1} ${y.shown?'added':'removed'}`;
+    if(JSON.stringify(x.events)!==JSON.stringify(y.events)) return `notes of layer ${i+1}`;
+    if(x.inst!==y.inst) return `instrument of layer ${i+1}`;
+    return `layer ${i+1} settings`;
+  }
+  return 'room settings';
+}
+function applySnapshot(json){
+  HIST.applying=true;
+  const d=JSON.parse(json);
+  Object.assign(S, d.S);
+  d.layers.forEach((nd,i)=>{
+    const Ly=layers[i], before=Ly.inst;
+    Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.03));
+    Object.assign(Ly, nd);
+    if(Ly.inst==='custom' && before!=='custom') Ly.inst=DEFAULT_INST[i];
+    if(Ly.inst!=='custom' && (Ly.inst!==before || !Ly.buffer)) setInstrument(Ly, Ly.inst, true);
+    applyLayer(Ly);
+  });
+  if(!layers[S.sel].shown){ const n=layers.findIndex(l=>l.shown); if(n>=0) S.sel=n; }
+  master.gain.setTargetAtTime(S.volume,ctx.currentTime,0.02); revOut.gain.setTargetAtTime(S.revLevel,ctx.currentTime,0.02);
+  dlyFb.gain.setTargetAtTime(S.dlyFb,ctx.currentTime,0.02); setDrive(S.drive); buildIR(); updateDelayTime();
+  if(S.playing){ const now=ctx.currentTime; b0=beatAt(now); t0=now; }
+  renderBarsSeg(); renderTempo(); renderLayers(); renderDetail(); renderGlobal();
+  if(ED.open){ ED.sel.clear(); edRenderTools(); edDraw(); }
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(sessionData())); }catch(e){}
+  HIST.last=json; HIST.applying=false; renderUndo();
+}
+function undo(){
+  flushSave();
+  if(!HIST.undo.length){ toast('nothing to undo'); return; }
+  const cur=HIST.last, prev=HIST.undo.pop(); HIST.redo.push(cur);
+  applySnapshot(prev); toast(`undone: ${describeChange(prev,cur)}`, 'redo', redo);
+}
+function redo(){
+  flushSave();
+  if(!HIST.redo.length){ toast('nothing to redo'); return; }
+  const cur=HIST.last, next=HIST.redo.pop(); HIST.undo.push(cur);
+  applySnapshot(next); toast(`redone: ${describeChange(cur,next)}`, 'undo', undo);
+}
+function renderUndo(){ const b=$('undoBtn'); if(b) b.disabled=!HIST.undo.length && !saveT; }
 function load(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); }catch(e){ return null; } }
 
 /* ============ UI ============ */
@@ -1283,9 +1411,8 @@ function renderLayers(){
         <span class="num">${i+1}</span>
         <div class="nmwrap">
           <span class="nm">${INST_ICON[Ly.inst]||''} ${instName(Ly)}</span>
-          <span class="tag t-target">● Records here</span><span class="tag t-rec">● Recording</span>
+          <span class="meta"><span class="cnt" id="cnt${i}">${noteCount(Ly)}</span><span class="tag t-target">● rec here</span><span class="tag t-rec">● recording</span></span>
         </div>
-        <span class="cnt" id="cnt${i}">${noteCount(Ly)}</span>
         <button class="ms m ${Ly.mute?'on':''}" data-act="mute" aria-label="Mute layer ${i+1}">M</button>
         <button class="ms s ${Ly.solo?'on':''}" data-act="solo" aria-label="Solo layer ${i+1}">S</button>
         <button class="open" data-act="open" aria-label="Settings of layer ${i+1}">${SLIDERS}</button>
@@ -1305,9 +1432,18 @@ $('layers').addEventListener('click',e=>{
   if(act==='mute'){ Ly.mute=!Ly.mute; layers.forEach(applyLayer); renderLayers(); save(); return; }
   if(act==='solo'){ Ly.solo=!Ly.solo; layers.forEach(applyLayer); renderLayers(); save(); return; }
   if(act==='open'){ selectLayer(i); openSheet('layerSheet'); return; }
-  if(i===S.sel){ openSheet('layerSheet'); return; }   // tap the record layer again for its settings
+  if(i===S.sel){ if(e.target.tagName==='CANVAS') openEditor(i); else openSheet('layerSheet'); return; }   // the record layer: roll = notes, rest = settings
   selectLayer(i);
 });
+(()=>{ let t=null, x0=0, y0=0; const L=$('layers');
+  L.addEventListener('pointerdown',e=>{ const el=e.target.closest('.layer'); if(!el || e.target.closest('[data-act]')) return;
+    x0=e.clientX; y0=e.clientY; clearTimeout(t);
+    t=setTimeout(()=>{ t='fired'; if(navigator.vibrate) navigator.vibrate(10); openLayerMenu(+el.dataset.i); setTimeout(()=>{ if(t==='fired') t=null; },700); },480); });
+  L.addEventListener('pointermove',e=>{ if(t && t!=='fired' && Math.hypot(e.clientX-x0,e.clientY-y0)>8){ clearTimeout(t); t=null; } });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>L.addEventListener(ev,()=>{ if(t!=='fired'){ clearTimeout(t); t=null; } }));
+  L.addEventListener('click',e=>{ if(t==='fired'){ e.stopImmediatePropagation(); t=null; } }, true);
+  L.addEventListener('contextmenu',e=>e.preventDefault());
+})();
 $('layers').addEventListener('dblclick',e=>{ const el=e.target.closest('canvas'); if(el){ openEditor(+el.closest('.layer').dataset.i); } });
 
 /* adding and removing layers */
@@ -1324,19 +1460,44 @@ function addLayer(key){
   selectLayer(idx); renderLayers(); save();
   toast(`Layer ${idx+1} · ${instName(Ly)} is ready — tap ● to record into it`);
 }
-let removeArm=0;
 function removeLayer(){
   const Ly=selLayer(), i=S.sel;
-  if(layers.filter(l=>l.shown).length<=1 && !Ly.events.length){ toast('This is your only layer'); return; }
-  if(Ly.events.length && Date.now()-removeArm>2500){ removeArm=Date.now(); $('removeBtn').textContent='Tap again to remove'; setTimeout(()=>$('removeBtn').textContent='Remove layer',2500); return; }
-  removeArm=0; $('removeBtn').textContent='Remove layer';
+  if(layers.filter(l=>l.shown).length<=1){ toast('this is your only layer'); return; }
+  flushSave();
   if(S.rec) setRec(false);
   Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05));
   Object.assign(Ly, newLayerData(i)); setInstrument(Ly, Ly.inst); applyLayer(Ly);
-  const next=layers.findIndex(l=>l.shown);
-  if(next<0){ Ly.shown=true; } else { S.sel=next; }
-  closeSheets(); renderLayers(); renderDetail(); save(); toast(`Layer ${i+1} removed`);
+  const next=layers.findIndex(l=>l.shown); if(next>=0) S.sel=next;
+  closeSheets(); renderLayers(); renderDetail(); writeSave(); toast(`layer ${i+1} removed`, 'undo', undo);
 }
+/* duplicate a layer into a free one */
+function duplicateLayer(){
+  const src=selLayer(), idx=layers.findIndex(l=>!l.shown);
+  if(idx<0){ toast('8 layers is the maximum'); return; }
+  flushSave();
+  const Ly=layers[idx], ids=new Map();
+  Object.assign(Ly, JSON.parse(JSON.stringify(Object.fromEntries(LAYER_KEYS.map(k=>[k,src[k]])))), { shown:true, mute:false, solo:false });
+  Ly.events=Ly.events.map(e=>{ if(!ids.has(e.chord)) ids.set(e.chord,chordSeq++); return {...e, id:evId++, chord:ids.get(e.chord)}; });
+  if(src.inst==='custom'){ Ly.buffer=src.buffer; Ly.customName=src.customName; Ly.mode=src.mode; Ly.slices=null; } else setInstrument(Ly, Ly.inst, true);
+  applyLayer(Ly); closeSheets(); selectLayer(idx); renderLayers(); writeSave(); toast(`layer ${idx+1} is a copy of layer ${layers.indexOf(src)+1}`, 'undo', undo);
+}
+/* long-press menu */
+function openLayerMenu(i){
+  selectLayer(i); const Ly=layers[i];
+  $('menuTitle').textContent=`layer ${i+1} · ${instName(Ly)}`;
+  const items=[['edit','edit notes'],['mute', Ly.mute?'unmute':'mute'],['solo', Ly.solo?'unsolo':'solo'],['sound','change instrument'],['dup','duplicate layer'],['clear','clear notes','danger'],['remove','remove layer','danger']];
+  $('menuList').innerHTML=items.map(([k,l,c])=>`<button data-m="${k}" class="${c||''}">${l}</button>`).join('');
+  openSheet('menuSheet');
+}
+$('menuList').onclick=e=>{
+  const k=e.target.closest('[data-m]')?.dataset.m; if(!k) return; const Ly=selLayer();
+  if(k==='edit'){ closeSheets(); openEditor(S.sel); }
+  else if(k==='mute'||k==='solo'){ Ly[k]=!Ly[k]; layers.forEach(applyLayer); closeSheets(); renderLayers(); save(); }
+  else if(k==='sound'){ S.tab='sound'; renderDetail(); closeSheets(); openSheet('layerSheet'); }
+  else if(k==='dup') duplicateLayer();
+  else if(k==='clear') clearLayer();
+  else if(k==='remove') removeLayer();
+};
 $('instGrid').innerHTML = Object.entries(LIB).map(([k,v])=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${v.name}</button>`).join('');
 $('settingsBtn').innerHTML=ic('cog',''); $('themeBtn').innerHTML=ic('theme','');
 document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close',''));
@@ -1996,7 +2157,11 @@ edCv.addEventListener('contextmenu',e=>e.preventDefault());
 // iOS can pause the audio engine (route change, call, other app): any tap wakes it again
 addEventListener('pointerdown',()=>{ if(ctx && ctx.state!=='running') ctx.resume().then(renderAudioStatus); }, true);
 $('recBtn').onclick=()=>{ if(!ctx) return; setRec(!S.rec); };
-$('undoBtn').onclick=undoTake;
+$('undoBtn').onclick=undo;
+(()=>{ let t=null; const b=$('undoBtn');   // hold undo for redo
+  b.addEventListener('pointerdown',()=>{ t=setTimeout(()=>{ t='fired'; redo(); },550); });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>{ if(t!=='fired') clearTimeout(t); }));
+  b.addEventListener('click',e=>{ if(t==='fired'){ e.stopImmediatePropagation(); t=null; } }, true); })();
 $('clearBtn').onclick=clearLayer;
 $('panicBtn').onclick=()=>stopAllVoices(true);
 $('bpmDown').onclick=()=>setTempo(S.bpm-1);
@@ -2020,7 +2185,7 @@ addEventListener('keydown',e=>{
   if(e.repeat) return;
   if(e.code==='Space'){ e.preventDefault(); S.playing?stopTransport():startTransport(false); }
   else if(e.key==='r'||e.key==='R') setRec(!S.rec);
-  else if(e.key==='z'||e.key==='Z') undoTake();
+  else if(e.key==='z'||e.key==='Z') (e.shiftKey?redo:undo)();
   else if(e.key==='c'||e.key==='C') capture();
   else if(e.key==='ArrowDown'){ e.preventDefault(); selectLayer(Math.min(layers.length-1,S.sel+1)); }
   else if(e.key==='ArrowUp'){ e.preventDefault(); selectLayer(Math.max(0,S.sel-1)); }
@@ -2029,7 +2194,8 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{ const k=+e.key-1; if(k>=0&&k<7) padUp(k); });
 addEventListener('resize',()=>{ if(layers.length) drawAll(); if(ED.open){ edResize(); edClamp(); edDraw(); } });
 
-$('startBtn').onclick=async()=>{
+async function startApp(){
+  if(ctx) return;
   initAudio();
   const saved=load();
   if(saved && saved.S) Object.assign(S, saved.S, {playing:false, rec:false});
@@ -2055,7 +2221,12 @@ $('startBtn').onclick=async()=>{
   initMIDI(false);
   frame();
   if(layers.some(Ly=>Ly.events.length)) toast('Your last session is back');
-};
+  renderUndo(); HIST.last=histData(sessionData());
+  if(autoConnect()) setTimeout(()=>hcConnect({auto:true}), 300);
+}
+$('startBtn').onclick=startApp;
+// the iPhone app may play sound without a tap, so it skips the start screen
+if(inApp()) startApp().then(()=>{ if(ctx.state!=='running'){ ctx.close(); ctx=null; layers.length=0; $('overlay').classList.remove('hidden'); $('overlay').classList.add('force'); } });
 </script>
 </body>
 </html>
