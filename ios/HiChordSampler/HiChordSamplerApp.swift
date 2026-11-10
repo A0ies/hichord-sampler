@@ -16,7 +16,7 @@ struct HiChordSamplerApp: App {
     var body: some Scene {
         WindowGroup {
             SamplerWebView()
-                .ignoresSafeArea(edges: .bottom)
+                .ignoresSafeArea()   // full screen in every orientation; the page pads itself with env(safe-area-inset-*)
         }
     }
 }
@@ -62,7 +62,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         webView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(webView)
         NSLayoutConstraint.activate([
-            webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            webView.topAnchor.constraint(equalTo: view.topAnchor),
             webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),

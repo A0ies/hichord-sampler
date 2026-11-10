@@ -25,7 +25,7 @@ targets:
         PRODUCT_NAME: HiChord Sampler
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: HiChord Sampler
+        INFOPLIST_KEY_CFBundleDisplayName: HiChord Looper
         INFOPLIST_KEY_NSMicrophoneUsageDescription: Record sounds with the microphone to use as samples.
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
