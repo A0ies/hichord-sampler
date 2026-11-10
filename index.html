@@ -429,6 +429,23 @@ button.danger{color:var(--rec-text)}
 .tool.ready,.tool.ready small{color:var(--acc-text)}
 .layer .tag{color:color-mix(in srgb,var(--lc) 55%,var(--ink))}
 .layer.sel.recording .tag.t-rec{color:var(--rec-text)}
+/* projects */
+.projbtn{flex:1 1 auto;min-width:0;justify-content:flex-start;display:inline-flex;align-items:center;gap:8px;background:transparent;box-shadow:none;padding:6px 8px;
+  font-family:var(--sans);font-weight:700;font-size:17px;letter-spacing:-.02em;text-transform:lowercase}
+.projbtn #projName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.projbtn svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.projbtn #projIcon{display:inline-flex}
+@media (hover:hover){ .projbtn:hover{background:var(--key)} }
+header.top .chip{flex:0 1 auto}
+@media (max-width:420px){ header.top .chip #midiStatus{display:none} }
+.textin{width:100%;font-family:var(--sans);font-size:16px;font-weight:600;background:var(--key);border:none;border-radius:9px;padding:10px 12px;box-shadow:0 1px 0 var(--key-edge);color:var(--ink)}
+.projlist{display:flex;flex-direction:column;gap:8px}
+.proj{display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:12px;padding:10px 10px 10px 14px;box-shadow:0 1px 0 var(--key-edge)}
+.proj.cur{box-shadow:inset 0 0 0 2px var(--ink)}
+.proj .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.proj .pinfo b{font-family:var(--sans);font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj .pinfo small{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.proj .open-tag{font-family:var(--mono);font-size:11px;color:var(--dim);padding:0 8px}
 /* toast with an action */
 .toast{display:flex;align-items:center;gap:12px}
 .toast.act{pointer-events:auto}
@@ -483,6 +500,7 @@ button.danger{color:var(--rec-text)}
 
 <div class="shell">
   <header class="top">
+    <button class="projbtn" id="projBtn" aria-label="Projects"><span id="projIcon"></span><span id="projName">project</span></button>
     <button class="chip" id="midiChip" aria-label="HiChord and settings"><span class="dot" id="midiDot"></span><span id="midiStatus">no MIDI yet</span></button>
     <div class="spacer"></div>
     <button class="icon" id="themeBtn" aria-label="Toggle theme"></button>
@@ -539,6 +557,22 @@ button.danger{color:var(--rec-text)}
   <div class="menulist" id="menuList"></div>
 </section>
 <div class="countin" id="countIn" aria-live="assertive"></div>
+
+<!-- projects -->
+<section class="sheet tall" id="projSheet" aria-label="Projects">
+  <div class="grab"></div>
+  <div class="row sheethead"><h2 style="margin:0">projects</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
+  <div class="p wide"><label><span>this project</span><b id="projStatus">saves automatically</b></label>
+    <input id="projNameInput" class="textin" maxlength="60" aria-label="Project name" enterkeyhint="done"></div>
+  <div class="row" style="margin:12px 0 18px">
+    <button id="projSave" class="primary">save</button>
+    <button id="projCopy">save as copy</button>
+    <div class="spacer"></div>
+    <button id="projNew">+ new project</button>
+  </div>
+  <h2>all projects</h2>
+  <div class="projlist" id="projList"></div>
+</section>
 
 <!-- tempo and loop -->
 <section class="sheet" id="loopSheet" aria-label="Tempo and loop">
@@ -647,7 +681,7 @@ button.danger{color:var(--rec-text)}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.17';
+const PAGE_VERSION='2026-11-10.18';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1295,7 +1329,7 @@ function setCustom(Ly, buf, name){
   Ly.inst='custom'; Ly.customName=name; Ly.buffer=normalize(buf); Ly.mode='melodic'; Ly.slices=null;
   const f=detectPitch(Ly.buffer); Ly.root = f ? Math.round(69+12*Math.log2(f/440)) : 60;
   toast(`${name} now plays layer ${layers.indexOf(Ly)+1} (root ${noteName(Ly.root)})`);
-  renderLayers(); renderDetail(); save();
+  renderLayers(); renderDetail(); save(); storeSound(layers.indexOf(Ly));
 }
 function detectPitch(buf){
   const m=mono(buf), sr=buf.sampleRate, W=2048, s1=Math.min(m.length, Math.floor(sr*1.5));
@@ -1322,7 +1356,7 @@ function toggleBounce(){
 
 /* ============ the session is kept between visits ============ */
 const SAVE_KEY='hichord-looper-v1';
-const LAYER_KEYS=['inst','root','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown'];
+const LAYER_KEYS=['inst','customName','root','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown'];
 let saveT;
 function sessionData(){
   return { v:1,
@@ -1343,6 +1377,7 @@ function writeSave(){
   const d=sessionData();
   try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch(e){}
   commitHistory(d);
+  projAutosave(d);
 }
 function save(){ clearTimeout(saveT); saveT=setTimeout(writeSave,400); }
 function flushSave(){ if(saveT) writeSave(); }
@@ -1394,6 +1429,148 @@ function redo(){
 }
 function renderUndo(){ const b=$('undoBtn'); if(b) b.disabled=!HIST.undo.length && !saveT; }
 function load(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); }catch(e){ return null; } }
+
+/* ============ projects ============
+   Every session is a project and saves itself. Projects live in IndexedDB, with the audio of
+   your own sounds (microphone / file) next to them, so a project reopens exactly as you left it. */
+const PRJ={ db:null, current:null, list:[], saveT:null, savedAt:0, deleted:null };
+function idb(){
+  if(PRJ.db) return Promise.resolve(PRJ.db);
+  return new Promise((res,rej)=>{ const r=indexedDB.open('hichord-looper',1);
+    r.onupgradeneeded=()=>{ const db=r.result; if(!db.objectStoreNames.contains('projects')) db.createObjectStore('projects',{keyPath:'id'}); if(!db.objectStoreNames.contains('sounds')) db.createObjectStore('sounds'); };
+    r.onsuccess=()=>{ PRJ.db=r.result; res(PRJ.db); }; r.onerror=()=>rej(r.error); });
+}
+async function dbDo(store, mode, fn){
+  const db=await idb();
+  return new Promise((res,rej)=>{ const t=db.transaction(store,mode), st=t.objectStore(store); let out; const r=fn(st); if(r) r.onsuccess=()=>{ out=r.result; };
+    t.oncomplete=()=>res(out); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); });
+}
+const soundRange = id => IDBKeyRange.bound(id+':', id+':\uffff');
+async function soundsOf(id){
+  const [keys,vals]=await Promise.all([dbDo('sounds','readonly',st=>st.getAllKeys(soundRange(id))), dbDo('sounds','readonly',st=>st.getAll(soundRange(id)))]);
+  const out={}; (keys||[]).forEach((k,n)=>{ out[+k.split(':')[1]]=vals[n]; }); return out;
+}
+function storeSound(i){
+  const Ly=layers[i]; if(!PRJ.current || Ly.inst!=='custom' || !Ly.buffer) return;
+  const b=Ly.buffer, rec={ name:Ly.customName, sampleRate:b.sampleRate, channels:[...Array(b.numberOfChannels)].map((_,c)=>b.getChannelData(c).slice()) };
+  dbDo('sounds','readwrite',st=>st.put(rec, PRJ.current+':'+i)).catch(e=>console.warn('sound save', e));
+}
+function bufferFrom(rec){ const b=ctx.createBuffer(rec.channels.length, rec.channels[0].length, rec.sampleRate); rec.channels.forEach((ch,c)=>b.copyToChannel(ch,c)); return b; }
+const newId = () => 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function summary(d){ const ls=d.layers.filter(l=>l.shown); return { layers:ls.length, notes:ls.reduce((a,l)=>a+l.events.length,0), bpm:Math.round(d.S.bpm), bars:d.S.bars }; }
+/* autosave of the open project, shortly after the working copy */
+function projAutosave(d){
+  if(!PRJ.current) return;
+  clearTimeout(PRJ.saveT);
+  PRJ.saveT=setTimeout(async()=>{
+    const p=PRJ.list.find(x=>x.id===PRJ.current) || { id:PRJ.current, name:'project', created:Date.now() };
+    Object.assign(p, { data:d, updated:Date.now(), summary:summary(d) });
+    try{ await dbDo('projects','readwrite',st=>st.put(p)); PRJ.savedAt=Date.now(); renderProjStatus(); }catch(e){ setAlert('save','could not save the project — storage may be full'); }
+  },700);
+}
+async function projSaveNow(){ flushSave(); clearTimeout(PRJ.saveT); const d=sessionData(); PRJ.saveT=null;
+  const p=PRJ.list.find(x=>x.id===PRJ.current); if(!p) return;
+  Object.assign(p,{data:d, updated:Date.now(), summary:summary(d)}); await dbDo('projects','readwrite',st=>st.put(p));
+  layers.forEach((Ly,i)=>{ if(Ly.inst==='custom') storeSound(i); });
+  PRJ.savedAt=Date.now(); renderProjStatus(); toast(`saved "${p.name}"`); }
+async function refreshProjects(){ PRJ.list=(await dbDo('projects','readonly',st=>st.getAll()))||[]; PRJ.list.sort((a,b)=>b.updated-a.updated); }
+function setCurrent(id){ PRJ.current=id; try{ localStorage.setItem('hcl-project', id); }catch(e){} renderProjName(); }
+/* put a stored session into the app */
+function applySession(d, sounds){
+  if(S.playing) stopTransport(); stopAllVoices(true);
+  Object.assign(S, d.S, { playing:false, rec:false, tab:S.tab });
+  layers.forEach((Ly,i)=>{
+    const nd=d.layers[i]||{};
+    Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.02));
+    Object.assign(Ly, newLayerData(i), JSON.parse(JSON.stringify(nd)));
+    const snd=sounds && sounds[i];
+    if(Ly.inst==='custom' && snd){ Ly.buffer=bufferFrom(snd); Ly.customName=snd.name; Ly.mode='melodic'; Ly.slices=null; }
+    else { if(Ly.inst==='custom' || !LIB[Ly.inst]) Ly.inst=DEFAULT_INST[i]; setInstrument(Ly, Ly.inst, true); }
+    Ly.events.forEach(e=>{ if(!e.id) e.id=evId++; evId=Math.max(evId,e.id+1); if(e.chord!=null) chordSeq=Math.max(chordSeq,e.chord+1); });
+    applyLayer(Ly);
+  });
+  layers.forEach(ensureChords);
+  if(!layers.some(l=>l.shown)) layers[0].shown=true;
+  if(!layers[S.sel] || !layers[S.sel].shown) S.sel=layers.findIndex(l=>l.shown);
+  master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime();
+  $('metroChk').checked=S.metro; $('countChk').checked=S.countIn;
+  renderBarsSeg(); renderTempo(); renderTransport(); renderLayers(); renderDetail(); renderGlobal(); renderSync();
+  if(ED.open) closeEditor();
+  HIST.undo=[]; HIST.redo=[]; HIST.last=histData(sessionData()); renderUndo();
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(sessionData())); }catch(e){}
+}
+/* first start: the work you already have becomes your first project; later: reopen the last one */
+async function initProjects(){
+  try{
+    await refreshProjects();
+    let id=null; try{ id=localStorage.getItem('hcl-project'); }catch(e){}
+    let p=PRJ.list.find(x=>x.id===id);
+    if(!p){
+      const d=sessionData(); p={ id:newId(), name:`project ${PRJ.list.length+1}`, created:Date.now(), updated:Date.now(), data:d, summary:summary(d) };
+      await dbDo('projects','readwrite',st=>st.put(p)); PRJ.list.unshift(p);
+    }
+    setCurrent(p.id);
+    const sounds=await soundsOf(p.id);
+    layers.forEach((Ly,i)=>{ if(Ly.wantCustom && sounds[i]){ Ly.inst='custom'; Ly.buffer=bufferFrom(sounds[i]); Ly.customName=sounds[i].name; Ly.mode='melodic'; Ly.slices=null; } delete Ly.wantCustom; });
+    renderLayers(); renderDetail();
+  }catch(e){ console.warn('projects unavailable', e); setAlert('proj','projects are not available in this browser (private mode?)'); }
+}
+async function openProject(id){
+  if(id===PRJ.current){ closeSheets(); return; }
+  await projSaveNow().catch(()=>{});
+  const p=PRJ.list.find(x=>x.id===id); if(!p) return;
+  const sounds=await soundsOf(id);
+  applySession(p.data, sounds); setCurrent(id);
+  closeSheets(); toast(`opened "${p.name}"`);
+}
+async function newProject(){
+  await projSaveNow().catch(()=>{});
+  const d=sessionData();
+  d.S={...d.S, bpm:100, bars:4, sel:0};
+  d.layers=layers.map((_,i)=>{ const l=newLayerData(i); if(i===0) l.shown=true; return Object.fromEntries(LAYER_KEYS.map(k=>[k,l[k]])); });
+  const p={ id:newId(), name:`project ${PRJ.list.length+1}`, created:Date.now(), updated:Date.now(), data:d, summary:summary(d) };
+  await dbDo('projects','readwrite',st=>st.put(p)); PRJ.list.unshift(p);
+  applySession(d, {}); setCurrent(p.id); renderProjects();
+  toast(`new project "${p.name}"`);
+}
+async function saveAsCopy(){
+  await projSaveNow().catch(()=>{});
+  const src=PRJ.list.find(x=>x.id===PRJ.current), d=sessionData();
+  const p={ id:newId(), name:`${src?src.name:'project'} copy`, created:Date.now(), updated:Date.now(), data:d, summary:summary(d) };
+  await dbDo('projects','readwrite',st=>st.put(p)); PRJ.list.unshift(p);
+  const sounds=await soundsOf(PRJ.current);
+  for(const [i,rec] of Object.entries(sounds)) await dbDo('sounds','readwrite',st=>st.put(rec, p.id+':'+i));
+  setCurrent(p.id); renderProjects(); toast(`saved as "${p.name}" — you are now working in the copy`);
+}
+async function renameProject(name){
+  const p=PRJ.list.find(x=>x.id===PRJ.current); name=(name||'').trim(); if(!p || !name || name===p.name) return;
+  p.name=name.slice(0,60); await dbDo('projects','readwrite',st=>st.put(p)); renderProjName(); renderProjects();
+}
+async function deleteProject(id){
+  const p=PRJ.list.find(x=>x.id===id); if(!p || id===PRJ.current) return;
+  const sounds=await soundsOf(id);
+  await dbDo('projects','readwrite',st=>st.delete(id));
+  await dbDo('sounds','readwrite',st=>st.delete(soundRange(id)));
+  PRJ.list=PRJ.list.filter(x=>x.id!==id); PRJ.deleted={p, sounds}; renderProjects();
+  toast(`deleted "${p.name}"`, 'undo', async()=>{ const z=PRJ.deleted; if(!z) return;
+    await dbDo('projects','readwrite',st=>st.put(z.p));
+    for(const [i,rec] of Object.entries(z.sounds)) await dbDo('sounds','readwrite',st=>st.put(rec, z.p.id+':'+i));
+    PRJ.list.push(z.p); PRJ.list.sort((a,b)=>b.updated-a.updated); PRJ.deleted=null; renderProjects(); });
+}
+const ago = t => { const s=(Date.now()-t)/1000; return s<10?'just now':s<60?`${Math.round(s)} s ago`:s<3600?`${Math.round(s/60)} min ago`:s<86400?`${Math.round(s/3600)} h ago`:new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'}); };
+function renderProjName(){ const p=PRJ.list.find(x=>x.id===PRJ.current); $('projName').textContent = p ? p.name : 'project'; }
+function renderProjStatus(){ const el=$('projStatus'); if(el) el.textContent = PRJ.savedAt ? `saved ${ago(PRJ.savedAt)}` : 'saves automatically'; }
+function renderProjects(){
+  renderProjName(); renderProjStatus();
+  const cur=PRJ.list.find(x=>x.id===PRJ.current);
+  const inp=$('projNameInput'); if(cur && document.activeElement!==inp) inp.value=cur.name;
+  $('projList').innerHTML = PRJ.list.map(p=>{ const sm=p.summary||summary(p.data); const isCur=p.id===PRJ.current;
+    return `<div class="proj ${isCur?'cur':''}" data-id="${p.id}">
+      <div class="pinfo"><b>${p.name.replace(/</g,'&lt;')}</b><small>${sm.layers} layer${sm.layers===1?'':'s'} · ${sm.notes} notes · ${sm.bpm} bpm · ${ago(p.updated)}</small></div>
+      ${isCur?'<span class="open-tag">open</span>':`<button data-pa="open">open</button><button data-pa="del" class="danger" aria-label="Delete ${p.name.replace(/"/g,'')}">delete</button>`}
+    </div>`; }).join('') || '<p class="hint">No projects yet.</p>';
+}
+async function openProjects(){ flushSave(); await refreshProjects().catch(()=>{}); renderProjects(); openSheet('projSheet'); }
 
 /* ============ UI ============ */
 function param(host,label,get,set,min,max,step,fmt){
@@ -1464,6 +1641,7 @@ const ICONS={
   bell:'<path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4M12 3V2"/>',
   drums:'<ellipse cx="12" cy="10" rx="8" ry="3"/><path d="M4 10v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M6 3l5 5M18 3l-5 5"/>',
   custom:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+  folder:'<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.2h7.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>',
 };
 const ic=(name,cls='ii')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]||''}</svg>`;
 const INST_ICON=new Proxy({}, { get:(_,k)=>ic(ICONS[k]?k:'keys') });
@@ -1543,7 +1721,7 @@ function duplicateLayer(){
   const Ly=layers[idx], ids=new Map();
   Object.assign(Ly, JSON.parse(JSON.stringify(Object.fromEntries(LAYER_KEYS.map(k=>[k,src[k]])))), { shown:true, mute:false, solo:false });
   Ly.events=Ly.events.map(e=>{ if(!ids.has(e.chord)) ids.set(e.chord,chordSeq++); return {...e, id:evId++, chord:ids.get(e.chord)}; });
-  if(src.inst==='custom'){ Ly.buffer=src.buffer; Ly.customName=src.customName; Ly.mode=src.mode; Ly.slices=null; } else setInstrument(Ly, Ly.inst, true);
+  if(src.inst==='custom'){ Ly.buffer=src.buffer; Ly.customName=src.customName; Ly.mode=src.mode; Ly.slices=null; storeSound(idx); } else setInstrument(Ly, Ly.inst, true);
   applyLayer(Ly); closeSheets(); selectLayer(idx); renderLayers(); writeSave(); toast(`layer ${idx+1} is a copy of layer ${layers.indexOf(src)+1}`, 'undo', undo);
 }
 /* long-press menu */
@@ -1564,7 +1742,16 @@ $('menuList').onclick=e=>{
   else if(k==='remove') removeLayer();
 };
 $('instGrid').innerHTML = Object.entries(LIB).map(([k,v])=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${v.name}</button>`).join('');
-$('settingsBtn').innerHTML=ic('cog',''); $('themeBtn').innerHTML=ic('theme','');
+$('settingsBtn').innerHTML=ic('cog',''); $('themeBtn').innerHTML=ic('theme',''); $('projIcon').innerHTML=ic('folder','');
+$('projBtn').onclick=openProjects;
+$('projSave').onclick=()=>projSaveNow();
+$('projCopy').onclick=saveAsCopy;
+$('projNew').onclick=newProject;
+$('projNameInput').addEventListener('change',e=>renameProject(e.target.value));
+$('projNameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') e.target.blur(); e.stopPropagation(); });
+$('projList').onclick=e=>{ const b=e.target.closest('[data-pa]'); if(!b) return; const id=b.closest('.proj').dataset.id;
+  if(b.dataset.pa==='open') openProject(id); else deleteProject(id); };
+setInterval(()=>{ if($('projSheet').classList.contains('open')) renderProjStatus(); },5000);
 document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close',''));
 $('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(b) addLayer(b.dataset.k); };
 $('removeBtn').onclick=removeLayer;
@@ -2301,6 +2488,7 @@ try{ const th=localStorage.getItem('hcl-theme'); if(th) document.documentElement
 addEventListener('keydown',e=>{
   if(['INPUT','SELECT'].includes(e.target.tagName)||!ctx) return;
   if(ED.open){ edKey(e); return; }
+  if((e.metaKey||e.ctrlKey) && (e.key==='s'||e.key==='S')){ e.preventDefault(); projSaveNow(); return; }
   if(e.key==='Escape' && document.querySelector('.sheet.open')){ closeSheets(); return; }
   if(e.repeat) return;
   if(e.code==='Space'){ e.preventDefault(); S.playing?stopTransport():startTransport(false); }
@@ -2321,7 +2509,8 @@ async function startApp(){
   if(saved && saved.S) Object.assign(S, saved.S, {playing:false, rec:false});
   for(let i=0;i<8;i++){
     const Ly = Object.assign(newLayerData(i), saved && saved.layers && saved.layers[i] ? saved.layers[i] : {});
-    if(Ly.inst==='custom' || !LIB[Ly.inst]) Ly.inst=DEFAULT_INST[i];   // own sounds are not stored
+    Ly.wantCustom = Ly.inst==='custom';   // its audio comes back from the project store
+    if(Ly.inst==='custom' || !LIB[Ly.inst]) Ly.inst=DEFAULT_INST[i];
     if(Math.abs(Ly.nudge||0)<5) Ly.nudge=0;   // tiny nudges were accidental slider touches
     Ly.events.forEach(e=>{ if(!e.id) e.id=evId; evId=Math.max(evId,e.id+1); if(e.chord!=null) chordSeq=Math.max(chordSeq,e.chord+1); });
     layers.push(Ly); attachNodes(Ly);
@@ -2341,6 +2530,7 @@ async function startApp(){
   initMIDI(false);
   frame();
   if(layers.some(Ly=>Ly.events.length)) toast('Your last session is back');
+  await initProjects();
   renderUndo(); HIST.last=histData(sessionData());
   if(autoConnect()) setTimeout(()=>hcConnect({auto:true}), 300);
 }
