@@ -385,6 +385,50 @@ button.icon svg{display:block}
 /* landscape and wide screens: the settings of the selected layer are always shown beside the list,
    so the per-layer settings button is not needed there */
 @media (min-width:780px){ .layer .open{display:none} }
+/* phase 3: readable sizes */
+h2{font-size:12px}
+.p label{font-size:12px}
+.hint{font-size:13px}
+.layer .cnt{font-size:12px}
+.layer .tag{font-size:11px}
+.tool small{font-size:11px}
+.posbox .pos{font-size:11px}
+/* feel presets */
+.feels{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.feels button{flex-direction:column;display:flex;align-items:center;gap:2px;padding:8px 4px;min-height:52px}
+.feels button b{font-weight:600;font-size:12px}
+.feels button small{font-size:10px;opacity:.75;text-transform:lowercase}
+.feels button.on::before{display:none}
+.feels button.on{box-shadow:inset 0 0 0 2px var(--acc)}
+@media (max-width:420px){ .feels{grid-template-columns:repeat(3,minmax(0,1fr))} }
+details.adv{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}
+details.adv summary{cursor:pointer;list-style:none;min-height:36px;display:flex;align-items:center}
+details.adv summary::-webkit-details-marker{display:none}
+details.adv summary h2{margin:0}
+details.adv summary h2::after{content:" +"}
+details.adv[open] summary h2::after{content:" −"}
+details.adv .params{margin-top:8px}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper b{font-family:var(--mono);font-weight:500;min-width:58px;text-align:center}
+.stepper button{min-width:44px;padding:6px 8px}
+/* compact editor toolbar */
+.etool{position:relative}
+.etool button{min-height:38px}
+.edmenu{position:absolute;right:0;top:calc(100% + 6px);z-index:3;background:var(--bg);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25),0 1px 0 var(--key-edge);min-width:220px}
+.edmenu.hidden{display:none}
+.selrow{min-height:42px}
+.selrow .seltools{display:none;align-items:center;gap:6px;flex-wrap:wrap}
+.selrow.has-sel .seltools{display:flex}
+.selrow.has-sel .info{flex:1 1 140px}
+/* text in accent colours: darker in the light theme so it stays readable (4.5:1) */
+:root{--acc-text:#b83a00;--rec-text:#c01c0a}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--acc-text:var(--acc);--rec-text:var(--rec)} }
+:root[data-theme="dark"]{--acc-text:var(--acc);--rec-text:var(--rec)}
+button.danger{color:var(--rec-text)}
+.tool.ready,.tool.ready small{color:var(--acc-text)}
+.layer .tag{color:color-mix(in srgb,var(--lc) 55%,var(--ink))}
+.layer.sel.recording .tag.t-rec{color:var(--rec-text)}
 /* toast with an action */
 .toast{display:flex;align-items:center;gap:12px}
 .toast.act{pointer-events:auto}
@@ -563,27 +607,34 @@ button.icon svg{display:block}
 
 <div class="editor hidden" id="editor" role="dialog" aria-label="Note editor">
   <div class="etool">
-    <button id="edDone" class="on">Done</button>
+    <button id="edDone" class="primary">done</button>
     <select id="edLayer" aria-label="Layer"></select>
     <button id="edPlay" aria-label="Play / stop">▶</button>
-    <button id="edRec" aria-label="Record" style="color:var(--rec);border-color:var(--rec)">●</button>
+    <button id="edRec" class="danger" aria-label="Record">●</button>
     <div class="spacer"></div>
-    <span class="sub">Snap</span>
     <select id="edSnap" aria-label="Snap"></select>
-    <button id="edChordMode" title="Edit whole chords or single notes">Chords</button>
-    <button id="edDraw" title="Draw mode (B): a single tap adds a chord">✎ Draw</button>
-    <button id="edZoomOut" aria-label="Zoom out">−</button>
-    <button id="edFit" title="Fit the loop">Fit</button>
-    <button id="edZoomIn" aria-label="Zoom in">+</button>
-    <button id="edUndo" title="Undo (⌘Z)">↶</button>
-    <button id="edRedo" title="Redo (⇧⌘Z)">↷</button>
+    <button id="edChordMode" title="Edit whole chords or single notes">chords</button>
+    <button id="edUndo" title="Undo (⌘Z)" aria-label="Undo">↶</button>
+    <button id="edRedo" title="Redo (⇧⌘Z)" aria-label="Redo">↷</button>
+    <button id="edMore" aria-label="More editor tools" aria-expanded="false">⋯</button>
+    <div class="edmenu hidden" id="edMenu">
+      <button id="edDraw" title="Draw mode (B): a single tap adds a chord">✎ draw mode</button>
+      <div class="row" style="gap:6px;flex-wrap:nowrap">
+        <button id="edZoomOut" aria-label="Zoom out">−</button>
+        <button id="edFit" title="Fit the loop">fit loop</button>
+        <button id="edZoomIn" aria-label="Zoom in">+</button>
+      </div>
+      <button id="edQuantAll" title="Snap all notes of this layer to the grid">quantize all to snap</button>
+    </div>
   </div>
-  <div class="etool">
+  <div class="etool selrow">
     <span class="info" id="edInfo"></span>
-    <label class="vel">Velocity <input type="range" id="edVel" min="1" max="127" step="1"></label>
-    <button id="edQuant" title="Snap the selected notes to the grid">Quantize</button>
-    <button id="edDup" title="Duplicate (⌘D)">Duplicate</button>
-    <button id="edDel" title="Delete (⌫)">Delete</button>
+    <span class="seltools">
+      <label class="vel">vel <input type="range" id="edVel" min="1" max="127" step="1"></label>
+      <button id="edQuant" title="Snap the selection to the grid (Q)">quantize</button>
+      <button id="edDup" title="Duplicate (⌘D)">duplicate</button>
+      <button id="edDel" class="danger" title="Delete (⌫)">delete</button>
+    </span>
   </div>
   <div class="ebanner hidden" id="edBake">
     <span>This layer's timing settings move the notes when they play (outlines).</span>
@@ -596,7 +647,7 @@ button.icon svg{display:block}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.15';
+const PAGE_VERSION='2026-11-10.16';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -930,7 +981,7 @@ function effPos(Ly, e){
 function hash(n){ n=Math.imul(n,2654435761)>>>0; return ((n^(n>>>15))>>>0)/4294967296; }
 function effEvents(Ly){
   const L=loopLen();
-  return Ly.events.filter(e=>e.beat<L).map(e=>({ pos:effPos(Ly,e), note:e.note, vel:e.vel,
+  return Ly.events.filter(e=>e.beat<L).map(e=>({ pos:effPos(Ly,e), note:e.note, vel:e.vel, chord:e.chord,
     dur: Math.max(0.04, Math.min(L, e.dur*Ly.gate)) }));
 }
 
@@ -1413,7 +1464,7 @@ function renderLayers(){
         <span class="num">${i+1}</span>
         <div class="nmwrap">
           <span class="nm">${INST_ICON[Ly.inst]||''} ${instName(Ly)}</span>
-          <span class="meta"><span class="cnt" id="cnt${i}">${noteCount(Ly)}</span><span class="tag t-target">● rec here</span><span class="tag t-rec">● recording</span></span>
+          <span class="meta"><span class="cnt" id="cnt${i}">${noteCount(Ly)}</span><span class="tag t-target">● rec</span><span class="tag t-rec">● recording</span></span>
         </div>
         <button class="ms m ${Ly.mute?'on':''}" data-act="mute" aria-label="Mute layer ${i+1}">M</button>
         <button class="ms s ${Ly.solo?'on':''}" data-act="solo" aria-label="Solo layer ${i+1}">S</button>
@@ -1532,20 +1583,58 @@ function selectLayer(i){
 }
 
 const TABS=[['timing','Timing'],['sound','Instrument'],['mix','Mix']];
+/* timing presets: they set quantize, strength, swing and humanize; nudge, note length and octave stay yours */
+const FEELS=[['original','original','as played'],['tight','tight','on the grid'],['light','light','halfway'],['swing','swing','shuffled'],['loose','loose','relaxed']];
+const FEEL_SET={
+  original:{q:'off',strength:1,swing:0,humanize:0},
+  tight:{q:'1/16',strength:1,swing:0,humanize:0},
+  light:{q:'1/16',strength:0.5,swing:0,humanize:0},
+  swing:{q:'1/16',strength:1,swing:0.56,humanize:0},
+  loose:{q:'1/8',strength:0.6,swing:0,humanize:0.45},
+};
+function feelOf(Ly){
+  for(const [k] of FEELS){ const f=FEEL_SET[k];
+    if(Ly.q===f.q && Math.abs(Ly.strength-f.strength)<0.005 && Math.abs(Ly.swing-f.swing)<0.005 && Math.abs(Ly.humanize-f.humanize)<0.005) return k;
+    if(k==='original' && Ly.q==='off' && Ly.humanize<0.005) return k;   // strength and swing do nothing without a grid
+  }
+  return null;
+}
+function refreshFeel(){ const k=feelOf(selLayer()), d=document.querySelector('.feels'); if(!d) return;
+  d.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.f===k));
+  d.parentElement.querySelector('label b').textContent = k ? FEELS.find(f=>f[0]===k)[1] : 'custom'; }
+/* a stepper instead of a slider for values you should not change by accident */
+function stepper(host,label,get,set,min,max,step,fmt){
+  const d=document.createElement('div'); d.className='p';
+  d.innerHTML=`<label><span>${label}</span></label><div class="stepper"><button data-d="-1" aria-label="${label} −${step}">−${step}</button><b></b><button data-d="1" aria-label="${label} +${step}">+${step}</button><button data-z aria-label="Reset ${label}">0</button></div>`;
+  const out=d.querySelector('b'); const show=()=>{ out.textContent=fmt(get()); };
+  d.querySelector('.stepper').onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
+    set(b.dataset.z!=null ? 0 : clamp(get()+(+b.dataset.d)*step, min, max)); show(); save(); };
+  show(); host.appendChild(d); return d;
+}
 function renderDetail(){
   $('tabs').innerHTML = TABS.map(([k,l])=>`<button data-t="${k}" class="${S.tab===k?'on':''}">${l}</button>`).join('');
   const host=$('detail'); host.innerHTML=''; const Ly=selLayer();
   const grid=document.createElement('div'); grid.className='params'; host.appendChild(grid);
   if(S.tab==='timing'){
-    segParam(grid,'Quantize',GRIDS.map(g=>[g[0],g[1]]),()=>Ly.q,v=>{ Ly.q=v; renderDetail(); drawAll(); });
-    param(grid,'Strength',()=>Ly.strength,v=>{Ly.strength=v; drawAll();},0,1,0.01,pct);
-    if(Ly.q==='1/8'||Ly.q==='1/16') param(grid,'Swing',()=>Ly.swing,v=>{Ly.swing=v; drawAll();},0,1,0.01,v=>Math.round(50+v*25)+'%');
-    param(grid,'Nudge',()=>Ly.nudge,v=>{Ly.nudge=Math.abs(v)<5?0:v; drawAll();},-120,120,1,v=>Math.abs(v)<5?'0 ms':(v>0?'+':'')+v+' ms');
-    param(grid,'Note length',()=>Ly.gate,v=>{Ly.gate=v; drawAll();},0.1,2,0.01,pct);
-    param(grid,'Humanize',()=>Ly.humanize,v=>{Ly.humanize=v; drawAll();},0,1,0.01,pct);
+    // musical presets first; the knobs behind them under "advanced"
+    const cur=feelOf(Ly);
+    const fd=document.createElement('div'); fd.className='p wide';
+    fd.innerHTML=`<label><span>Feel</span><b>${cur?FEELS.find(f=>f[0]===cur)[1]:'custom'}</b></label><div class="feels">${FEELS.map(([k,l,d])=>`<button data-f="${k}" class="${k===cur?'on':''}"><b>${l}</b><small>${d}</small></button>`).join('')}</div>`;
+    fd.querySelector('.feels').onclick=e=>{ const b=e.target.closest('[data-f]'); if(!b) return; Object.assign(Ly, FEEL_SET[b.dataset.f]); renderDetail(); drawAll(); save(); };
+    grid.appendChild(fd);
     param(grid,'Octave',()=>Ly.oct,v=>{Ly.oct=v;},-2,2,1,v=>(v>0?'+':'')+v);
+    const adv=document.createElement('details'); adv.className='adv'; adv.open=!!S.advOpen;
+    adv.ontoggle=()=>{ S.advOpen=adv.open; };
+    adv.innerHTML='<summary><h2>advanced</h2></summary>';
+    const g2=document.createElement('div'); g2.className='params'; adv.appendChild(g2); host.appendChild(adv);
+    segParam(g2,'Quantize',GRIDS.map(g=>[g[0],g[1]]),()=>Ly.q,v=>{ Ly.q=v; renderDetail(); drawAll(); });
+    param(g2,'Strength',()=>Ly.strength,v=>{Ly.strength=v; drawAll(); refreshFeel();},0,1,0.01,pct);
+    if(Ly.q==='1/8'||Ly.q==='1/16') param(g2,'Swing',()=>Ly.swing,v=>{Ly.swing=v; drawAll(); refreshFeel();},0,1,0.01,v=>Math.round(50+v*25)+'%');
+    param(g2,'Humanize',()=>Ly.humanize,v=>{Ly.humanize=v; drawAll(); refreshFeel();},0,1,0.01,pct);
+    param(g2,'Note length',()=>Ly.gate,v=>{Ly.gate=v; drawAll();},0.1,2,0.01,pct);
+    stepper(g2,'Nudge',()=>Ly.nudge,v=>{ Ly.nudge=v; drawAll(); },-120,120,10,v=>(v>0?'+':'')+v+' ms');
     const h=document.createElement('p'); h.className='hint';
-    h.textContent='Every change is live and never touches what you played. Quantize Off brings back your original timing.';
+    h.textContent='Every change is live and never touches what you played. "Original" brings back your own timing.';
     host.appendChild(h);
   } else if(S.tab==='sound'){
     const opts=Object.entries(LIB).map(([k,v])=>[k,v.name]); if(Ly.inst==='custom') opts.unshift(['custom',Ly.customName]);
@@ -1624,11 +1713,24 @@ function drawRoll(Ly,i){
   g.fillStyle=cssVar('--screen-line'); for(let b=1;b<S.bars;b++) g.fillRect(Math.round(b*4/L*W),0,1,H);
   const evs=effEvents(Ly);
   if(evs.length){
+    // chord names along the top (not for drums), notes underneath
+    const named = Ly.mode!=='kit';
+    const top = named ? 14 : 3;
     let lo=Infinity, hi=-Infinity; evs.forEach(e=>{ lo=Math.min(lo,e.note); hi=Math.max(hi,e.note); });
-    const span=Math.max(12,hi-lo+1), rowH=Math.max(2,(H-6)/span);
+    const span=Math.max(12,hi-lo+1), rowH=Math.max(2,(H-top-3)/span);
     g.fillStyle=col;
-    evs.forEach(e=>{ const x=e.pos/L*W, w=Math.max(2,e.dur/L*W), y=H-3-((e.note-lo+1)/span)*(H-6), h=Math.max(2,rowH-1);
+    evs.forEach(e=>{ const x=e.pos/L*W, w=Math.max(2,e.dur/L*W), y=H-3-((e.note-lo+1)/span)*(H-top-3), h=Math.max(2,rowH-1);
       g.fillRect(x,y,Math.min(w,W-x),h); if(x+w>W) g.fillRect(0,y,x+w-W,h); });
+    if(named){
+      const groups=new Map(); evs.forEach(e=>{ const k=e.chord??('n'+e.pos); const c=groups.get(k)||{pos:Infinity,notes:[]}; c.pos=Math.min(c.pos,e.pos); c.notes.push(e); groups.set(k,c); });
+      g.font='500 10px IBM Plex Mono, monospace'; g.textBaseline='top'; g.fillStyle=cssVar('--screen-ink');
+      let lastEnd=-99;
+      [...groups.values()].sort((a,b)=>a.pos-b.pos).forEach(c=>{
+        const name=chordName(c.notes), x=Math.max(2, c.pos/L*W+2), w=g.measureText(name).width;
+        if(x<lastEnd+4 || x+w>W-2) return;   // no overlapping labels
+        g.fillText(name, x, 2); lastEnd=x+w;
+      });
+    }
   }
   if(S.playing){ const b=beatAt(ctx.currentTime); if(b>=0){ g.fillStyle=cssVar('--screen-ink'); g.fillRect(mod(b,L)/L*W-1,0,1.5,H); } }
 }
@@ -2067,7 +2169,8 @@ function edDraw(){
 }
 function edRenderTools(){
   const Ly=edLy(), s=edSelected();
-  $('edLayer').innerHTML=layers.map((l,i)=>`<option value="${i}" ${i===ED.li?'selected':''}>Layer ${i+1} · ${instName(l)}</option>`).join('');
+  $('edLayer').innerHTML=layers.map((l,i)=>(l.shown||i===ED.li)?`<option value="${i}" ${i===ED.li?'selected':''}>${i+1} · ${instName(l)}</option>`:'').join('');
+  document.querySelector('.selrow').classList.toggle('has-sel', s.length>0);
   $('edSnap').innerHTML=SNAPS.map(([k,l])=>`<option value="${k}" ${k===ED.snap?'selected':''}>${l}</option>`).join('');
   $('edDraw').classList.toggle('on',ED.draw);
   $('edChordMode').classList.toggle('on',ED.chordMode); $('edChordMode').textContent = ED.chordMode ? 'Chords' : 'Single notes';
@@ -2094,6 +2197,9 @@ $('edDraw').onclick=()=>{ ED.draw=!ED.draw; edRenderTools(); };
 $('edChordMode').onclick=()=>{ ED.chordMode=!ED.chordMode; if(ED.chordMode) edExpandSel(); edRenderTools(); edDraw(); };
 $('edZoomIn').onclick=()=>edZoom(1.5); $('edZoomOut').onclick=()=>edZoom(1/1.5); $('edFit').onclick=()=>{ edFit(); edDraw(); };
 $('edUndo').onclick=edUndo; $('edRedo').onclick=edRedo;
+$('edMore').onclick=e=>{ e.stopPropagation(); const m=$('edMenu'), open=m.classList.toggle('hidden')===false; $('edMore').setAttribute('aria-expanded',open); $('edMore').classList.toggle('on',open); };
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('#edMenu,#edMore')){ $('edMenu').classList.add('hidden'); $('edMore').classList.remove('on'); $('edMore').setAttribute('aria-expanded','false'); } });
+$('edQuantAll').onclick=()=>{ ED.sel.clear(); edQuantizeSel(); $('edMenu').classList.add('hidden'); };
 $('edDup').onclick=edDuplicate; $('edDel').onclick=edDeleteSel; $('edQuant').onclick=edQuantizeSel;
 $('edBakeBtn').onclick=edBake;
 $('edPlay').onclick=()=>{ S.playing?stopTransport():startTransport(false); edRenderTools(); };
