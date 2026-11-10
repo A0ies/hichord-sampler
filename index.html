@@ -299,7 +299,7 @@ details[open] summary h2::after{content:" −"}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.4';
+const PAGE_VERSION='2026-11-10.5';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -516,7 +516,7 @@ async function startTransport(withCountIn){
   if(ctx.state!=='running'){ S.starting=true; try{ await ctx.resume(); }catch(e){} await new Promise(r=>setTimeout(r,150)); S.starting=false; if(S.playing) return; }
   console.log(`[diag] start: state ${ctx.state} t ${ctx.currentTime.toFixed(3)} base ${(ctx.baseLatency||0).toFixed(3)} out ${(ctx.outputLatency||0).toFixed(3)}`);
   ctx.resume();
-  t0=ctx.currentTime+0.1; b0 = withCountIn ? -4 : 0; schedBeat=b0;
+  t0=ctx.currentTime+0.1; b0 = withCountIn ? -4 : -earlyLead(); schedBeat=b0;
   S.playing=true; tick(); renderTransport();
 }
 function stopTransport(){
@@ -537,6 +537,14 @@ function setRec(on){
   renderTransport();
 }
 
+/* Notes moved just before the loop start (by nudge, swing or humanize) belong to beat 1.
+   They play at the very end of each pass, so the first pass starts that much early to include them. */
+const EARLY=0.5;   // beats
+function earlyLead(){
+  const L=loopLen(); let lead=0;
+  for(const Ly of layers){ if(!audible(Ly)) continue; for(const e of effEvents(Ly)) if(e.pos>L-EARLY) lead=Math.max(lead, L-e.pos); }
+  return lead;
+}
 /* lookahead scheduler */
 const DIAG={late:0,maxLate:0,sched:0,maxGap:0,lastTick:0,pass:null};
 function diagTick(){
@@ -558,8 +566,8 @@ function tick(){
 setInterval(tick, 25);
 function scheduleRange(a, b){
   for(let k=Math.ceil(a); k<b; k++) if(k<0 || S.metro) click(timeAt(k), mod(k,4)===0, k<0);
-  if(b<=0) return;
-  const L=loopLen(), lo=Math.max(a,0);
+  if(b<=-EARLY) return;
+  const L=loopLen(), lo=Math.max(a,-EARLY);
   for(const Ly of layers){
     if(!audible(Ly) || !Ly.events.length) continue;
     const evs = effEvents(Ly);
@@ -567,7 +575,7 @@ function scheduleRange(a, b){
       const base=n*L;
       for(const e of evs){
         const abs=base+e.pos;
-        if(abs>=lo && abs<b){
+        if(abs>=lo && abs<b && (abs>=0 || e.pos>L-EARLY)){
           let when=timeAt(abs), dur=e.dur*60/S.bpm;
           DIAG.sched++;
           const late=ctx.currentTime-when;
@@ -1024,7 +1032,7 @@ function renderDetail(){
     segParam(grid,'Quantize',GRIDS.map(g=>[g[0],g[1]]),()=>Ly.q,v=>{ Ly.q=v; renderDetail(); drawAll(); });
     param(grid,'Strength',()=>Ly.strength,v=>{Ly.strength=v; drawAll();},0,1,0.01,pct);
     if(Ly.q==='1/8'||Ly.q==='1/16') param(grid,'Swing',()=>Ly.swing,v=>{Ly.swing=v; drawAll();},0,1,0.01,v=>Math.round(50+v*25)+'%');
-    param(grid,'Nudge',()=>Ly.nudge,v=>{Ly.nudge=v; drawAll();},-120,120,1,v=>(v>0?'+':'')+v+' ms');
+    param(grid,'Nudge',()=>Ly.nudge,v=>{Ly.nudge=Math.abs(v)<5?0:v; drawAll();},-120,120,1,v=>Math.abs(v)<5?'0 ms':(v>0?'+':'')+v+' ms');
     param(grid,'Note length',()=>Ly.gate,v=>{Ly.gate=v; drawAll();},0.1,2,0.01,pct);
     param(grid,'Humanize',()=>Ly.humanize,v=>{Ly.humanize=v; drawAll();},0,1,0.01,pct);
     param(grid,'Octave',()=>Ly.oct,v=>{Ly.oct=v;},-2,2,1,v=>(v>0?'+':'')+v);
@@ -1654,6 +1662,7 @@ $('startBtn').onclick=async()=>{
   for(let i=0;i<8;i++){
     const Ly = Object.assign(newLayerData(i), saved && saved.layers && saved.layers[i] ? saved.layers[i] : {});
     if(Ly.inst==='custom' || !LIB[Ly.inst]) Ly.inst=DEFAULT_INST[i];   // own sounds are not stored
+    if(Math.abs(Ly.nudge||0)<5) Ly.nudge=0;   // tiny nudges were accidental slider touches
     Ly.events.forEach(e=>{ if(!e.id) e.id=evId; evId=Math.max(evId,e.id+1); if(e.chord!=null) chordSeq=Math.max(chordSeq,e.chord+1); });
     layers.push(Ly); attachNodes(Ly);
   }
