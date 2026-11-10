@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>HiChord Looper</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -27,6 +27,10 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-tap-highlight-color:transparent}
+/* an instrument, not a document: no text selection, no callout on long press, no page zoom */
+html{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
+body,button,canvas,label,.editor{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,select,textarea{-webkit-user-select:auto;user-select:auto}
 button,select,input{font:inherit;color:inherit}
 button{background:none;border:2px solid var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer;font-weight:500;white-space:nowrap;touch-action:manipulation}
 @media (hover:hover){button:hover{background:var(--acc-soft)}}
@@ -202,6 +206,7 @@ details[open] summary h2::after{content:" −"}
       <label class="check"><input type="checkbox" id="metroChk" checked> Click</label>
       <label class="check"><input type="checkbox" id="countChk" checked> Count-in</label>
       <div class="spacer"></div>
+      <button id="captureBtn" title="Keep what you just played without recording (C)" disabled>Capture</button>
       <button id="undoBtn" title="Remove the last take of the selected layer (Z)">Undo take</button>
       <button id="panicBtn" title="Stop all sounding notes">Panic</button>
     </div>
@@ -242,6 +247,7 @@ details[open] summary h2::after{content:" −"}
         <span class="stat"><span class="dot" id="audioDot"></span><span id="audioStatus">audio not started</span></span>
       </div>
       <p class="hint" id="routeInfo"></p>
+      <p class="hint" id="midiMon">Notes in: none yet — play on the HiChord</p>
       <label class="check hidden" id="usbOutRow" style="margin-top:8px"><input type="checkbox" id="usbOutChk"> Send the app's sound to the HiChord's USB port (for recording on another device)</label>
       <h2 style="margin-top:18px">Room and output</h2>
       <div class="params" id="pGlobal"></div>
@@ -267,7 +273,8 @@ details[open] summary h2::after{content:" −"}
     <div class="spacer"></div>
     <span class="sub">Snap</span>
     <select id="edSnap" aria-label="Snap"></select>
-    <button id="edDraw" title="Draw mode (B): a single tap adds a note">✎ Draw</button>
+    <button id="edChordMode" title="Edit whole chords or single notes">Chords</button>
+    <button id="edDraw" title="Draw mode (B): a single tap adds a chord">✎ Draw</button>
     <button id="edZoomOut" aria-label="Zoom out">−</button>
     <button id="edFit" title="Fit the loop">Fit</button>
     <button id="edZoomIn" aria-label="Zoom in">+</button>
@@ -589,11 +596,63 @@ function liveOn(note, vel){
   const Ly=selLayer();
   const old=Ly.live.get(note); if(old) releaseVoice(old, ctx.currentTime, 0.03);
   Ly.live.set(note, playNote(Ly, note, vel, ctx.currentTime, null));
+  midiSeen(note, vel);
   if(S.rec && S.playing){
-    let b=recBeat();
-    if(b<0){ if(b>-0.5) b=0; else return; }   // slightly early on the count-in still counts
-    held.set(note,{beat:b, vel});
+    const b=Math.max(0, recBeat());   // chords played during the count-in land on beat 1
+    held.set(note,{beat:b, vel, chord:chordFor(b)});
+  } else {
+    capHeld.set(note,{ t:ctx.currentTime-latency(), beat: S.playing ? recBeat() : null, vel });
   }
+}
+/* notes that start together belong to one chord, so the editor can move them as one */
+let lastChord=null;
+function chordFor(b){
+  if(lastChord && lastChord.layer===S.sel && Math.abs(b-lastChord.beat)<0.12) return lastChord.id;
+  lastChord={ id:chordSeq++, beat:b, layer:S.sel }; return lastChord.id;
+}
+let chordSeq=1;
+function ensureChords(Ly){
+  const free=Ly.events.filter(e=>e.chord==null).sort((a,b)=>a.beat-b.beat);
+  let cur=null;
+  for(const e of free){ if(!cur || e.beat-cur.beat>=0.12){ cur={id:chordSeq++, beat:e.beat}; } e.chord=cur.id; }
+}
+/* Capture: everything you play is kept for a while, so it can still be saved after the fact */
+const capHeld=new Map(), capBuf=[];
+const latency=()=> (ctx.outputLatency||0)+(ctx.baseLatency||0)+S.recOffset/1000;
+function capEnd(note){
+  const c=capHeld.get(note); if(!c) return; capHeld.delete(note);
+  const tEnd=ctx.currentTime-latency();
+  capBuf.push({ t:c.t, tEnd, beat:c.beat, endBeat: c.beat!=null && S.playing ? recBeat() : null, note, vel:c.vel });
+  while(capBuf.length && ctx.currentTime-capBuf[0].tEnd > 120) capBuf.shift();
+  renderCapture();
+}
+function capture(){
+  const Ly=selLayer(), L=loopLen(), spb=60/S.bpm;
+  if(!capBuf.length){ toast('Nothing to capture yet: play something on the HiChord first'); return; }
+  // the last phrase: notes up to one loop length before the last note
+  const lastEnd=capBuf[capBuf.length-1].tEnd, phrase=capBuf.filter(n=>lastEnd-n.t <= L*spb + 0.05);
+  const take=(Ly.takes||0)+1; Ly.takes=take;
+  let added=0;
+  if(phrase.every(n=>n.beat!=null)){
+    // played along with the loop: keep the positions in the loop
+    phrase.forEach(n=>{ Ly.events.push({ id:evId++, beat:mod(n.beat,L), dur:clamp(n.endBeat-n.beat,0.05,L), note:n.note, vel:n.vel, take }); added++; });
+  } else {
+    // played freely: the first note becomes beat 1
+    const t0=phrase[0].t;
+    phrase.forEach(n=>{ const b=(n.t-t0)/spb; if(b<L){ Ly.events.push({ id:evId++, beat:b, dur:clamp((n.tEnd-n.t)/spb,0.05,L), note:n.note, vel:n.vel, take }); added++; } });
+  }
+  ensureChords(Ly); capBuf.length=0; renderCapture();
+  renderLayers(); save();
+  toast(`Captured ${added} notes into layer ${S.sel+1}`);
+  if(!S.playing) startTransport(false);
+}
+function renderCapture(){ const b=$('captureBtn'); if(b){ b.disabled=!capBuf.length; b.textContent = capBuf.length ? `Capture (${capBuf.length})` : 'Capture'; } }
+/* MIDI monitor: shows that notes really arrive */
+let midiCount=0, midiLast='', monT=0;
+function midiSeen(note, vel){
+  midiCount++; midiLast=`${noteName(note)} vel ${vel}`;
+  if(!monT) monT=requestAnimationFrame(()=>{ monT=0;
+    $('midiMon').textContent=`Notes in: ${midiCount} · last ${midiLast} · ${S.rec&&S.playing?`recording into layer ${S.sel+1}`:'not recording — tap ● to record, or Capture afterwards'}`; });
 }
 function liveOff(note){
   if(!ctx) return;
@@ -602,11 +661,12 @@ function liveOff(note){
   Ly.live.delete(note);
   const h=held.get(note);
   if(h){ held.delete(note); closeNote(Ly, note, h, recBeat()); }
+  capEnd(note);
 }
 function closeNote(Ly, note, h, endBeat){
   const L=loopLen();
   const dur=clamp(endBeat-h.beat, 0.05, L);
-  Ly.events.push({ id:evId++, beat:mod(h.beat,L), dur, note, vel:h.vel, take:S.curTake });
+  Ly.events.push({ id:evId++, beat:mod(h.beat,L), dur, note, vel:h.vel, take:S.curTake, chord:h.chord });
   renderLayerMeta(); save();
 }
 function undoTake(){
@@ -1068,7 +1128,7 @@ const SNAPS=[['off','Off',0],['1/4','1/4',1],['1/8','1/8',0.5],['1/16','1/16',0.
 const KEYW=46, RULER=20, MINLEN=1/32;
 let VELH=64;   // the velocity lane gets smaller on short screens (phone in landscape)
 const ED={ open:false, li:0, snap:'1/16', draw:false, ppb:60, rowH:16, sx:0, sy:0, sel:new Set(), hist:[], fut:[],
-  drag:null, pointers:new Map(), lastLen:0, lastTap:null };
+  drag:null, pointers:new Map(), lastLen:0, lastTap:null, chordMode:true, lastShape:[0,4,7] };
 const edCv=$('edCanvas');
 const edLy = () => layers[ED.li];
 const snapGrid = () => SNAPS.find(s=>s[0]===ED.snap)[2];
@@ -1081,7 +1141,8 @@ const noteOfY = y => clamp(127-Math.floor((y-RULER+ED.sy)/ED.rowH),0,127);
 const isBlack = n => [1,3,6,8,10].includes(mod(n,12));
 const timingActive = Ly => (Ly.q!=='off' && Ly.strength>0) || Ly.nudge || Ly.humanize || Ly.gate!==1;
 const fmtPos = b => `${Math.floor(b/4)+1}.${Math.floor(mod(b,4))+1}.${Math.floor(mod(b,1)*4+1e-6)+1}`;
-const fmtLen = d => { const s=d*4; return Math.abs(s-Math.round(s))<1e-6 ? `${Math.round(s)}/16` : `${d.toFixed(3)} beats`; };
+const fmtLen = d => { const s=d*4; if(Math.abs(s-Math.round(s))>1e-6) return `${d.toFixed(2)} beats`;
+  let n=Math.round(s), q=16; while(n%2===0 && q>1){ n/=2; q/=2; } return q===1 ? `${n} bar${n>1?'s':''}` : `${n}/${q}`; };
 
 function openEditor(i){
   if(i!=null && i!==S.sel) selectLayer(i);
@@ -1126,6 +1187,20 @@ const edSelected = () => edLy().events.filter(e=>ED.sel.has(e.id));
 function edAudition(note, vel){ if(ctx) playNote(edLy(), note, vel||100, ctx.currentTime, 0.25); }
 
 function edHit(x,y){
+  if(ED.chordMode){
+    // a chord is hit anywhere inside the box around its notes, which is easy to grab on a phone
+    const boxes=edChordBoxes();
+    for(let k=boxes.length-1;k>=0;k--){
+      const c=boxes[k], x0=xOf(c.beat), x1=xOf(c.end), yTop=yOf(c.hi), yBot=yOf(c.lo)+ED.rowH;
+      if(y>=yTop-2 && y<=yBot+2 && x>=x0-2 && x<=x1+2){
+        const w=x1-x0, edge=Math.max(6, Math.min(14, w*0.3));
+        const zone = x>x1-edge ? 'resize-r' : (x<x0+edge && w>20) ? 'resize-l' : 'move';
+        const e = zone==='resize-r' ? c.notes.reduce((a,b)=>a.beat+a.dur>=b.beat+b.dur?a:b) : c.notes.reduce((a,b)=>a.beat<=b.beat?a:b);
+        return { e, zone };
+      }
+    }
+    return null;
+  }
   const evs=edLy().events;
   for(let k=evs.length-1;k>=0;k--){
     const e=evs[k], x0=xOf(e.beat), x1=xOf(e.beat+e.dur), y0=yOf(e.note);
@@ -1136,6 +1211,35 @@ function edHit(x,y){
   }
   return null;
 }
+/* chords: notes that share a chord id */
+function edChordBoxes(){
+  const m=new Map();
+  for(const e of edLy().events){
+    const k=e.chord!=null?e.chord:'n'+e.id; let c=m.get(k);
+    if(!c){ c={key:k, notes:[], beat:Infinity, end:-Infinity, lo:127, hi:0}; m.set(k,c); }
+    c.notes.push(e); c.beat=Math.min(c.beat,e.beat); c.end=Math.max(c.end,e.beat+e.dur); c.lo=Math.min(c.lo,e.note); c.hi=Math.max(c.hi,e.note);
+  }
+  return [...m.values()].sort((a,b)=>a.beat-b.beat);
+}
+function edExpandSel(){
+  if(!ED.chordMode || !ED.sel.size) return;
+  const ids=new Set(edLy().events.filter(e=>ED.sel.has(e.id)&&e.chord!=null).map(e=>e.chord));
+  edLy().events.forEach(e=>{ if(ids.has(e.chord)) ED.sel.add(e.id); });
+}
+const CHORD_SHAPES=[['',[0,4,7]],['m',[0,3,7]],['dim',[0,3,6]],['aug',[0,4,8]],['sus2',[0,2,7]],['sus4',[0,5,7]],['7',[0,4,7,10]],['maj7',[0,4,7,11]],
+  ['m7',[0,3,7,10]],['m7b5',[0,3,6,10]],['dim7',[0,3,6,9]],['6',[0,4,7,9]],['m6',[0,3,7,9]],['add9',[0,2,4,7]],['madd9',[0,2,3,7]],['9',[0,2,4,7,10]],['maj9',[0,2,4,7,11]],['m9',[0,2,3,7,10]],['5',[0,7]]];
+function chordName(notes){
+  if(!notes.length) return '';
+  const ns=notes.map(e=>e.note).sort((a,b)=>a-b), bass=mod(ns[0],12), pcs=[...new Set(ns.map(n=>mod(n,12)))];
+  if(pcs.length===1) return NOTE[pcs[0]];
+  const order=[bass, ...pcs.filter(p=>p!==bass)];
+  for(const root of order){
+    const set=[...new Set(pcs.map(p=>mod(p-root,12)))].sort((a,b)=>a-b).join(',');
+    const hit=CHORD_SHAPES.find(([,iv])=>[...iv].sort((a,b)=>a-b).join(',')===set);
+    if(hit) return NOTE[root]+hit[0]+(root!==bass?'/'+NOTE[bass]:'');
+  }
+  return NOTE[bass]+'(…)';
+}
 function edVelHit(x){
   const {H}=edDims(); let best=null, bd=9;
   for(const e of edLy().events){ const d=Math.abs(xOf(e.beat)-x); const pref=ED.sel.has(e.id)?-1:0; if(d+pref<bd){ bd=d+pref; best=e; } }
@@ -1144,7 +1248,17 @@ function edVelHit(x){
 function edAddNote(x,y){
   const g=snapGrid(), L=loopLen();
   let b=beatOfX(x); b = g ? Math.floor(b/g)*g : b; b=clamp(b,0,L-MINLEN);
-  const e={ id:evId++, beat:b, dur: ED.lastLen>0 ? ED.lastLen : (g||0.25), note:noteOfY(y), vel:100, take:0 };
+  const root=noteOfY(y);
+  if(ED.chordMode){
+    // a new chord takes the shape of the selected (or last) chord, with its lowest note where you tapped
+    const sel=edSelected(); if(sel.length>1){ const lo=Math.min(...sel.map(e=>e.note)); ED.lastShape=[...new Set(sel.map(e=>e.note-lo))].sort((a,c)=>a-c); }
+    const cid=chordSeq++, dur=ED.lastLen>0?ED.lastLen:Math.max(g||0.25,1);
+    const notes=ED.lastShape.map(iv=>({ id:evId++, beat:b, dur, note:clamp(root+iv,0,127), vel:100, take:0, chord:cid }));
+    edLy().events.push(...notes); ED.sel=new Set(notes.map(n=>n.id));
+    notes.forEach(n=>edAudition(n.note,n.vel));
+    return notes[0];
+  }
+  const e={ id:evId++, beat:b, dur: ED.lastLen>0 ? ED.lastLen : (g||0.25), note:root, vel:100, take:0, chord:chordSeq++ };
   edLy().events.push(e); ED.sel.clear(); ED.sel.add(e.id); edAudition(e.note, e.vel);
   return e;
 }
@@ -1152,8 +1266,9 @@ function edDeleteSel(){ if(!ED.sel.size) return; edPush(); edLy().events=edLy().
 function edDuplicate(){
   const s=edSelected(); if(!s.length) return; edPush();
   const lo=Math.min(...s.map(e=>e.beat)), hi=Math.max(...s.map(e=>e.beat+e.dur)), span=snapB(hi-lo)||hi-lo;
-  ED.sel.clear();
-  s.forEach(e=>{ const c={...e, id:evId++, beat:e.beat+span, take:0}; if(c.beat<loopLen()){ edLy().events.push(c); ED.sel.add(c.id); } });
+  ED.sel.clear(); const ids=new Map();
+  s.forEach(e=>{ if(!ids.has(e.chord)) ids.set(e.chord, chordSeq++);
+    const c={...e, id:evId++, beat:e.beat+span, take:0, chord:ids.get(e.chord)}; if(c.beat<loopLen()){ edLy().events.push(c); ED.sel.add(c.id); } });
   edAfterChange();
 }
 function edQuantizeSel(){
@@ -1194,7 +1309,7 @@ edCv.addEventListener('pointerdown', e=>{
   if(y<RULER){ ED.drag={type:'pan', x0:x, y0:y, sx0:ED.sx, sy0:ED.sy}; return; }
   if(y>=H-VELH){
     const ev=edVelHit(x); if(!ev){ ED.drag={type:'none'}; return; }
-    if(!ED.sel.has(ev.id)){ ED.sel.clear(); ED.sel.add(ev.id); }
+    if(!ED.sel.has(ev.id)){ ED.sel.clear(); ED.sel.add(ev.id); edExpandSel(); }
     edPush(); ED.drag={ type:'vel', anchor:ev, y0:y, pushed:true, changed:false, orig:new Map(edSelected().map(s=>[s.id,s.vel])) };
     edRenderTools(); edDraw(); return;
   }
@@ -1203,10 +1318,11 @@ edCv.addEventListener('pointerdown', e=>{
     const multi=e.shiftKey||e.metaKey||e.ctrlKey;
     if(multi){ if(ED.sel.has(hit.e.id)){ ED.sel.delete(hit.e.id); edRenderTools(); edDraw(); ED.drag={type:'none'}; return; } ED.sel.add(hit.e.id); }
     else if(!ED.sel.has(hit.e.id)){ ED.sel.clear(); ED.sel.add(hit.e.id); }
+    edExpandSel();
     edPush();
     let anchor=hit.e;
     if(e.altKey && hit.zone==='move'){   // Alt-drag copies, like in Ableton
-      const copies=edSelected().map(s=>({...s, id:evId++, take:0})); edLy().events.push(...copies);
+      const cids=new Map(), copies=edSelected().map(s=>{ if(!cids.has(s.chord)) cids.set(s.chord,chordSeq++); return {...s, id:evId++, take:0, chord:cids.get(s.chord)}; }); edLy().events.push(...copies);
       const map=new Map(edSelected().map((s,k)=>[s.id,copies[k]])); anchor=map.get(hit.e.id);
       ED.sel=new Set(copies.map(c=>c.id));
     }
@@ -1245,7 +1361,7 @@ edCv.addEventListener('pointermove', e=>{
   if(d.type==='marquee'){
     d.x1=x; d.y1=y;
     const b0=beatOfX(Math.min(d.x0,x)), b1=beatOfX(Math.max(d.x0,x)), n0=noteOfY(Math.max(d.y0,y)), n1=noteOfY(Math.min(d.y0,y));
-    ED.sel=new Set(d.base); edLy().events.forEach(ev=>{ if(ev.beat<b1 && ev.beat+ev.dur>b0 && ev.note>=n0 && ev.note<=n1) ED.sel.add(ev.id); });
+    ED.sel=new Set(d.base); edLy().events.forEach(ev=>{ if(ev.beat<b1 && ev.beat+ev.dur>b0 && ev.note>=n0 && ev.note<=n1) ED.sel.add(ev.id); }); edExpandSel();
     edRenderTools(); edDraw(); return;
   }
   if(d.type==='vel'){
@@ -1326,6 +1442,18 @@ function edDraw(){
       g.strokeRect(xOf(p)+0.5, yOf(e.note)+1.5, Math.max(3,e.dur*Ly.gate*ED.ppb)-1, ED.rowH-3); });
     g.setLineDash([]); g.globalAlpha=1;
   }
+  // chords: a box around each chord with its name
+  if(ED.chordMode){
+    g.font='600 11px JetBrains Mono, monospace'; g.textBaseline='bottom';
+    edChordBoxes().forEach(c=>{
+      const x0=xOf(c.beat), x1=xOf(c.end), y0=yOf(c.hi)-3, y1=yOf(c.lo)+ED.rowH+3;
+      if(x0>W||x1<KEYW||y0>rollBottom||y1<RULER) return;
+      const s=c.notes.some(n=>ED.sel.has(n.id));
+      g.fillStyle=C.col; g.globalAlpha= s?0.16:0.07; g.fillRect(x0,y0,x1-x0,y1-y0); g.globalAlpha=1;
+      if(s){ g.strokeStyle=C.ink; g.lineWidth=1.5; g.strokeRect(x0+0.5,y0+0.5,x1-x0-1,y1-y0-1); }
+      if(c.notes.length>1 && x1-x0>16){ g.fillStyle= s?C.ink:C.dim; g.fillText(chordName(c.notes), x0+2, y0-1); }
+    });
+  }
   // notes
   g.font=`600 ${Math.min(11,ED.rowH-5)}px JetBrains Mono, monospace`; g.textBaseline='middle';
   Ly.events.forEach(e=>{
@@ -1333,7 +1461,7 @@ function edDraw(){
     if(x>W||x+w<KEYW||y>rollBottom||y+ED.rowH<RULER) return;
     const s=ED.sel.has(e.id);
     g.fillStyle=C.col; g.globalAlpha=0.35+0.65*(e.vel/127); g.fillRect(x+0.5,y+1,w-1,ED.rowH-2); g.globalAlpha=1;
-    g.strokeStyle= s ? C.ink : C.col; g.lineWidth= s ? 2 : 1; g.strokeRect(x+0.5,y+1,w-1,ED.rowH-2);
+    g.strokeStyle= s && !ED.chordMode ? C.ink : C.col; g.lineWidth= s && !ED.chordMode ? 2 : 1; g.strokeRect(x+0.5,y+1,w-1,ED.rowH-2);
     if(w>30 && ED.rowH>=14){ g.fillStyle= s? C.ink : '#fff'; g.fillText(noteName(e.note), x+4, y+ED.rowH/2+0.5); }
   });
   // playhead
@@ -1372,15 +1500,20 @@ function edRenderTools(){
   $('edLayer').innerHTML=layers.map((l,i)=>`<option value="${i}" ${i===ED.li?'selected':''}>Layer ${i+1} · ${instName(l)}</option>`).join('');
   $('edSnap').innerHTML=SNAPS.map(([k,l])=>`<option value="${k}" ${k===ED.snap?'selected':''}>${l}</option>`).join('');
   $('edDraw').classList.toggle('on',ED.draw);
+  $('edChordMode').classList.toggle('on',ED.chordMode); $('edChordMode').textContent = ED.chordMode ? 'Chords' : 'Single notes';
   $('edPlay').textContent = S.playing ? '■' : '▶';
   $('edRec').classList.toggle('on',S.rec); $('edRec').style.color = S.rec?'#fff':'var(--rec)';
   $('edUndo').disabled=!ED.hist.length; $('edRedo').disabled=!ED.fut.length;
   ['edDup','edDel'].forEach(id=>$(id).disabled=!s.length);
   $('edQuant').disabled=!Ly.events.length;
   $('edVel').disabled=!s.length; if(s.length) $('edVel').value=Math.round(s.reduce((a,e)=>a+e.vel,0)/s.length);
-  $('edInfo').textContent = s.length===1 ? `${noteName(s[0].note)} · start ${fmtPos(s[0].beat)} · length ${fmtLen(s[0].dur)} · velocity ${s[0].vel}`
+  const selChords = ED.chordMode && s.length ? edChordBoxes().filter(c=>c.notes.some(n=>ED.sel.has(n.id))) : [];
+  if(selChords.length===1 && selChords[0].notes.length>1){ const lo=selChords[0].lo; ED.lastShape=[...new Set(selChords[0].notes.map(n=>n.note-lo))].sort((a,b)=>a-b); }
+  $('edInfo').textContent = selChords.length===1 ? `${chordName(selChords[0].notes)} · start ${fmtPos(selChords[0].beat)} · length ${fmtLen(selChords[0].end-selChords[0].beat)} · ${selChords[0].notes.length} notes`
+    : selChords.length>1 ? `${selChords.length} chords selected`
+    : s.length===1 ? `${noteName(s[0].note)} · start ${fmtPos(s[0].beat)} · length ${fmtLen(s[0].dur)} · velocity ${s[0].vel}`
     : s.length ? `${s.length} notes selected`
-    : Ly.events.length ? (matchMedia('(pointer:coarse)').matches ? 'Double-tap to add · drag a note to move · drag its end to resize · two fingers to zoom' : 'Double-click to add · drag to move · drag the end to resize · drag empty space to select · Alt-drag to copy')
+    : Ly.events.length ? (matchMedia('(pointer:coarse)').matches ? (ED.chordMode?'Tap a chord to select it · drag to move or transpose · drag its end to resize · double-tap adds a chord':'Double-tap to add · drag a note to move · drag its end to resize · two fingers to zoom') : (ED.chordMode?'Click a chord to select it · drag to move or transpose · drag its end to resize · double-click adds a chord · Alt-drag copies':'Double-click to add · drag to move · drag the end to resize · drag empty space to select · Alt-drag to copy'))
     : 'No notes yet: double-tap (or Draw) to add one, or record from the HiChord';
   $('edBake').classList.toggle('hidden', !timingActive(Ly));
 }
@@ -1388,6 +1521,7 @@ $('edDone').onclick=closeEditor;
 $('edLayer').onchange=e=>{ selectLayer(+e.target.value); ED.li=S.sel; ED.sel.clear(); ED.hist=[]; ED.fut=[]; edCenterPitch(); edRenderTools(); edDraw(); };
 $('edSnap').onchange=e=>{ ED.snap=e.target.value; edDraw(); };
 $('edDraw').onclick=()=>{ ED.draw=!ED.draw; edRenderTools(); };
+$('edChordMode').onclick=()=>{ ED.chordMode=!ED.chordMode; if(ED.chordMode) edExpandSel(); edRenderTools(); edDraw(); };
 $('edZoomIn').onclick=()=>edZoom(1.5); $('edZoomOut').onclick=()=>edZoom(1/1.5); $('edFit').onclick=()=>{ edFit(); edDraw(); };
 $('edUndo').onclick=edUndo; $('edRedo').onclick=edRedo;
 $('edDup').onclick=edDuplicate; $('edDel').onclick=edDeleteSel; $('edQuant').onclick=edQuantizeSel;
@@ -1421,10 +1555,16 @@ $('playBtn').onclick=()=>{
   if(!ctx) return;
   if(S.playing){ stopTransport(); return; }
   startTransport(false);
-  if(!layers.some(Ly=>Ly.events.length && audible(Ly))) toast(S.metro ? 'No notes yet, so you only hear the click: press ● and play on the HiChord' : 'No notes yet: press ● and play on the HiChord');
+  if(!layers.some(Ly=>Ly.events.length && audible(Ly))) toast(capBuf.length ? 'Nothing recorded yet. Tap Capture to keep what you just played' : 'Nothing recorded yet: tap ● (record), then play on the HiChord');
 };
 $('testBtn').onclick=testSound;
+$('captureBtn').onclick=capture;
 $('usbOutChk').onchange=e=>{ if(inApp()) window.webkit.messageHandlers.audio.postMessage({cmd:'usbOutput', on:e.target.checked}); };
+// no pinch or double-tap zoom of the page (the note editor has its own zoom)
+['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('touchmove',e=>{ if(e.touches.length>1 && e.target!==edCv) e.preventDefault(); },{passive:false});
+document.addEventListener('selectstart',e=>{ if(!e.target.closest || !e.target.closest('input,textarea')) e.preventDefault(); });
+edCv.addEventListener('contextmenu',e=>e.preventDefault());
 // iOS can pause the audio engine (route change, call, other app): any tap wakes it again
 addEventListener('pointerdown',()=>{ if(ctx && ctx.state!=='running') ctx.resume().then(renderAudioStatus); }, true);
 $('recBtn').onclick=()=>{ if(!ctx) return; setRec(!S.rec); };
@@ -1452,6 +1592,7 @@ addEventListener('keydown',e=>{
   if(e.code==='Space'){ e.preventDefault(); S.playing?stopTransport():startTransport(false); }
   else if(e.key==='r'||e.key==='R') setRec(!S.rec);
   else if(e.key==='z'||e.key==='Z') undoTake();
+  else if(e.key==='c'||e.key==='C') capture();
   else if(e.key==='ArrowDown'){ e.preventDefault(); selectLayer(Math.min(layers.length-1,S.sel+1)); }
   else if(e.key==='ArrowUp'){ e.preventDefault(); selectLayer(Math.max(0,S.sel-1)); }
   else { const k=+e.key-1; if(k>=0&&k<7) padDown(k); }
@@ -1466,10 +1607,10 @@ $('startBtn').onclick=async()=>{
   for(let i=0;i<8;i++){
     const Ly = Object.assign(newLayerData(i), saved && saved.layers && saved.layers[i] ? saved.layers[i] : {});
     if(Ly.inst==='custom' || !LIB[Ly.inst]) Ly.inst=DEFAULT_INST[i];   // own sounds are not stored
-    Ly.events.forEach(e=>{ if(!e.id) e.id=evId; evId=Math.max(evId,e.id+1); });
+    Ly.events.forEach(e=>{ if(!e.id) e.id=evId; evId=Math.max(evId,e.id+1); if(e.chord!=null) chordSeq=Math.max(chordSeq,e.chord+1); });
     layers.push(Ly); attachNodes(Ly);
   }
-  layers.forEach(applyLayer);
+  layers.forEach(applyLayer); layers.forEach(ensureChords); renderCapture();
   if(saved){ master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime(); }
   $('metroChk').checked=S.metro; $('countChk').checked=S.countIn;
   $('overlay').classList.add('hidden');

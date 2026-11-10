@@ -52,6 +52,10 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         webView.isOpaque = false
         webView.backgroundColor = view.backgroundColor
         webView.scrollView.contentInsetAdjustmentBehavior = .never   // the page pads itself with env(safe-area-inset-*)
+        // The page never zooms; only the note editor's timeline does, inside its own canvas.
+        webView.scrollView.minimumZoomScale = 1
+        webView.scrollView.maximumZoomScale = 1
+        webView.scrollView.bouncesZoom = false
         if #available(iOS 16.4, *) { webView.isInspectable = true }
         webView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(webView)
