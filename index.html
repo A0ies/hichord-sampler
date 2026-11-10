@@ -5,25 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>HiChord Looper</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f3f0e8; --panel:#ebe7dc; --ink:#1b1a17; --dim:#8f897c; --line:#d6d0c2;
-  --acc:#ff5a1f; --acc-soft:rgba(255,90,31,.14); --rec:#e5332a; --ok:#2f9e5b;
-  --l0:#ff5a1f; --l1:#2f7de1; --l2:#2f9e5b; --l3:#b34ad8; --l4:#d9a400; --l5:#e0457b; --l6:#14a3a3; --l7:#7a6a55;
-  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
-  --sans:"Space Grotesk",system-ui,sans-serif;
+  /* body: brushed aluminium; keys: light grey; screens: black OLED with bright thin graphics */
+  --bg:#d9d9d5; --panel:#e6e6e2; --key:#f2f2ef; --key-edge:rgba(0,0,0,.22); --ink:#151515; --dim:#5d5d58; --line:#bfbfba;
+  --acc:#ff5000; --acc-soft:rgba(255,80,0,.14); --rec:#ff3a1d; --ok:#00a651;
+  --dark-key:#262626; --dark-key-ink:#f4f4f2;
+  --screen:#0b0b0b; --screen2:#171717; --screen-line:#2b2b2b; --screen-ink:#f4f4f2; --screen-dim:#8a8a86;
+  --enc1:#2f6fe0; --enc2:#00a651; --enc3:#e8e8e4; --enc4:#ff5000;   /* the four encoders */
+  --l0:#2f6fe0; --l1:#00a651; --l2:#ff5000; --l3:#ffc400; --l4:#ff3d8b; --l5:#00b8d4; --l6:#8b5cf6; --l7:#b8b8b2;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --sans:"Inter",system-ui,sans-serif;
   --sl:env(safe-area-inset-left); --sr:env(safe-area-inset-right); --st:env(safe-area-inset-top); --sb:env(safe-area-inset-bottom);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#121210; --panel:#1c1c19; --ink:#ece8de; --dim:#7d786d; --line:#2f2e29;
-    --acc:#ff6a2e; --acc-soft:rgba(255,106,46,.16); --rec:#ff4b40;
+    --bg:#161616; --panel:#202020; --key:#2c2c2c; --key-edge:rgba(0,0,0,.6); --ink:#ededea; --dim:#a3a39e; --line:#3a3a3a;
+    --acc:#ff5a14; --acc-soft:rgba(255,90,20,.18); --rec:#ff4628;
+    --dark-key:#3a3a3a; --dark-key-ink:#f4f4f2; --l7:#d6d6d0;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#121210; --panel:#1c1c19; --ink:#ece8de; --dim:#7d786d; --line:#2f2e29;
-  --acc:#ff6a2e; --acc-soft:rgba(255,106,46,.16); --rec:#ff4b40;
+  --bg:#161616; --panel:#202020; --key:#2c2c2c; --key-edge:rgba(0,0,0,.6); --ink:#ededea; --dim:#a3a39e; --line:#3a3a3a;
+  --acc:#ff5a14; --acc-soft:rgba(255,90,20,.18); --rec:#ff4628;
+  --dark-key:#3a3a3a; --dark-key-ink:#f4f4f2; --l7:#d6d6d0;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-tap-highlight-color:transparent}
@@ -239,6 +245,125 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
   .params{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
   .wrap .pads{grid-template-columns:repeat(4,1fr)}
 }
+
+/* ================= house style: OP-1 inspired ================= */
+html,body{font-family:var(--sans);font-size:14px;letter-spacing:-.005em}
+body{background:var(--bg)}
+h2,.sub,.p label,.check,.stat,.hint,.layer .cnt,.layer .tag,.tool small,.pos,.chip{font-family:var(--mono)}
+h2{font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:lowercase;color:var(--dim)}
+.hint{font-size:12px;color:var(--dim)}
+/* keys */
+button{border:none;border-radius:9px;background:var(--key);color:var(--ink);padding:7px 13px;font-family:var(--mono);font-size:12px;font-weight:500;
+  text-transform:lowercase;letter-spacing:.02em;box-shadow:0 1px 0 var(--key-edge),inset 0 -2px 0 rgba(0,0,0,.07);transition:transform .05s,background .1s}
+button:active{transform:translateY(1px);box-shadow:0 0 0 var(--key-edge),inset 0 -1px 0 rgba(0,0,0,.07)}
+@media (hover:hover){button:hover{background:color-mix(in srgb,var(--key) 85%,var(--ink))}}
+button.on{background:var(--dark-key);color:var(--dark-key-ink);box-shadow:0 1px 0 var(--key-edge)}
+button.on::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--acc);margin-right:7px;vertical-align:1px}
+.seg button.on::before,.tabs button.on::before,.big.on::before,.tool.on::before,button.icon.on::before,.ms.on::before,.inst.on::before,.pad.on::before{display:none}
+button:disabled{opacity:.4}
+select{background:var(--key);border:none;border-radius:8px;box-shadow:0 1px 0 var(--key-edge);font-family:var(--mono);font-size:12px;padding:7px 8px;color:var(--ink)}
+button.icon{border-radius:10px;width:40px;height:40px}
+button.icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chip{background:var(--screen);color:var(--screen-ink);border-radius:8px;font-size:11px;box-shadow:none;text-transform:lowercase}
+.chip .dot{background:#444}
+.dot.ok{background:var(--enc2)} .dot.live{background:var(--acc)}
+/* header */
+header.top{background:var(--bg)}
+.logo{font-family:var(--sans);font-weight:700;font-size:19px;letter-spacing:-.03em;text-transform:lowercase}
+.logo span{color:var(--ink);font-weight:400}
+.logo::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--acc);margin-left:5px;vertical-align:3px}
+/* segmented controls: a row of small keys */
+.seg{border:none;gap:4px;border-radius:0;overflow:visible;background:transparent}
+.seg button{border-radius:7px;padding:6px 9px;font-size:12px}
+.seg button.on{background:var(--dark-key);color:var(--dark-key-ink)}
+.tabs button{border-radius:8px}
+/* sliders: a thin line with an encoder-coloured knob */
+input[type=range]{--knob:var(--enc1)}
+.params .p:nth-child(4n+2) input[type=range]{--knob:var(--enc2)}
+.params .p:nth-child(4n+3) input[type=range]{--knob:var(--enc3)}
+.params .p:nth-child(4n+4) input[type=range]{--knob:var(--enc4)}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{width:20px;height:20px;margin-top:-9px;border-radius:50%;background:var(--knob);border:3px solid var(--dark-key);box-shadow:0 1px 2px rgba(0,0,0,.35)}
+input[type=range]:active::-webkit-slider-thumb{background:var(--knob);box-shadow:0 0 0 4px color-mix(in srgb,var(--knob) 30%,transparent)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--knob);border:3px solid var(--dark-key)}
+.p label{font-size:11px;text-transform:lowercase}
+.p label b{font-family:var(--mono);font-weight:500}
+.check input{accent-color:var(--acc)}
+/* layers: plates with a black screen */
+.layer{background:var(--panel);border:none;border-radius:12px;box-shadow:0 1px 0 var(--key-edge);padding:10px 12px 12px}
+.layer .num{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--ink);width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;background:var(--lc);color:#fff}
+.layer .nm{font-family:var(--sans);font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:7px;text-transform:lowercase}
+.layer .nm .ii{width:18px;height:18px;flex:none}
+.layer .tag{font-size:10px;letter-spacing:.04em;text-transform:lowercase}
+.layer .cnt{font-size:11px}
+.layer canvas{background:var(--screen);border-radius:7px;height:40px}
+.layer.sel{background:color-mix(in srgb,var(--lc) 14%,var(--panel));box-shadow:inset 0 0 0 2px var(--lc)}
+.layer.sel.recording{background:color-mix(in srgb,var(--rec) 13%,var(--panel));box-shadow:inset 0 0 0 2px var(--rec)}
+.layer .ms{border-radius:7px;min-width:34px;min-height:32px;padding:0;font-weight:600;text-transform:none}
+.layer .ms.on.m{background:var(--dark-key);color:var(--dark-key-ink)}
+.layer .ms.on.s{background:var(--enc4);color:#fff}
+.layer .open{border-radius:7px}
+.layer .open svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.newlayer{border:1.5px dashed var(--line);box-shadow:none;background:transparent;text-transform:lowercase;border-radius:12px;color:var(--dim)}
+/* instrument picker */
+.inst{border-radius:12px;text-transform:lowercase;font-size:12px;gap:8px;min-height:88px}
+.inst .ii{width:28px;height:28px}
+.ii{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+/* transport: dark keys and a small black display */
+.tbar{background:var(--panel);border-top:none;box-shadow:0 -1px 0 var(--line)}
+.big{border:none;border-radius:12px;background:var(--dark-key);color:var(--dark-key-ink);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.big svg{width:22px;height:22px;fill:currentColor}
+.big.play.on{background:var(--dark-key);color:var(--enc2)}
+.big.rec{color:var(--rec);border:none}
+.big.rec.on{background:var(--rec);color:#fff;animation:pulse 1s infinite}
+.recnum{border-radius:6px;border:2px solid var(--panel);right:-6px;bottom:-6px;font-family:var(--mono)}
+.big.rec.on .recnum{background:#fff;color:var(--rec)}
+.posbox{background:var(--screen);border-radius:9px;padding:6px 10px 7px;align-self:stretch;display:flex;flex-direction:column;justify-content:center}
+.posbox .pos{color:var(--screen-dim);font-size:10px;text-transform:lowercase}
+.posbox .pos b{color:var(--screen-ink);font-weight:500;font-size:19px}
+.posbox .bars{height:4px;gap:3px;margin-top:5px}
+.posbox .bars i{background:#333;border-radius:2px}
+.posbox .bars i u{background:var(--screen-ink)}
+.posbox .bars.rec i u{background:var(--rec)}
+.tool{background:transparent;box-shadow:none;text-transform:none;border-radius:10px;color:var(--ink)}
+.tool svg{stroke-width:1.8}
+.tool b{font-family:var(--mono);font-weight:500}
+.tool small{text-transform:lowercase}
+@media (hover:hover){.tool:hover{background:var(--key)}}
+.tbar{gap:6px}
+.posbox{min-width:92px}
+#loopBtn small{font-size:9px}
+@media (max-width:420px){
+  .tbar .big{width:50px;height:50px}
+  .tool{min-width:42px;padding:4px 2px}
+  #loopBtn{min-width:54px}
+}
+/* sheets */
+.backdrop{background:rgba(0,0,0,.35)}
+.sheet{background:var(--bg);border-radius:16px 16px 0 0}
+.grab{background:var(--dim);opacity:.5;height:4px}
+@media (min-width:780px){ .layersheet{background:var(--panel);box-shadow:0 1px 0 var(--key-edge);border-radius:12px} }
+.hcstate div{background:var(--screen);color:var(--screen-ink);border-radius:8px}
+.hcstate small{color:var(--screen-dim);text-transform:lowercase;font-family:var(--mono)}
+.hcstate b{font-weight:500}
+.hcstate b.flash{color:var(--acc)}
+/* editor */
+.editor{background:var(--bg)}
+#edCanvas{background:var(--screen);border-radius:10px}
+.etool .info{color:var(--dim)}
+.ebanner{background:var(--screen);color:var(--screen-ink);font-family:var(--mono);font-size:11px}
+.ebanner button{background:var(--key);color:var(--ink)}
+/* test chord pads */
+.pad{border-radius:10px;font-family:var(--sans);font-weight:700;text-transform:none}
+.pad.on{background:var(--dark-key);color:var(--acc)}
+/* toast: a small display */
+.toast{background:var(--screen);color:var(--screen-ink);border-radius:9px;font-family:var(--mono);font-size:12px;text-transform:lowercase}
+/* start screen */
+.overlay{background:var(--bg)}
+.overlay h1{font-family:var(--sans);font-weight:700;letter-spacing:-.04em;text-transform:lowercase}
+.overlay h1 span{color:var(--ink);font-weight:400}
+.overlay h1::after{content:"";display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--acc);margin-left:8px;vertical-align:6px}
+.overlay button{background:var(--dark-key);color:var(--dark-key-ink);font-size:14px;padding:12px 26px;border-radius:12px}
 </style>
 </head>
 <body>
@@ -255,8 +380,8 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
     <div class="logo">HiChord <span>Looper</span></div>
     <button class="chip" id="midiChip" aria-label="HiChord and settings"><span class="dot" id="midiDot"></span><span id="midiStatus">no MIDI yet</span></button>
     <div class="spacer"></div>
-    <button class="icon" id="themeBtn" aria-label="Toggle theme">◐</button>
-    <button class="icon" id="settingsBtn" aria-label="Settings"><svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.6 4.9-1.9-.4a6.9 6.9 0 0 1-.6 1.5l1.1 1.6-1.6 1.6-1.6-1.1c-.5.3-1 .5-1.5.6l-.4 1.9h-2.2l-.4-1.9a6.9 6.9 0 0 1-1.5-.6l-1.6 1.1-1.6-1.6 1.1-1.6c-.3-.5-.5-1-.6-1.5l-1.9-.4v-2.2l1.9-.4c.1-.5.3-1 .6-1.5L4.4 7.2 6 5.6l1.6 1.1c.5-.3 1-.5 1.5-.6l.4-1.9h2.2l.4 1.9c.5.1 1 .3 1.5.6L15.2 5.6l1.6 1.6-1.1 1.6c.3.5.5 1 .6 1.5l1.9.4Z"/></svg></button>
+    <button class="icon" id="themeBtn" aria-label="Toggle theme"></button>
+    <button class="icon" id="settingsBtn" aria-label="Settings"></button>
   </header>
 
   <main class="main">
@@ -270,7 +395,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
       <div class="row sheethead">
         <h2 id="detailTitle" style="margin:0">Layer 1</h2>
         <div class="spacer"></div>
-        <button class="icon close" data-close aria-label="Close">✕</button>
+        <button class="icon close" data-close aria-label="Close"></button>
       </div>
       <div class="row" style="margin-bottom:12px">
         <button id="editBtn" class="on">Edit notes</button>
@@ -290,7 +415,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
       <div class="pos" id="pos"><b>1.1</b>stopped</div>
       <div class="bars" id="barsVis"></div>
     </div>
-    <button class="tool" id="loopBtn" aria-label="Tempo and loop settings"><b id="bpmMini">100</b><small>bpm · <span id="barsMini">4 bars</span></small></button>
+    <button class="tool" id="loopBtn" aria-label="Tempo and loop settings"><b id="bpmMini">100</b><small>bpm</small><small><span id="barsMini">4 bars</span></small></button>
     <button class="tool" id="captureBtn" title="Keep what you just played without recording (C)" disabled><svg viewBox="0 0 24 24"><path d="M12 3v11m0 0-4-4m4 4 4-4M5 17v3h14v-3"/></svg><small id="captureLbl">Capture</small></button>
     <button class="tool" id="undoBtn" title="Remove the last take of the selected layer (Z)"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2"/></svg><small>Undo</small></button>
   </footer>
@@ -301,7 +426,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 <!-- tempo and loop -->
 <section class="sheet" id="loopSheet" aria-label="Tempo and loop">
   <div class="grab"></div>
-  <div class="row sheethead"><h2 style="margin:0">Tempo and loop</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close">✕</button></div>
+  <div class="row sheethead"><h2 style="margin:0">Tempo and loop</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
   <div class="tempo">
     <button id="bpmDown" aria-label="Slower">−</button>
     <span class="bpm" id="bpm">100</span>
@@ -325,14 +450,14 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 <!-- new layer: pick an instrument -->
 <section class="sheet" id="newSheet" aria-label="New layer">
   <div class="grab"></div>
-  <div class="row sheethead"><h2 style="margin:0">New layer · pick a sound</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close">✕</button></div>
+  <div class="row sheethead"><h2 style="margin:0">New layer · pick a sound</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
   <div class="instgrid" id="instGrid"></div>
 </section>
 
 <!-- app settings: HiChord, sound, room -->
 <section class="sheet tall" id="settingsSheet" aria-label="Settings">
   <div class="grab"></div>
-  <div class="row sheethead"><h2 style="margin:0">Settings</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close">✕</button></div>
+  <div class="row sheethead"><h2 style="margin:0">Settings</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
   <h2>HiChord</h2>
   <div class="row">
     <button id="hcConnect">Connect HiChord</button>
@@ -396,7 +521,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.8';
+const PAGE_VERSION='2026-11-10.9';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1089,8 +1214,27 @@ function renderBarsSeg(){
   $('barsMini').textContent=`${S.bars} bar${S.bars>1?'s':''}`;
 }
 const noteCount = Ly => Ly.events.length ? `${Ly.events.length} note${Ly.events.length>1?'s':''}` : 'empty';
-const INST_ICON={keys:'🎹',piano:'🎹',pad:'☁️',strings:'🎻',organ:'🎛️',lead:'🎺',bass:'🔈',pluck:'🪕',bell:'🔔',drums:'🥁',custom:'🎤'};
-const SLIDERS='<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>';
+/* pictograms: thin geometric lines, OP-1 style */
+const ICONS={
+  cog:'<circle cx="12" cy="12" r="6.4" stroke-width="2"/><circle cx="12" cy="12" r="2.3"/>'+[0,45,90,135,180,225,270,315].map(a=>`<rect x="10.3" y="2.2" width="3.4" height="3.6" rx=".9" fill="currentColor" stroke="none" transform="rotate(${a} 12 12)"/>`).join(''),
+  faders:'<path d="M6 4v16M12 4v16M18 4v16"/><rect x="3.8" y="12.5" width="4.4" height="3.6" rx="1" fill="currentColor" stroke="none"/><rect x="9.8" y="6" width="4.4" height="3.6" rx="1" fill="currentColor" stroke="none"/><rect x="15.8" y="10" width="4.4" height="3.6" rx="1" fill="currentColor" stroke="none"/>',
+  theme:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>',
+  close:'<path d="M6 6l12 12M18 6 6 18"/>',
+  keys:'<rect x="3" y="6" width="18" height="12" rx="1.5"/><path d="M7 6v7h2V6M11 6v7h2V6M15 6v7h2V6" fill="currentColor" stroke="none"/><path d="M8 13v5M12 13v5M16 13v5"/>',
+  piano:'<path d="M4 20V9a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5 3 3 0 0 0 3 3h1v8z"/><path d="M4 16h16"/>',
+  pad:'<path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 11 3.5 3.5 0 0 0 7 18z"/>',
+  strings:'<path d="M12 2.5V9"/><path d="M9 9h6a2 2 0 0 1 0 4 3 3 0 0 1 0 6H9a3 3 0 0 1 0-6 2 2 0 0 1 0-4z"/><path d="M12 13v3.5"/>',
+  organ:'<path d="M5 19V10M9 19V6M13 19V4M17 19V8M21 19v-6M3 19h20"/>',
+  lead:'<path d="M2.5 15h4.5V8h5v8h5V9h4.5"/>',
+  bass:'<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9.5a3.5 3.5 0 0 1 0 5M19 7a7 7 0 0 1 0 10"/>',
+  pluck:'<path d="M12 21c-3-3-7-8-7-12 0-3 3-5 7-5s7 2 7 5c0 4-4 9-7 12z"/>',
+  bell:'<path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4M12 3V2"/>',
+  drums:'<ellipse cx="12" cy="10" rx="8" ry="3"/><path d="M4 10v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M6 3l5 5M18 3l-5 5"/>',
+  custom:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+};
+const ic=(name,cls='ii')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]||''}</svg>`;
+const INST_ICON=new Proxy({}, { get:(_,k)=>ic(ICONS[k]?k:'keys') });
+const SLIDERS=ic('faders','');
 function renderLayers(){
   const vis=layers.map((Ly,i)=>[Ly,i]).filter(([Ly,i])=>Ly.shown || i===S.sel);
   $('layers').innerHTML = vis.map(([Ly,i])=>`
@@ -1153,7 +1297,9 @@ function removeLayer(){
   if(next<0){ Ly.shown=true; } else { S.sel=next; }
   closeSheets(); renderLayers(); renderDetail(); save(); toast(`Layer ${i+1} removed`);
 }
-$('instGrid').innerHTML = Object.entries(LIB).map(([k,v])=>`<button class="inst" data-k="${k}"><span class="ico">${INST_ICON[k]||'🎵'}</span>${v.name}</button>`).join('');
+$('instGrid').innerHTML = Object.entries(LIB).map(([k,v])=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${v.name}</button>`).join('');
+$('settingsBtn').innerHTML=ic('cog',''); $('themeBtn').innerHTML=ic('theme','');
+document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close',''));
 $('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(b) addLayer(b.dataset.k); };
 $('removeBtn').onclick=removeLayer;
 
@@ -1271,7 +1417,7 @@ function drawRoll(Ly,i){
   if(cv.width!==Math.round(W*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
   const L=loopLen(), col=cssVar('--l'+i);
-  g.fillStyle=cssVar('--line'); for(let b=1;b<S.bars;b++) g.fillRect(Math.round(b*4/L*W),0,1,H);
+  g.fillStyle=cssVar('--screen-line'); for(let b=1;b<S.bars;b++) g.fillRect(Math.round(b*4/L*W),0,1,H);
   const evs=effEvents(Ly);
   if(evs.length){
     let lo=Infinity, hi=-Infinity; evs.forEach(e=>{ lo=Math.min(lo,e.note); hi=Math.max(hi,e.note); });
@@ -1280,7 +1426,7 @@ function drawRoll(Ly,i){
     evs.forEach(e=>{ const x=e.pos/L*W, w=Math.max(2,e.dur/L*W), y=H-3-((e.note-lo+1)/span)*(H-6), h=Math.max(2,rowH-1);
       g.fillRect(x,y,Math.min(w,W-x),h); if(x+w>W) g.fillRect(0,y,x+w-W,h); });
   }
-  if(S.playing){ const b=beatAt(ctx.currentTime); if(b>=0){ g.fillStyle=cssVar('--ink'); g.fillRect(mod(b,L)/L*W-1,0,2,H); } }
+  if(S.playing){ const b=beatAt(ctx.currentTime); if(b>=0){ g.fillStyle=cssVar('--screen-ink'); g.fillRect(mod(b,L)/L*W-1,0,1.5,H); } }
 }
 function drawAll(){ layers.forEach(drawRoll); }
 function drawPos(){
@@ -1610,7 +1756,7 @@ function edDraw(){
   const dpr=devicePixelRatio||1, {W,H}=edDims();
   if(edCv.width!==Math.round(W*dpr)||edCv.height!==Math.round(H*dpr)) edResize();
   const g=edCv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
-  const C={ bg:cssVar('--panel'), bg2:cssVar('--bg'), ink:cssVar('--ink'), dim:cssVar('--dim'), line:cssVar('--line'), acc:cssVar('--acc'), col:cssVar('--l'+ED.li) };
+  const C={ bg:cssVar('--screen'), bg2:cssVar('--screen2'), ink:cssVar('--screen-ink'), dim:cssVar('--screen-dim'), line:cssVar('--screen-line'), acc:cssVar('--acc'), col:cssVar('--l'+ED.li) };
   const L=loopLen(), Ly=edLy(), rollBottom=H-VELH;
   g.fillStyle=C.bg; g.fillRect(0,0,W,H);
   // pitch rows
@@ -1618,7 +1764,7 @@ function edDraw(){
   const nTop=noteOfY(RULER), nBot=noteOfY(rollBottom-1);
   for(let n=nBot;n<=nTop;n++){
     const y=yOf(n);
-    if(isBlack(n)){ g.fillStyle=C.bg2; g.globalAlpha=0.55; g.fillRect(KEYW,y,W-KEYW,ED.rowH); g.globalAlpha=1; }
+    if(isBlack(n)){ g.fillStyle=C.bg2; g.globalAlpha=0.9; g.fillRect(KEYW,y,W-KEYW,ED.rowH); g.globalAlpha=1; }
     if(mod(n,12)===0){ g.fillStyle=C.line; g.fillRect(KEYW,y+ED.rowH-1,W-KEYW,1); }
   }
   // grid lines
@@ -1636,7 +1782,7 @@ function edDraw(){
   }
   // chords: a box around each chord with its name
   if(ED.chordMode){
-    g.font='600 11px JetBrains Mono, monospace'; g.textBaseline='bottom';
+    g.font='600 11px IBM Plex Mono, monospace'; g.textBaseline='bottom';
     edChordBoxes().forEach(c=>{
       const x0=xOf(c.beat), x1=xOf(c.end), y0=yOf(c.hi)-3, y1=yOf(c.lo)+ED.rowH+3;
       if(x0>W||x1<KEYW||y0>rollBottom||y1<RULER) return;
@@ -1647,7 +1793,7 @@ function edDraw(){
     });
   }
   // notes
-  g.font=`600 ${Math.min(11,ED.rowH-5)}px JetBrains Mono, monospace`; g.textBaseline='middle';
+  g.font=`600 ${Math.min(11,ED.rowH-5)}px IBM Plex Mono, monospace`; g.textBaseline='middle';
   Ly.events.forEach(e=>{
     const x=xOf(e.beat), w=Math.max(3,e.dur*ED.ppb), y=yOf(e.note);
     if(x>W||x+w<KEYW||y>rollBottom||y+ED.rowH<RULER) return;
@@ -1665,7 +1811,7 @@ function edDraw(){
   // ruler
   g.fillStyle=C.bg; g.fillRect(KEYW,0,W-KEYW,RULER);
   g.save(); g.beginPath(); g.rect(KEYW,0,W-KEYW,RULER); g.clip();
-  g.font='600 11px JetBrains Mono, monospace'; g.textBaseline='middle';
+  g.font='600 11px IBM Plex Mono, monospace'; g.textBaseline='middle';
   for(let b=Math.ceil(b0);b<=b1;b++){ const x=Math.round(xOf(b));
     if(b%4===0){ g.fillStyle=C.ink; g.fillRect(x,RULER-8,1,8); if(b<L) g.fillText(String(b/4+1), x+4, RULER/2); }
     else if(ED.ppb>18){ g.fillStyle=C.dim; g.fillRect(x,RULER-4,1,4); } }
@@ -1674,13 +1820,13 @@ function edDraw(){
   // keyboard
   g.save(); g.beginPath(); g.rect(0,RULER,KEYW,rollBottom-RULER); g.clip();
   for(let n=nBot;n<=nTop;n++){ const y=yOf(n);
-    g.fillStyle = isBlack(n) ? C.ink : C.bg2; g.fillRect(0,y,KEYW-2,ED.rowH-1);
-    if(mod(n,12)===0 && ED.rowH>=11){ g.fillStyle=C.dim; g.font='600 10px JetBrains Mono, monospace'; g.fillText(noteName(n), 4, y+ED.rowH/2); } }
+    g.fillStyle = isBlack(n) ? '#050505' : '#2e2e2e'; g.fillRect(0,y,KEYW-2,ED.rowH-1);
+    if(mod(n,12)===0 && ED.rowH>=11){ g.fillStyle=C.dim; g.font='600 10px IBM Plex Mono, monospace'; g.fillText(noteName(n), 4, y+ED.rowH/2); } }
   g.restore();
   g.fillStyle=C.bg; g.fillRect(0,0,KEYW,RULER);
   // velocity lane
   g.fillStyle=C.bg2; g.fillRect(KEYW,rollBottom,W-KEYW,VELH); g.fillStyle=C.line; g.fillRect(KEYW,rollBottom,W-KEYW,1);
-  g.fillStyle=C.dim; g.font='600 10px JetBrains Mono, monospace'; g.fillText('VEL', 6, rollBottom+VELH/2);
+  g.fillStyle=C.dim; g.font='600 10px IBM Plex Mono, monospace'; g.fillText('VEL', 6, rollBottom+VELH/2);
   g.save(); g.beginPath(); g.rect(KEYW,rollBottom,W-KEYW,VELH); g.clip();
   const top=rollBottom+6, vh=VELH-10;
   Ly.events.forEach(e=>{ const x=xOf(e.beat); if(x<KEYW-4||x>W) return; const h=vh*e.vel/127, s=ED.sel.has(e.id);
