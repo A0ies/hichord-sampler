@@ -360,8 +360,31 @@ function normalize(b){
 }
 function mono(b){ if(b.numberOfChannels===1) return b.getChannelData(0); const a=b.getChannelData(0), c=b.getChannelData(1), m=new Float32Array(a.length); for(let i=0;i<a.length;i++) m[i]=(a[i]+c[i])*0.5; return m; }
 
+/* ============ iOS silent mode ============
+   Safari and iPhone web views treat Web Audio as "ambient" sound, which the silent switch
+   (the Action button on newer iPhones) mutes. Declaring the page a music player makes it
+   play like any music app. Older iOS without navigator.audioSession: a looping silent
+   <audio> element has the same effect. */
+function setAudioSessionType(type){
+  try{ if(navigator.audioSession){ navigator.audioSession.type=type; return true; } }catch(e){ console.warn('audioSession', e); }
+  return false;
+}
+let unmuteEl=null;
+function keepAudibleInSilentMode(){
+  if(setAudioSessionType('playback')) console.log('audio session:', navigator.audioSession.type);
+  // belt and braces on iPhone/iPad: the silent <audio> trick also works where audioSession is ignored
+  if(unmuteEl || !/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) || !('ontouchend' in document)) return;
+  const sr=8000, n=sr/2, buf=new ArrayBuffer(44+n*2), v=new DataView(buf), w=(o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
+  w(0,'RIFF'); v.setUint32(4,36+n*2,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,n*2,true);
+  unmuteEl=document.createElement('audio'); unmuteEl.src=URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
+  unmuteEl.loop=true; unmuteEl.setAttribute('playsinline',''); unmuteEl.setAttribute('x-webkit-airplay','deny');
+  unmuteEl.play().then(()=>console.log('silent-mode workaround active')).catch(e=>console.warn('unmute', e));
+}
+
 /* ============ audio graph ============ */
 function initAudio(){
+  keepAudibleInSilentMode();
   ctx = new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
   preFx = ctx.createGain();
   tape = ctx.createWaveShaper(); tape.oversample='2x'; setDrive(S.drive);
@@ -740,8 +763,8 @@ function testSound(){
     const an=ctx.createAnalyser(); an.fftSize=2048; limiter.connect(an); const buf=new Float32Array(an.fftSize); let peak=0;
     const iv=setInterval(()=>{ an.getFloatTimeDomainData(buf); for(const x of buf) peak=Math.max(peak,Math.abs(x)); },30);
     setTimeout(()=>{ clearInterval(iv); limiter.disconnect(an);
-      console.log('test sound peak', peak.toFixed(3), 'state', ctx.state, 'route', JSON.stringify(audioRoute));
-      toast(peak>0.01 ? `The app makes sound (layer ${S.sel+1}). Hear nothing? Check the volume buttons and "Sound goes to".` : 'The audio engine is silent: tap Start again or restart the app');
+      console.log('test sound peak', peak.toFixed(3), 'state', ctx.state, 'session', navigator.audioSession&&navigator.audioSession.type, 'route', JSON.stringify(audioRoute));
+      toast(peak>0.01 ? `The app makes sound (layer ${S.sel+1}). Hear nothing? Turn the volume up and check "Sound goes to".` : 'The audio engine is silent: tap Start again or restart the app');
       renderAudioStatus(); }, 900);
   });
 }
@@ -750,13 +773,14 @@ function testSound(){
 let mic=null;
 async function toggleMic(){
   if(mic){ mic.rec.stop(); return; }
+  setAudioSessionType('play-and-record');
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
     const srcN=ctx.createMediaStreamSource(stream), an=ctx.createAnalyser(); an.fftSize=1024; srcN.connect(an);
     const rec=new MediaRecorder(stream), chunks=[]; rec.ondataavailable=e=>chunks.push(e.data);
     mic={rec,Ly:selLayer(),started:performance.now()}; renderDetail();
     rec.onstop=async()=>{
-      stream.getTracks().forEach(x=>x.stop()); srcN.disconnect(); const target=mic.Ly; mic=null;
+      stream.getTracks().forEach(x=>x.stop()); srcN.disconnect(); const target=mic.Ly; mic=null; setAudioSessionType('playback');
       try{ const b=await ctx.decodeAudioData(await new Blob(chunks).arrayBuffer()); const tr=trimSilence(b);
         if(!tr) toast('No sound was recorded'); else setCustom(target, tr, 'Mic '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})); }
       catch(e){ toast('Could not read the recording'); }
@@ -767,7 +791,7 @@ async function toggleMic(){
       const m=document.querySelector('#micMeter i'); if(m) m.style.width=Math.min(100,p*140)+'%';
       if(performance.now()-mic.started>8000) mic.rec.stop(); else requestAnimationFrame(meter); };
     meter();
-  }catch(e){ toast('No access to the microphone'); }
+  }catch(e){ setAudioSessionType('playback'); toast('No access to the microphone'); }
 }
 function trimSilence(b){
   const m=mono(b); let peak=0; for(const x of m) peak=Math.max(peak,Math.abs(x)); if(peak<0.003) return null;
@@ -1229,6 +1253,7 @@ edCv.addEventListener('pointermove', e=>{
     edSelected().forEach(s=>{ s.vel=clamp(d.orig.get(s.id)+delta,1,127); });
     d.changed=true; edRenderTools(); edDraw(); return;
   }
+  if(!d.orig) return;   // keyboard taps and other gestures without notes
   const o=d.orig.get(d.anchor.id), dxB=(x-d.x0)/ED.ppb, sel=edSelected();
   if(d.type==='move'){
     let db=snapB(o.beat+dxB, free)-o.beat;

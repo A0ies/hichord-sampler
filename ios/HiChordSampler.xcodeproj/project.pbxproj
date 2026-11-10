@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1D73FDC9FC1AAA1D689CB5B8 /* MIDIBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D8A7CBFB49866E21CC2E4F3 /* MIDIBridge.swift */; };
 		4CD69C98F341F5036F69D33E /* HiChordSamplerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15CED2210A541BC3E4079D69 /* HiChordSamplerApp.swift */; };
+		B2F7795DC0E0D3E288DC3768 /* AudioRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A269B4B58CAAE39FB888082 /* AudioRouter.swift */; };
 		B7DB37B26A0564F6D9867750 /* midi-shim.js in Resources */ = {isa = PBXBuildFile; fileRef = D97C5A50945DE89A3467C30C /* midi-shim.js */; };
 		EBB9946D879FD76502CED61F /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = 72B964DABAA16E055F8C1677 /* index.html */; };
 /* End PBXBuildFile section */
@@ -17,6 +18,7 @@
 		15CED2210A541BC3E4079D69 /* HiChordSamplerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiChordSamplerApp.swift; sourceTree = "<group>"; };
 		30A7A79148E3C3899C3A2046 /* HiChordSampler.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HiChordSampler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		72B964DABAA16E055F8C1677 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
+		7A269B4B58CAAE39FB888082 /* AudioRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRouter.swift; sourceTree = "<group>"; };
 		8D8A7CBFB49866E21CC2E4F3 /* MIDIBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIBridge.swift; sourceTree = "<group>"; };
 		D97C5A50945DE89A3467C30C /* midi-shim.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "midi-shim.js"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -25,6 +27,7 @@
 		31E1E021155A3F2DBCD1F3E2 /* HiChordSampler */ = {
 			isa = PBXGroup;
 			children = (
+				7A269B4B58CAAE39FB888082 /* AudioRouter.swift */,
 				15CED2210A541BC3E4079D69 /* HiChordSamplerApp.swift */,
 				D97C5A50945DE89A3467C30C /* midi-shim.js */,
 				8D8A7CBFB49866E21CC2E4F3 /* MIDIBridge.swift */,
@@ -130,6 +133,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B2F7795DC0E0D3E288DC3768 /* AudioRouter.swift in Sources */,
 				4CD69C98F341F5036F69D33E /* HiChordSamplerApp.swift in Sources */,
 				1D73FDC9FC1AAA1D689CB5B8 /* MIDIBridge.swift in Sources */,
 			);
