@@ -290,7 +290,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
       <div class="pos" id="pos"><b>1.1</b>stopped</div>
       <div class="bars" id="barsVis"></div>
     </div>
-    <button class="tool" id="loopBtn" aria-label="Tempo and loop settings"><b id="bpmMini">100</b><small>bpm · <span id="barsMini">4</span> bars</small></button>
+    <button class="tool" id="loopBtn" aria-label="Tempo and loop settings"><b id="bpmMini">100</b><small>bpm · <span id="barsMini">4 bars</span></small></button>
     <button class="tool" id="captureBtn" title="Keep what you just played without recording (C)" disabled><svg viewBox="0 0 24 24"><path d="M12 3v11m0 0-4-4m4 4 4-4M5 17v3h14v-3"/></svg><small id="captureLbl">Capture</small></button>
     <button class="tool" id="undoBtn" title="Remove the last take of the selected layer (Z)"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2"/></svg><small>Undo</small></button>
   </footer>
@@ -396,7 +396,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.7';
+const PAGE_VERSION='2026-11-10.8';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1086,8 +1086,9 @@ function renderTempo(){
 function renderBarsSeg(){
   $('barsSeg').innerHTML = BAR_OPTS.map(n=>`<button data-n="${n}" class="${n===S.bars?'on':''}">${n}</button>`).join('');
   $('barsVis').innerHTML = Array.from({length:S.bars},()=>'<i><u></u></i>').join('');
-  $('barsMini').textContent=S.bars;
+  $('barsMini').textContent=`${S.bars} bar${S.bars>1?'s':''}`;
 }
+const noteCount = Ly => Ly.events.length ? `${Ly.events.length} note${Ly.events.length>1?'s':''}` : 'empty';
 const INST_ICON={keys:'🎹',piano:'🎹',pad:'☁️',strings:'🎻',organ:'🎛️',lead:'🎺',bass:'🔈',pluck:'🪕',bell:'🔔',drums:'🥁',custom:'🎤'};
 const SLIDERS='<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>';
 function renderLayers(){
@@ -1100,7 +1101,7 @@ function renderLayers(){
           <span class="nm">${INST_ICON[Ly.inst]||''} ${instName(Ly)}</span>
           <span class="tag t-target">● Records here</span><span class="tag t-rec">● Recording</span>
         </div>
-        <span class="cnt" id="cnt${i}">${Ly.events.length?Ly.events.length+' notes':'empty'}</span>
+        <span class="cnt" id="cnt${i}">${noteCount(Ly)}</span>
         <button class="ms m ${Ly.mute?'on':''}" data-act="mute" aria-label="Mute layer ${i+1}">M</button>
         <button class="ms s ${Ly.solo?'on':''}" data-act="solo" aria-label="Solo layer ${i+1}">S</button>
         <button class="open" data-act="open" aria-label="Settings of layer ${i+1}">${SLIDERS}</button>
@@ -1113,7 +1114,7 @@ function renderLayers(){
   renderTransport();
   drawAll();
 }
-function renderLayerMeta(){ layers.forEach((Ly,i)=>{ const c=$('cnt'+i); if(c) c.textContent=Ly.events.length?Ly.events.length+' notes':'empty'; }); if(!S.playing) drawAll(); }
+function renderLayerMeta(){ layers.forEach((Ly,i)=>{ const c=$('cnt'+i); if(c) c.textContent=noteCount(Ly); }); if(!S.playing) drawAll(); }
 $('layers').addEventListener('click',e=>{
   const el=e.target.closest('.layer'); if(!el) return; const i=+el.dataset.i, Ly=layers[i];
   const act=e.target.closest('[data-act]')?.dataset.act;
