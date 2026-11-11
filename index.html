@@ -130,9 +130,10 @@ details summary::-webkit-details-marker{display:none}
 details summary h2{display:inline}
 details summary h2::after{content:" +"}
 details[open] summary h2::after{content:" −"}
-.pads{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:10px}
+.pads{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:10px}
 .pad{border-radius:14px;padding:14px 4px;font-weight:700;font-size:15px;text-align:center;user-select:none;-webkit-user-select:none;touch-action:none}
-.pad small{display:block;font-family:var(--mono);font-size:10px;color:var(--dim);font-weight:400;margin-top:2px}
+.pad{min-width:0}
+.pad small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:10px;color:var(--dim);font-weight:400;margin-top:2px}
 .pad.on small{color:#fff}
 
 .overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:30;
@@ -208,7 +209,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 .backdrop.show{opacity:1;pointer-events:auto}
 :root{--tbarh:calc(77px + var(--sb))}
 .sheet{position:fixed;left:0;right:0;bottom:var(--tbarh);z-index:11;background:var(--bg);border-radius:20px 20px 0 0;box-shadow:0 -10px 34px rgba(0,0,0,.2);
-  max-height:calc(80dvh - var(--tbarh));overflow:auto;overscroll-behavior:contain;transform:translateY(105%);transition:transform .25s ease;visibility:hidden;
+  max-height:calc(80dvh - var(--tbarh));overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;transform:translateY(105%);transition:transform .25s ease;visibility:hidden;
   padding:4px max(16px,calc(var(--sr) + 10px)) 22px max(16px,calc(var(--sl) + 10px))}
 .sheet.tall{max-height:calc(94dvh - var(--tbarh))}
 .sheet.open{transform:none;visibility:visible}
@@ -243,7 +244,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 .layer .edit{padding:2px 9px;font-size:12px}
 @media (max-width:560px){
   .params{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
-  .wrap .pads{grid-template-columns:repeat(4,1fr)}
+  .pads{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 
 /* ================= house style: OP-1 inspired ================= */
@@ -408,8 +409,9 @@ details.adv summary h2{margin:0}
 details.adv summary h2::after{content:" +"}
 details.adv[open] summary h2::after{content:" −"}
 details.adv .params{margin-top:8px}
-.stepper{display:flex;align-items:center;gap:6px}
-.stepper b{font-family:var(--mono);font-weight:500;min-width:58px;text-align:center}
+.stepper{display:flex;align-items:center;gap:6px;min-width:0}
+.params .wide{grid-column:1/-1}
+.stepper b{font-family:var(--mono);font-weight:500;min-width:58px;text-align:center;white-space:nowrap}
 .stepper button{min-width:44px;padding:6px 8px}
 /* compact editor toolbar */
 .etool{position:relative}
@@ -681,7 +683,7 @@ header.top .chip{flex:0 1 auto}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-11.1';
+const PAGE_VERSION='2026-11-11.2';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1831,7 +1833,7 @@ function refreshFeel(){ const k=feelOf(selLayer()), d=document.querySelector('.f
   d.parentElement.querySelector('label b').textContent = k ? FEELS.find(f=>f[0]===k)[1] : 'custom'; }
 /* a stepper instead of a slider for values you should not change by accident */
 function stepper(host,label,get,set,min,max,step,fmt){
-  const d=document.createElement('div'); d.className='p';
+  const d=document.createElement('div'); d.className='p wide';   // full row: its buttons don't fit half a phone screen
   d.innerHTML=`<label><span>${label}</span></label><div class="stepper"><button data-d="-1" aria-label="${label} −${step}">−${step}</button><b></b><button data-d="1" aria-label="${label} +${step}">+${step}</button><button data-z aria-label="Reset ${label}">0</button></div>`;
   const out=d.querySelector('b'); const show=()=>{ out.textContent=fmt(get()); };
   d.querySelector('.stepper').onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
