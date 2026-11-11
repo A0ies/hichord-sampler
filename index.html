@@ -514,6 +514,50 @@ header.top .chip{flex:0 1 auto}
 .ctile.off{opacity:.45}
 .ctile.off .cstate{background:var(--line);color:var(--dim)}
 .tool.on{color:var(--acc)}
+#detail.advon .feels,#detail.advon>.hint{display:none}
+/* advanced timing: XY screen, grid keys, mini steppers — fits without scrolling */
+.advt{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.xy{position:relative;height:clamp(110px,18dvh,170px);border-radius:10px;background:var(--screen);touch-action:none;cursor:crosshair;overflow:hidden;
+  background-image:linear-gradient(var(--screen-line) 1px,transparent 1px),linear-gradient(90deg,var(--screen-line) 1px,transparent 1px);background-size:25% 25%;background-position:-1px -1px}
+.xy .xyl{position:absolute;font-family:var(--mono);font-size:11px;color:var(--screen-dim);pointer-events:none;white-space:nowrap}
+.xy .xyh{left:8px;top:6px}.xy .xys{right:8px;top:6px}.xy .xya{left:50%;bottom:5px;transform:translateX(-50%)}
+.xy .xyd{position:absolute;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 4px rgba(255,80,0,.25);pointer-events:none}
+.xy.touch .xyd{box-shadow:0 0 0 8px rgba(255,80,0,.3)}
+.xy.touch .xyl{color:var(--screen-ink)}
+.xy.nogrid .xys,.xy.nogrid .xya{color:#555}
+.gridkeys{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.gridkeys button{padding:6px 2px;min-width:0;font-size:11px}
+.gridkeys button.on::before{display:none}
+.minis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.mini{display:flex;flex-direction:column;gap:3px;min-width:0}
+.mini>span{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.mini>div{display:flex;align-items:center;gap:3px;min-width:0}
+.mini button{flex:none;width:32px;min-width:0;padding:0;min-height:34px}
+.mini b{flex:1;min-width:0;text-align:center;font-family:var(--mono);font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden}
+.mini.dis{opacity:.4}
+/* layer pages (timing / instrument / mix) as a strip of the OLED screen */
+.tabs{display:flex;gap:0;flex-wrap:nowrap;background:var(--screen);border-radius:10px;padding:4px;margin-bottom:14px}
+.tabs button,.tabs button.on{flex:1;min-width:0;background:transparent;box-shadow:none;border-radius:7px;color:var(--screen-dim);
+  text-transform:uppercase;letter-spacing:.08em;font-size:12px;padding:8px 4px 6px;min-height:38px;border-bottom:2px solid transparent;border-radius:0}
+.tabs button.on{color:var(--screen-ink);border-bottom-color:var(--acc)}
+.tabs button:active{transform:none}
+@media (hover:hover){.tabs button:hover{background:transparent;color:var(--screen-ink)}}
+/* in capture mode the record strip takes the place of the transport bar: no loop recording there, only the output */
+body.cap .tbar{display:none}
+body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
+.caprec{display:flex;align-items:center;gap:10px;background:var(--screen);color:var(--screen-ink);border-radius:12px;padding:8px 12px 8px 8px;flex:none}
+.caprec .cbtn{background:var(--screen2);color:var(--screen-ink);box-shadow:none;min-height:44px;height:44px;display:inline-flex;align-items:center;gap:8px;padding:0 14px}
+.caprec .cbtn::before{display:none}
+.caprec .cbtn svg{width:18px;height:18px;fill:currentColor}
+.caprec #capPlay{width:44px;padding:0;justify-content:center}
+.caprec #capPlay.on{color:var(--enc2)}
+.caprec .crec i{width:12px;height:12px;border-radius:50%;background:var(--rec);display:block}
+.caprec .crec.on{background:var(--rec);color:#fff}
+.caprec .crec.on i{border-radius:2px;background:#fff}
+.caprec .ctime{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;min-width:44px;color:var(--screen-dim)}
+.caprec.rec .ctime{color:var(--screen-ink)}
+.caprec .cmeter{flex:1;min-width:30px;height:6px;border-radius:3px;background:var(--screen-line);overflow:hidden}
+.caprec .cmeter i{display:block;height:100%;width:0;background:var(--enc2);transition:width .05s linear}
 </style>
 </head>
 <body>
@@ -580,6 +624,12 @@ header.top .chip{flex:0 1 auto}
 <section class="capmode hidden" id="capMode" aria-label="Capture mode">
   <div class="caphead"><h2>capture mode</h2><span class="hint">tap: on/off · hold and drag: effect</span><button class="icon" id="capClose" aria-label="Close capture mode"></button></div>
   <div class="cgrid" id="cgrid"></div>
+  <div class="caprec" id="capRec">
+    <button class="cbtn" id="capPlay" aria-label="Play / stop (space)"><svg viewBox="0 0 24 24" id="capPlayIcon"><path d="M7 4l13 8-13 8z"/></svg></button>
+    <button class="cbtn crec" id="capRecBtn" aria-label="Record what you hear to an audio file"><i></i><span id="capRecLbl">rec out</span></button>
+    <span class="ctime" id="capTime">0:00</span>
+    <span class="cmeter"><i id="capMeter"></i></span>
+  </div>
 </section>
 <div class="backdrop" id="backdrop"></div>
 <!-- long-press menu for a layer -->
@@ -662,9 +712,6 @@ header.top .chip{flex:0 1 auto}
   <label class="check hidden" id="usbOutRow" style="margin-top:8px"><input type="checkbox" id="usbOutChk"> Send the app's sound to the HiChord's USB port (for recording on another device)</label>
   <h2 style="margin-top:22px">Room and output</h2>
   <div class="params" id="pGlobal"></div>
-  <div class="row" style="margin-top:12px">
-    <button id="bounceBtn" title="Record what you hear to an audio file">● Record output</button>
-  </div>
   <details id="padsBox" style="margin-top:22px">
     <summary><h2>Test chords (keys 1–7)</h2></summary>
     <div class="pads" id="pads"></div>
@@ -713,7 +760,7 @@ header.top .chip{flex:0 1 auto}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.7';
+const PAGE_VERSION = '2026-11-11.8';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -996,6 +1043,7 @@ function stopTransport(){
 }
 function setRec(on){
   if(on===S.rec) return;
+  if(on && CAP.open){ toast('Capture mode records the output only: use rec out'); return; }
   const Ly=selLayer();
   if(on){
     S.rec=true; Ly.takes=(Ly.takes||0)+1; S.curTake=Ly.takes;
@@ -1426,15 +1474,29 @@ function detectPitch(buf){
 }
 
 /* ============ record output ============ */
-let bouncer=null;
+let bouncer=null, bounceT0=0, meterA=null, meterBuf=null;
 function toggleBounce(){
   if(bouncer){ bouncer.stop(); return; }
+  if(!ctx) return;
   const chunks=[]; bouncer=new MediaRecorder(recDest.stream);
   bouncer.ondataavailable=e=>chunks.push(e.data);
   bouncer.onstop=()=>{ const ext=(bouncer.mimeType||'').includes('mp4')?'m4a':'webm';
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(chunks,{type:bouncer.mimeType})); a.download=`hichord-loop.${ext}`; document.body.appendChild(a); a.click(); a.remove();
-    bouncer=null; $('bounceBtn').classList.remove('on'); $('bounceBtn').textContent='● Record output'; };
-  bouncer.start(); $('bounceBtn').classList.add('on'); $('bounceBtn').textContent='■ Stop and save';
+    bouncer=null; renderBounce(); toast('Recording saved'); };
+  if(!S.playing) startTransport(false);   // a recording starts with the loop on beat 1
+  bouncer.start(); bounceT0=performance.now(); renderBounce();
+}
+function renderBounce(){
+  $('capRecBtn').classList.toggle('on',!!bouncer); $('capRec').classList.toggle('rec',!!bouncer);
+  $('capRecLbl').textContent = bouncer ? 'stop · save' : 'rec out';
+  if(!bouncer) $('capTime').textContent='0:00';
+}
+function drawCapRec(){
+  if(!meterA){ meterA=ctx.createAnalyser(); meterA.fftSize=1024; meterBuf=new Float32Array(meterA.fftSize); limiter.connect(meterA); }
+  meterA.getFloatTimeDomainData(meterBuf); let pk=0; for(const s of meterBuf) pk=Math.max(pk,Math.abs(s));
+  const db=20*Math.log10(pk||1e-6), w=clamp((db+48)/48,0,1);
+  const m=$('capMeter'); m.style.width=(w*100).toFixed(1)+'%'; m.style.background = pk>0.97 ? 'var(--rec)' : 'var(--enc2)';
+  if(bouncer){ const s=Math.floor((performance.now()-bounceT0)/1000); $('capTime').textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
 }
 
 /* ============ the session is kept between visits ============ */
@@ -1687,7 +1749,8 @@ const instName = Ly => Ly.inst==='custom' ? Ly.customName : LIB[Ly.inst].name;
 
 function renderTransport(){
   $('playBtn').classList.toggle('on',S.playing);
-  $('playIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1"/>' : '<path d="M7 4l13 8-13 8z"/>';
+  $('playIcon').innerHTML = $('capPlayIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1"/>' : '<path d="M7 4l13 8-13 8z"/>';
+  $('capPlay').classList.toggle('on',S.playing);
   $('recBtn').classList.toggle('on',S.rec);
   $('recNum').textContent=S.sel+1; $('recBtn').style.setProperty('--lc',`var(--l${S.sel})`);
   $('recBtn').setAttribute('aria-label',`Record into layer ${S.sel+1} (R)`);
@@ -1888,6 +1951,41 @@ function feelOf(Ly){
 function refreshFeel(){ const k=feelOf(selLayer()), d=document.querySelector('.feels'); if(!d) return;
   d.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.f===k));
   d.parentElement.querySelector('label b').textContent = k ? FEELS.find(f=>f[0]===k)[1] : 'custom'; }
+/* advanced timing on one screen: an XY pad (left–right: how tight to the grid, up–down: humanize),
+   the grid as a row of keys, and swing, note length and nudge as small steppers */
+function advTiming(host, Ly){
+  const box=document.createElement('div'); box.className='advt'; host.appendChild(box);
+  box.innerHTML=`<div class="xy" id="xyPad"><span class="xyl xyh"></span><span class="xyl xys"></span><span class="xyl xya">loose ← → tight</span><i class="xyd"></i></div>
+    <div class="gridkeys">${GRIDS.map(([k,l])=>`<button data-q="${k}" class="${Ly.q===k?'on':''}">${l}</button>`).join('')}</div>
+    <div class="minis">
+      <div class="mini" data-k="swing"><span>swing</span><div><button data-d="-1" aria-label="Less swing">−</button><b></b><button data-d="1" aria-label="More swing">+</button></div></div>
+      <div class="mini" data-k="gate"><span>length</span><div><button data-d="-1" aria-label="Shorter notes">−</button><b></b><button data-d="1" aria-label="Longer notes">+</button></div></div>
+      <div class="mini" data-k="nudge"><span>nudge</span><div><button data-d="-1" aria-label="Nudge earlier">−</button><b></b><button data-d="1" aria-label="Nudge later">+</button></div></div>
+    </div>`;
+  const pad=box.querySelector('.xy'), dot=pad.querySelector('.xyd');
+  const MINI={ swing:{min:0,max:1,step:0.1,fmt:v=>Math.round(50+v*25)+'%'}, gate:{min:0.1,max:2,step:0.1,fmt:pct}, nudge:{min:-120,max:120,step:10,fmt:v=>(v>0?'+':'')+v+'ms'} };
+  const show=()=>{
+    const grid=Ly.q!=='off', swingOk=Ly.q==='1/8'||Ly.q==='1/16';
+    dot.style.left=`calc(12px + ${Ly.strength} * (100% - 24px))`; dot.style.top=`calc(12px + ${1-Ly.humanize} * (100% - 24px))`;
+    pad.classList.toggle('nogrid',!grid);
+    pad.querySelector('.xyh').textContent=`humanize ${pct(Ly.humanize)}`;
+    pad.querySelector('.xys').textContent= grid ? `strength ${pct(Ly.strength)}` : 'strength: pick a grid';
+    box.querySelectorAll('.mini').forEach(m=>{ const k=m.dataset.k; m.querySelector('b').textContent=MINI[k].fmt(Ly[k]);
+      if(k==='swing'){ m.classList.toggle('dis',!swingOk); m.querySelectorAll('button').forEach(b=>b.disabled=!swingOk); } });
+  };
+  const at=ev=>{ const r=pad.getBoundingClientRect();
+    Ly.strength=Math.round(clamp((ev.clientX-r.left-12)/(r.width-24),0,1)*100)/100; Ly.humanize=Math.round(clamp(1-(ev.clientY-r.top-12)/(r.height-24),0,1)*100)/100;
+    show(); drawAll(); refreshFeel(); };
+  let drag=null;
+  pad.onpointerdown=ev=>{ drag=ev.pointerId; try{ pad.setPointerCapture(ev.pointerId); }catch(e){} pad.classList.add('touch'); at(ev); };
+  pad.onpointermove=ev=>{ if(drag===ev.pointerId) at(ev); };
+  pad.onpointerup=pad.onpointercancel=ev=>{ if(drag!==ev.pointerId) return; drag=null; pad.classList.remove('touch'); save(); };
+  box.querySelector('.gridkeys').onclick=ev=>{ const b=ev.target.closest('[data-q]'); if(!b) return; Ly.q=b.dataset.q;
+    box.querySelectorAll('.gridkeys button').forEach(x=>x.classList.toggle('on',x===b)); show(); drawAll(); refreshFeel(); save(); };
+  box.querySelector('.minis').onclick=ev=>{ const b=ev.target.closest('[data-d]'); if(!b) return; const k=b.closest('.mini').dataset.k, m=MINI[k];
+    Ly[k]=Math.round(clamp(Ly[k]+(+b.dataset.d)*m.step, m.min, m.max)*100)/100; show(); drawAll(); refreshFeel(); save(); };
+  show();
+}
 /* a stepper instead of a slider for values you should not change by accident */
 function stepper(host,label,get,set,min,max,step,fmt){
   const d=document.createElement('div'); d.className='p wide';   // full row: its buttons don't fit half a phone screen
@@ -1901,6 +1999,7 @@ function renderDetail(){
   $('tabs').innerHTML = TABS.map(([k,l])=>`<button data-t="${k}" class="${S.tab===k?'on':''}">${l}</button>`).join('');
   const host=$('detail'); host.innerHTML=''; const Ly=selLayer();
   const grid=document.createElement('div'); grid.className='params'; host.appendChild(grid);
+  host.classList.remove('advon'); $('layerSheet').classList.remove('tall');
   if(S.tab==='timing'){
     // musical presets first; the knobs behind them under "advanced"
     const cur=feelOf(Ly);
@@ -1910,15 +2009,12 @@ function renderDetail(){
     grid.appendChild(fd);
     param(grid,'Octave',()=>Ly.oct,v=>{Ly.oct=v;},-2,2,1,v=>(v>0?'+':'')+v);
     const adv=document.createElement('details'); adv.className='adv'; adv.open=!!S.advOpen;
-    adv.ontoggle=()=>{ S.advOpen=adv.open; };
+    // open, the XY screen takes the place of the feel keys and the sheet grows, so nothing scrolls
+    const advOn=()=>{ host.classList.toggle('advon',adv.open); $('layerSheet').classList.toggle('tall',adv.open); };
+    adv.ontoggle=()=>{ S.advOpen=adv.open; advOn(); };
     adv.innerHTML='<summary><h2>advanced</h2></summary>';
-    const g2=document.createElement('div'); g2.className='params'; adv.appendChild(g2); host.appendChild(adv);
-    segParam(g2,'Quantize',GRIDS.map(g=>[g[0],g[1]]),()=>Ly.q,v=>{ Ly.q=v; renderDetail(); drawAll(); });
-    param(g2,'Strength',()=>Ly.strength,v=>{Ly.strength=v; drawAll(); refreshFeel();},0,1,0.01,pct);
-    if(Ly.q==='1/8'||Ly.q==='1/16') param(g2,'Swing',()=>Ly.swing,v=>{Ly.swing=v; drawAll(); refreshFeel();},0,1,0.01,v=>Math.round(50+v*25)+'%');
-    param(g2,'Humanize',()=>Ly.humanize,v=>{Ly.humanize=v; drawAll(); refreshFeel();},0,1,0.01,pct);
-    param(g2,'Note length',()=>Ly.gate,v=>{Ly.gate=v; drawAll();},0.1,2,0.01,pct);
-    stepper(g2,'Nudge',()=>Ly.nudge,v=>{ Ly.nudge=v; drawAll(); },-120,120,10,v=>(v>0?'+':'')+v+' ms');
+    host.appendChild(adv); advTiming(adv, Ly);
+    setTimeout(advOn);
     const h=document.createElement('p'); h.className='hint';
     h.textContent='Every change is live and never touches what you played. "Original" brings back your own timing.';
     host.appendChild(h);
@@ -2067,6 +2163,7 @@ function frame(){
     if(S.playing || n!==edLastNotes){ edLastNotes=n; if(!ED.drag) edDraw(); }
   } else if(S.playing){ CAP.open ? drawCaptureRolls() : drawAll(); }
   if(S.playing) drawPos();
+  if(CAP.open) drawCapRec();
   requestAnimationFrame(frame);
 }
 function flash(Ly){ const el=document.querySelector(`.layer[data-i="${layers.indexOf(Ly)}"] .num`); if(!el) return; el.style.textDecoration='underline'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.textDecoration='',120); }
@@ -2135,12 +2232,13 @@ function gateOff(Ly){
 const CAP={open:false, touch:new Map()};
 function openCapture(){
   if(!ctx) return;
-  closeSheets(); CAP.open=true; $('capMode').classList.remove('hidden'); $('captureBtn').classList.add('on');
+  closeSheets(); if(S.rec) setRec(false); CAP.open=true; document.body.classList.add('cap'); $('capMode').classList.remove('hidden'); $('captureBtn').classList.add('on'); renderTransport();
   renderCaptureMode();
 }
 function closeCapture(){
   CAP.touch.forEach(t=>clearTimeout(t.timer)); CAP.touch.clear(); layers.forEach(fxReset);
-  CAP.open=false; $('capMode').classList.add('hidden'); $('captureBtn').classList.remove('on');
+  if(bouncer) bouncer.stop();   // leaving capture mode saves a running output recording
+  CAP.open=false; document.body.classList.remove('cap'); $('capMode').classList.add('hidden'); $('captureBtn').classList.remove('on');
   renderLayers();
 }
 const capLayers = () => layers.map((Ly,i)=>[Ly,i]).filter(([Ly])=>Ly.shown);
@@ -2690,7 +2788,8 @@ $('barsSeg').onclick=e=>{ const n=+e.target.dataset.n; if(n) setBars(n); };
 $('doubleBtn').onclick=doubleLoop;
 $('metroChk').onchange=e=>{ S.metro=e.target.checked; save(); };
 $('countChk').onchange=e=>{ S.countIn=e.target.checked; save(); };
-$('bounceBtn').onclick=toggleBounce;
+$('capRecBtn').onclick=toggleBounce;
+$('capPlay').onclick=()=>$('playBtn').onclick();
 $('hcConnect').onclick=hcConnect;
 $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) loadFile(f); e.target.value=''; };
 $('themeBtn').onclick=()=>{ const r=document.documentElement, dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
