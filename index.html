@@ -514,7 +514,51 @@ header.top .chip{flex:0 1 auto}
 .ctile.off{opacity:.45}
 .ctile.off .cstate{background:var(--line);color:var(--dim)}
 .tool.on{color:var(--acc)}
-#detail.advon .feels,#detail.advon>.hint{display:none}
+/* layer panel: one fixed height on every tab, preview screen above it, danger keys at the bottom */
+:root{--prevh:clamp(96px,17dvh,150px)}
+.lsbody{display:flex;flex-direction:column;min-height:0;flex:1}
+#detail{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
+#detail>.hint{margin:0}
+.dangerkeys{display:flex;gap:8px;padding-top:12px;margin-top:12px;border-top:1px solid var(--line)}
+.dangerkeys button{flex:1;min-height:40px}
+.dangerkeys button.armed{background:var(--rec);color:#fff}
+.lprev{background:var(--screen);border-radius:14px;position:relative;overflow:hidden}
+.lprev canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.lprev .pkeys{position:absolute;right:8px;bottom:8px;display:flex;gap:6px}
+.lprev .pkeys button{background:var(--screen2);color:var(--screen-ink);box-shadow:none;min-height:34px;min-width:44px;padding:0 10px}
+.lprev .pkeys button::before{display:none}
+.lprev .pkeys button.on{background:var(--acc);color:#fff}
+.tsw{display:flex;align-items:center;gap:10px}
+.tsw .feelname{margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:500}
+.seg2{display:flex;gap:4px}
+.seg2 button{min-height:34px;padding:0 14px}
+#detail .advt{flex:1;min-height:0;margin-top:0}
+#detail .advt .xy{flex:1;min-height:80px;height:auto}
+@media (max-width:779px){
+  .layersheet{overflow:visible;display:flex;flex-direction:column;max-height:none;padding-bottom:calc(12px);
+    height:min(calc(100dvh - var(--tbarh) - var(--st) - var(--prevh) - 26px),660px)}
+  .layersheet .lsbody{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;margin:0 -4px;padding:0 4px}
+  .layersheet .lprev{position:absolute;left:max(12px,calc(var(--sl) + 8px));right:max(12px,calc(var(--sr) + 8px));bottom:calc(100% + 10px);height:var(--prevh)}
+}
+/* short phones (iPhone SE): a smaller preview and tighter spacing, so nothing scrolls there either */
+@media (max-width:779px) and (max-height:740px){
+  :root{--prevh:84px}
+  #detail>.hint{display:none}
+  #detail{gap:8px}
+  .layersheet .params{gap:6px 14px}
+  .layersheet .sheethead{margin-bottom:6px}
+  .layersheet .grab{margin:4px auto 6px}
+  .layersheet #editBtn{min-height:34px}
+  .layersheet .row[style*="margin-bottom:12px"]{margin-bottom:8px!important}
+  .layersheet .tabs{margin-bottom:8px}
+  .dangerkeys{padding-top:8px;margin-top:8px}
+  .dangerkeys button{min-height:36px}
+}
+@media (min-width:780px){
+  .layersheet{display:flex;flex-direction:column;height:calc(100dvh - 64px - 96px - var(--sb));overflow:hidden}
+  .layersheet .lsbody{overflow-y:auto;overflow-x:hidden}
+  .layersheet .lprev{height:120px;flex:none;margin-bottom:10px}
+}
 /* advanced timing: XY screen, grid keys, mini steppers — fits without scrolling */
 .advt{display:flex;flex-direction:column;gap:8px;margin-top:6px}
 .xy{position:relative;height:clamp(110px,18dvh,170px);border-radius:10px;background:var(--screen);touch-action:none;cursor:crosshair;overflow:hidden;
@@ -536,12 +580,12 @@ header.top .chip{flex:0 1 auto}
 .mini b{flex:1;min-width:0;text-align:center;font-family:var(--mono);font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden}
 .mini.dis{opacity:.4}
 /* layer pages (timing / instrument / mix) as a strip of the OLED screen */
-.tabs{display:flex;gap:0;flex-wrap:nowrap;background:var(--screen);border-radius:10px;padding:4px;margin-bottom:14px}
-.tabs button,.tabs button.on{flex:1;min-width:0;background:transparent;box-shadow:none;border-radius:7px;color:var(--screen-dim);
+.tabs{display:flex;gap:0;flex-wrap:nowrap;background:color-mix(in srgb,var(--ink) 9%,transparent);border-radius:10px;padding:3px;margin-bottom:14px;flex:none}
+.tabs button,.tabs button.on{flex:1;min-width:0;background:transparent;box-shadow:none;border-radius:7px;color:var(--dim);
   text-transform:uppercase;letter-spacing:.08em;font-size:12px;padding:8px 4px 6px;min-height:38px;border-bottom:2px solid transparent;border-radius:0}
-.tabs button.on{color:var(--screen-ink);border-bottom-color:var(--acc)}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--acc)}
 .tabs button:active{transform:none}
-@media (hover:hover){.tabs button:hover{background:transparent;color:var(--screen-ink)}}
+@media (hover:hover){.tabs button:hover{background:transparent;color:var(--ink)}}
 /* in capture mode the record strip takes the place of the transport bar: no loop recording there, only the output */
 body.cap .tbar{display:none}
 body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
@@ -587,6 +631,11 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
     <!-- settings of the selected layer: a bottom sheet on phones, a side panel on wide screens -->
     <section class="sheet layersheet" id="layerSheet" aria-label="Layer settings">
+      <div class="lprev" id="lprev">
+        <canvas id="prevCv" aria-hidden="true"></canvas>
+        <div class="pkeys"><button id="prevPlay" aria-label="Play a preview of this layer's sound">▶</button><button id="prevSolo" aria-label="Hear only this layer">solo</button></div>
+      </div>
+      <div class="lsbody">
       <div class="grab"></div>
       <div class="row sheethead">
         <h2 id="detailTitle" style="margin:0">Layer 1</h2>
@@ -595,15 +644,14 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
       </div>
       <div class="row" style="margin-bottom:12px">
         <button id="editBtn" class="primary">Edit notes</button>
-        <div class="spacer"></div>
-        <button id="moreBtn" aria-expanded="false" aria-controls="moreRow">more ▾</button>
-      </div>
-      <div class="row danger-row hidden" id="moreRow">
-        <button id="clearBtn" class="danger">Clear notes</button>
-        <button id="removeBtn" class="danger">Remove layer</button>
       </div>
       <div class="tabs" id="tabs"></div>
       <div id="detail"></div>
+      <div class="dangerkeys" id="dangerKeys">
+        <button id="clearBtn" class="danger">clear notes</button>
+        <button id="removeBtn" class="danger">remove layer</button>
+      </div>
+      </div>
     </section>
   </main>
 
@@ -760,7 +808,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.8';
+const PAGE_VERSION = '2026-11-11.9';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1814,6 +1862,7 @@ function renderLayers(){
     </div>`).join('') +
     (layers.some(Ly=>!Ly.shown) ? '<button class="newlayer" id="newLayerBtn">+ New layer</button>' : '');
   $('detailTitle').textContent = `Layer ${S.sel+1} · ${instName(selLayer())}`;
+  renderPrevSolo();
   const nb=$('newLayerBtn'); if(nb) nb.onclick=()=>openSheet('newSheet');
   renderTransport();
   drawAll();
@@ -1904,8 +1953,18 @@ $('projList').onclick=e=>{ const b=e.target.closest('[data-pa]'); if(!b) return;
 setInterval(()=>{ if($('projSheet').classList.contains('open')) renderProjStatus(); },5000);
 document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close',''));
 $('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(b) addLayer(b.dataset.k); };
-$('removeBtn').onclick=removeLayer;
-$('moreBtn').onclick=()=>{ const r=$('moreRow'), open=r.classList.toggle('hidden')===false; $('moreBtn').setAttribute('aria-expanded',open); $('moreBtn').textContent= open?'less ▴':'more ▾'; };
+/* clear and remove need two taps: the first arms the key for 3 seconds */
+function twoTap(btn, label, fn){
+  let armT=null;
+  btn.onclick=()=>{
+    if(btn.classList.contains('armed')){ clearTimeout(armT); btn.classList.remove('armed'); btn.textContent=label; fn(); return; }
+    btn.classList.add('armed'); btn.textContent='tap again';
+    armT=setTimeout(()=>{ btn.classList.remove('armed'); btn.textContent=label; },3000);
+  };
+}
+twoTap($('removeBtn'),'remove layer',removeLayer);
+twoTap($('clearBtn'),'clear notes',clearLayer);
+
 
 /* sheets */
 const isWide = () => matchMedia('(min-width:780px)').matches;
@@ -1948,9 +2007,61 @@ function feelOf(Ly){
   }
   return null;
 }
-function refreshFeel(){ const k=feelOf(selLayer()), d=document.querySelector('.feels'); if(!d) return;
-  d.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.f===k));
-  d.parentElement.querySelector('label b').textContent = k ? FEELS.find(f=>f[0]===k)[1] : 'custom'; }
+function refreshFeel(){ const k=feelOf(selLayer());
+  document.querySelectorAll('.feels button').forEach(b=>b.classList.toggle('on', b.dataset.f===k));
+  const n=document.querySelector('.feelname'); if(n) n.textContent = k ? FEELS.find(f=>f[0]===k)[1] : 'custom'; }
+/* preview above the layer panel: the layer's live waveform, its filter curve and its envelope,
+   redrawn every frame so they follow the sliders; play a short preview, or solo the layer */
+const PREV={f:null,mag:null,ph:null,wave:null};
+function layerSheetShown(){ return $('layerSheet').classList.contains('open') || isWide(); }
+function drawPreview(){
+  const cv=$('prevCv'); if(!cv || !cv.offsetWidth) return;
+  const Ly=selLayer(), i=S.sel, dpr=devicePixelRatio||1, W=cv.offsetWidth, H=cv.offsetHeight;
+  if(cv.width!==Math.round(W*dpr) || cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+  if($('prevSolo').classList.contains('on')!==!!Ly.solo) renderPrevSolo();
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const col=cssVar('--l'+i), dim=cssVar('--screen-dim'), line=cssVar('--screen-line');
+  g.fillStyle=line; for(let k=1;k<4;k++) g.fillRect(Math.round(W*k/4),0,1,H); g.fillRect(0,Math.round(H/2),W,1);
+  // filter curve: 40 Hz – 18 kHz, −24 … +18 dB
+  if(!PREV.f){ const n=96; PREV.f=new Float32Array(n); PREV.mag=new Float32Array(n); PREV.ph=new Float32Array(n);
+    for(let k=0;k<n;k++) PREV.f[k]=40*Math.pow(18000/40,k/(n-1)); }
+  Ly.filter.getFrequencyResponse(PREV.f,PREV.mag,PREV.ph);
+  g.beginPath(); for(let k=0;k<PREV.f.length;k++){ const db=20*Math.log10(PREV.mag[k]||1e-6), x=k/(PREV.f.length-1)*W, y=H-8-clamp((db+24)/42,0,1)*(H*0.55);
+    k?g.lineTo(x,y):g.moveTo(x,y); }
+  g.strokeStyle=dim; g.lineWidth=1.25; g.stroke();
+  // envelope: attack up, hold, release down (log time so short values stay visible)
+  const ew=Math.min(96,W*0.3), eh=28, ex=W-ew-8, ey=22, tl=v=>Math.log10(1+v*40)/Math.log10(1+4*40);
+  const ax=ex+tl(Ly.a)*ew*0.45, rx=ex+ew*0.55+tl(Ly.r)*ew*0.45;
+  g.beginPath(); g.moveTo(ex,ey+eh); g.lineTo(ax,ey); g.lineTo(ex+ew*0.55,ey); g.lineTo(rx,ey+eh);
+  g.strokeStyle=cssVar('--acc'); g.lineWidth=1.5; g.stroke();
+  // live waveform
+  if(!Ly.an){ Ly.an=ctx.createAnalyser(); Ly.an.fftSize=2048; Ly.panner.connect(Ly.an); }
+  if(!PREV.wave || PREV.wave.length!==Ly.an.fftSize) PREV.wave=new Float32Array(Ly.an.fftSize);
+  Ly.an.getFloatTimeDomainData(PREV.wave);
+  let st=0; for(let k=1;k<PREV.wave.length/2;k++) if(PREV.wave[k-1]<0 && PREV.wave[k]>=0){ st=k; break; }   // steady trace: start on a rising zero crossing
+  const span=Math.min(800,PREV.wave.length-st);
+  g.beginPath(); for(let k=0;k<span;k++){ const x=k/(span-1)*W, y=H/2-clamp(PREV.wave[st+k]*2.2,-1,1)*(H/2-6); k?g.lineTo(x,y):g.moveTo(x,y); }
+  g.strokeStyle=col; g.lineWidth=2; g.stroke();
+  // labels
+  g.font='11px '+cssVar('--mono'); g.textBaseline='top';
+  g.fillStyle=col; g.fillText(`${i+1} · ${instName(Ly).toLowerCase()}${audible(Ly)?'':' · muted'}`,8,6);
+  g.fillStyle=dim; g.textBaseline='bottom';
+  const f=80*Math.pow(18000/80,Ly.cutoff);
+  const info = S.tab==='timing' ? `grid ${Ly.q} · str ${pct(Ly.strength)} · hum ${pct(Ly.humanize)}`
+    : S.tab==='mix' ? `vol ${pct(Ly.vol)} · pan ${Ly.pan===0?'c':(Ly.pan<0?'l':'r')+Math.round(Math.abs(Ly.pan)*100)} · rev ${pct(Ly.rev)}`
+    : `atk ${secs(Ly.a)} · rel ${secs(Ly.r)} · ${f>=1000?(f/1000).toFixed(1)+'k':Math.round(f)}`;
+  g.fillText(info,8,H-5);
+}
+function renderPrevSolo(){ const b=$('prevSolo'), on=!!selLayer().solo; b.classList.toggle('on',on); b.textContent= on?'solo':'all'; 
+  b.setAttribute('aria-label', on?'Hearing only this layer: tap to hear all layers':'Hearing all layers: tap to hear only this layer'); }
+$('prevSolo').onclick=()=>{ const Ly=selLayer(); Ly.solo=!Ly.solo; layers.forEach(applyLayer); renderLayers(); renderPrevSolo(); save(); };
+$('prevPlay').onclick=()=>{
+  if(!ctx) return; if(ctx.state!=='running') ctx.resume();
+  const Ly=selLayer(), t0=ctx.currentTime+0.02;
+  if(Ly.inst==='drums') [[36,0],[42,0.18],[38,0.36],[42,0.54]].forEach(([n,d])=>playNote(Ly,n,105,t0+d,0.15));
+  else if(MONO_INST.has(Ly.inst)) [[48,0],[55,0.3]].forEach(([n,d])=>playNote(Ly,n,105,t0+d,0.26));
+  else [60,64,67].forEach(n=>playNote(Ly,n,100,t0,0.8));
+};
 /* advanced timing on one screen: an XY pad (left–right: how tight to the grid, up–down: humanize),
    the grid as a row of keys, and swing, note length and nudge as small steppers */
 function advTiming(host, Ly){
@@ -1999,25 +2110,24 @@ function renderDetail(){
   $('tabs').innerHTML = TABS.map(([k,l])=>`<button data-t="${k}" class="${S.tab===k?'on':''}">${l}</button>`).join('');
   const host=$('detail'); host.innerHTML=''; const Ly=selLayer();
   const grid=document.createElement('div'); grid.className='params'; host.appendChild(grid);
-  host.classList.remove('advon'); $('layerSheet').classList.remove('tall');
   if(S.tab==='timing'){
-    // musical presets first; the knobs behind them under "advanced"
+    // feel presets or the advanced XY screen, never both: the panel keeps one height
+    grid.remove();
     const cur=feelOf(Ly);
-    const fd=document.createElement('div'); fd.className='p wide';
-    fd.innerHTML=`<label><span>Feel</span><b>${cur?FEELS.find(f=>f[0]===cur)[1]:'custom'}</b></label><div class="feels">${FEELS.map(([k,l,d])=>`<button data-f="${k}" class="${k===cur?'on':''}"><b>${l}</b><small>${d}</small></button>`).join('')}</div>`;
-    fd.querySelector('.feels').onclick=e=>{ const b=e.target.closest('[data-f]'); if(!b) return; Object.assign(Ly, FEEL_SET[b.dataset.f]); renderDetail(); drawAll(); save(); };
-    grid.appendChild(fd);
+    const sw=document.createElement('div'); sw.className='tsw';
+    sw.innerHTML=`<div class="seg2"><button data-m="feel" class="${S.advOpen?'':'on'}">feel</button><button data-m="adv" class="${S.advOpen?'on':''}">advanced</button></div><b class="feelname">${cur?FEELS.find(f=>f[0]===cur)[1]:'custom'}</b>`;
+    sw.onclick=e=>{ const b=e.target.closest('[data-m]'); if(!b) return; S.advOpen=b.dataset.m==='adv'; renderDetail(); };
+    host.appendChild(sw);
+    if(!S.advOpen){
+      const fd=document.createElement('div'); fd.className='feels';
+      fd.innerHTML=FEELS.map(([k,l,d])=>`<button data-f="${k}" class="${k===cur?'on':''}"><b>${l}</b><small>${d}</small></button>`).join('');
+      fd.onclick=e=>{ const b=e.target.closest('[data-f]'); if(!b) return; Object.assign(Ly, FEEL_SET[b.dataset.f]); renderDetail(); drawAll(); save(); };
+      host.appendChild(fd);
+    } else advTiming(host, Ly);
+    host.appendChild(grid);
     param(grid,'Octave',()=>Ly.oct,v=>{Ly.oct=v;},-2,2,1,v=>(v>0?'+':'')+v);
-    const adv=document.createElement('details'); adv.className='adv'; adv.open=!!S.advOpen;
-    // open, the XY screen takes the place of the feel keys and the sheet grows, so nothing scrolls
-    const advOn=()=>{ host.classList.toggle('advon',adv.open); $('layerSheet').classList.toggle('tall',adv.open); };
-    adv.ontoggle=()=>{ S.advOpen=adv.open; advOn(); };
-    adv.innerHTML='<summary><h2>advanced</h2></summary>';
-    host.appendChild(adv); advTiming(adv, Ly);
-    setTimeout(advOn);
-    const h=document.createElement('p'); h.className='hint';
-    h.textContent='Every change is live and never touches what you played. "Original" brings back your own timing.';
-    host.appendChild(h);
+    if(!S.advOpen){ const h=document.createElement('p'); h.className='hint';
+      h.textContent='Every change is live and never touches what you played. "Original" brings back your own timing.'; host.appendChild(h); }
   } else if(S.tab==='sound'){
     const opts=Object.entries(LIB).map(([k,v])=>[k,v.name]); if(Ly.inst==='custom') opts.unshift(['custom',Ly.customName]);
     selectParam(grid,'Instrument',opts,()=>Ly.inst,v=>{ if(v==='custom') return; Ly.voices.forEach(x=>releaseVoice(x,ctx.currentTime,0.05)); setInstrument(Ly,v); applyLayer(Ly); renderLayers(); renderDetail(); });
@@ -2164,6 +2274,7 @@ function frame(){
   } else if(S.playing){ CAP.open ? drawCaptureRolls() : drawAll(); }
   if(S.playing) drawPos();
   if(CAP.open) drawCapRec();
+  else if(ctx && layerSheetShown()) drawPreview();
   requestAnimationFrame(frame);
 }
 function flash(Ly){ const el=document.querySelector(`.layer[data-i="${layers.indexOf(Ly)}"] .num`); if(!el) return; el.style.textDecoration='underline'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.textDecoration='',120); }
@@ -2778,7 +2889,7 @@ $('undoBtn').onclick=undo;
   b.addEventListener('pointerdown',()=>{ t=setTimeout(()=>{ t='fired'; redo(); },550); });
   ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>{ if(t!=='fired') clearTimeout(t); }));
   b.addEventListener('click',e=>{ if(t==='fired'){ e.stopImmediatePropagation(); t=null; } }, true); })();
-$('clearBtn').onclick=clearLayer;
+
 $('panicBtn').onclick=()=>stopAllVoices(true);
 $('bpmDown').onclick=()=>setTempo(S.bpm-1);
 $('bpmUp').onclick=()=>setTempo(S.bpm+1);
