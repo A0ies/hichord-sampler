@@ -812,6 +812,12 @@ body.projopen .pbar{display:none}
 #settingsSheet .setpage[data-k=sound] .padsbox h2{margin-bottom:10px}
 #settingsSheet .setpage[data-k=room] .rgroup{display:flex;flex-direction:column}
 #settingsSheet .setpage[data-k=room] .rgroup .params{flex:1;align-content:space-around}
+/* the looper's logo in the middle of the settings header, as on the start screen */
+#settingsSheet .sheethead{position:relative}
+.setlogo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:var(--sans);font-weight:700;font-size:18px;letter-spacing:-.03em;
+  text-transform:lowercase;white-space:nowrap;pointer-events:none;color:var(--ink)}
+.setlogo span{font-weight:400}
+.setlogo::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--acc);margin-left:5px;vertical-align:3px}
 /* the projects screen fills the screen, like capture mode: "projects" top left, close top right, this project's name,
    then every project ("+ new project" first) — one column in portrait, three in landscape */
 body.projopen .tbar{display:none}
@@ -1049,7 +1055,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 <!-- app settings: HiChord, sound, room -->
 <section class="sheet tall" id="settingsSheet" aria-label="Settings">
   <div class="grab"></div>
-  <div class="row sheethead"><h2 style="margin:0">Settings</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
+  <div class="row sheethead"><h2 style="margin:0">Settings</h2><span class="setlogo" aria-hidden="true">hichord <span>looper</span></span><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
   <!-- the HiChord screen stays on top; tabs below pick sync, sound check or room -->
   <div class="setbody">
     <div class="hcscreen">
@@ -1122,7 +1128,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.42';
+const PAGE_VERSION = '2026-11-11.43';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
