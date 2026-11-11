@@ -785,11 +785,16 @@ body.projopen .pbar{display:none}
   #settingsSheet .setpage[data-k=sound] .hint+.hint{margin-top:10px}
   #settingsSheet .setpage[data-k=sound] .padsbox{margin-top:26px}
   #settingsSheet .setpage[data-k=sound] .padsbox h2{margin-bottom:10px}
-  #settingsSheet .setpage[data-k=room] .params{grid-template-columns:repeat(3,minmax(0,1fr))}
   #settingsSheet .pads{grid-template-columns:repeat(7,minmax(0,1fr))}
   #settingsSheet .setpage[data-k=sync] .hint{display:none}
   #settingsSheet .setpage .hint{font-size:11px}
 }
+/* room: reverb, delay and output side by side, two sliders under each heading */
+.roomgroups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 18px}
+.rgroup{min-width:0}
+.rgroup h2{margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em;font-size:11px}
+#settingsSheet .rgroup .params{grid-template-columns:minmax(0,1fr);gap:10px}
+.rgroup .params .p:nth-child(2) input[type=range]{--knob:var(--enc2)}
 /* the projects screen fills the screen, like capture mode: "projects" top left, close top right, this project's name,
    then every project ("+ new project" first) — one column in portrait, three in landscape */
 body.projopen .tbar{display:none}
@@ -1053,7 +1058,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
       <div class="padsbox"><h2>test chords · keys 1–7</h2><div class="pads" id="pads"></div></div>
     </div>
     <div class="setpage" data-k="room" hidden>
-      <div class="params" id="pGlobal"></div>
+      <div class="roomgroups" id="pGlobal"></div>
     </div>
   </div>
 </section>
@@ -1100,7 +1105,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.38';
+const PAGE_VERSION = '2026-11-11.39';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2581,13 +2586,18 @@ $('tabs').onclick=e=>{ const t=e.target.dataset.t; if(t){ S.tab=t; renderDetail(
 
 const DIVS=[[0.25,'1/16'],[0.5,'1/8'],[0.75,'3/16'],[1,'1/4'],[1.5,'3/8'],[2,'1/2']];
 function renderGlobal(){
+  // three small groups with a heading each, so the labels stay one short word and the sliders line up
   const p=$('pGlobal'); p.innerHTML='';
-  param(p,'Reverb size',()=>S.revSize,v=>{S.revSize=v;buildIR();},0,1,0.01,pct);
-  param(p,'Reverb level',()=>S.revLevel,v=>{S.revLevel=v;revOut.gain.setTargetAtTime(v,ctx.currentTime,0.02);},0,1.5,0.01,pct);
-  param(p,'Delay time',()=>Math.max(0,DIVS.findIndex(d=>d[0]===S.dlyDiv)),v=>{S.dlyDiv=DIVS[v][0];updateDelayTime();},0,DIVS.length-1,1,v=>DIVS[v][1]);
-  param(p,'Delay feedback',()=>S.dlyFb,v=>{S.dlyFb=v;dlyFb.gain.setTargetAtTime(v,ctx.currentTime,0.02);},0,0.9,0.01,pct);
-  param(p,'Tape drive',()=>S.drive,v=>{S.drive=v;setDrive(v);},0,1,0.01,pct);
-  param(p,'Master',()=>S.volume,v=>{S.volume=v;master.gain.setTargetAtTime(v,ctx.currentTime,0.02);},0,1.2,0.01,pct);
+  const group=t=>{ const g=document.createElement('div'); g.className='rgroup'; g.innerHTML=`<h2>${t}</h2><div class="params"></div>`; p.appendChild(g); return g.lastChild; };
+  let g=group('reverb');
+  param(g,'Size',()=>S.revSize,v=>{S.revSize=v;buildIR();},0,1,0.01,pct);
+  param(g,'Level',()=>S.revLevel,v=>{S.revLevel=v;revOut.gain.setTargetAtTime(v,ctx.currentTime,0.02);},0,1.5,0.01,pct);
+  g=group('delay');
+  param(g,'Time',()=>Math.max(0,DIVS.findIndex(d=>d[0]===S.dlyDiv)),v=>{S.dlyDiv=DIVS[v][0];updateDelayTime();},0,DIVS.length-1,1,v=>DIVS[v][1]);
+  param(g,'Feedback',()=>S.dlyFb,v=>{S.dlyFb=v;dlyFb.gain.setTargetAtTime(v,ctx.currentTime,0.02);},0,0.9,0.01,pct);
+  g=group('output');
+  param(g,'Drive',()=>S.drive,v=>{S.drive=v;setDrive(v);},0,1,0.01,pct);
+  param(g,'Master',()=>S.volume,v=>{S.volume=v;master.gain.setTargetAtTime(v,ctx.currentTime,0.02);},0,1.2,0.01,pct);
 }
 function renderSync(){
   const p=$('pSync'); p.innerHTML='';
