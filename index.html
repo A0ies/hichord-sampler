@@ -850,6 +850,60 @@ body.projopen .pbar{display:none}
 /* the note editor opens over the landscape layer settings panel (and returns to it on done); toasts stay on top */
 .editor{z-index:24}
 .toast{z-index:26}
+/* ============ note editor: toolbar on top, timeline with zoom keys and trim lane, overview, actions, black bar ============ */
+.editor{padding:calc(8px + var(--st)) max(12px,calc(var(--sr) + 8px)) 0 max(12px,calc(var(--sl) + 8px));gap:8px}
+.edhead{display:flex;align-items:center;gap:8px;flex:none;flex-wrap:wrap}
+.edhead>button,.edhead .edtools button{min-height:44px}
+.edpick{flex:0 1 230px;min-width:0;height:44px}
+.edpick #edLayerIcon{display:flex;flex:none} .edpick #edLayerName{flex:1;min-width:0;font-family:var(--sans);font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.edmode{display:flex;background:color-mix(in srgb,var(--ink) 9%,transparent);border-radius:10px;padding:3px;gap:2px;margin-left:auto}
+.edmode button{background:transparent;box-shadow:none;min-height:38px;padding:0 14px;color:var(--dim)}
+.edmode button.on{background:var(--dark-key);color:var(--dark-key-ink)} .edmode button.on::before{display:none}
+.edtools{position:relative;display:flex;background:var(--key);border-radius:10px;box-shadow:0 1px 0 var(--key-edge)}
+.edtools>button{background:transparent;box-shadow:none;border-radius:0;width:46px;padding:0;display:flex;align-items:center;justify-content:center}
+.edtools>button+button{border-left:1px solid var(--line)}
+.edtools>button:first-child{border-radius:10px 0 0 10px} .edtools>button:nth-child(3){border-radius:0 10px 10px 0}
+.edtools>button.on{background:var(--dark-key);color:var(--dark-key-ink)} .edtools>button.on::before{display:none}
+.editor svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.edtools .edmenu{right:0;top:calc(100% + 6px);min-width:220px}
+.edroll{flex:1;min-height:0;position:relative;display:flex}
+.edroll #edCanvas{flex:1;min-height:0;min-width:0}
+.edzoom{position:absolute;top:6px;right:6px;display:flex;gap:4px}
+.edzoom button{background:var(--screen2);color:var(--screen-ink);box-shadow:0 0 0 1px var(--screen-line),0 2px 6px rgba(0,0,0,.4);border-radius:9px;min-height:34px;height:34px;min-width:40px;padding:0 10px;font-size:13px}
+.edzoom button::before{display:none}
+#edOv{flex:none;height:26px;width:100%;display:block;border-radius:7px;touch-action:none;cursor:pointer}
+.edact{position:relative;flex:none;display:flex;align-items:center;gap:6px;padding-bottom:3px}   /* room for the keys' bottom edge */
+.edact .info{flex:1;min-width:0;font-family:var(--mono);font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.edact .info b{color:var(--ink);font-weight:600}
+.edact>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:50px;width:64px;padding:4px 0;flex:none}
+.edact>button small{font-size:10px}
+.edact>button:disabled{opacity:.35}
+.edvelpop{position:absolute;right:0;bottom:calc(100% + 8px);z-index:4;width:min(300px,100%);background:var(--bg);border-radius:12px;padding:12px 14px;box-shadow:0 0 0 1px var(--line),0 10px 30px rgba(0,0,0,.25)}
+.edvelpop label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:6px} .edvelpop label b{color:var(--ink)}
+.edvelpop input{width:100%}
+.edbar{flex:none;margin:0 calc(-1 * max(12px,calc(var(--sr) + 8px))) 0 calc(-1 * max(12px,calc(var(--sl) + 8px)));background:var(--screen);color:var(--screen-ink);
+  display:flex;align-items:center;gap:10px;padding:10px max(12px,calc(var(--sr) + 8px)) calc(10px + var(--sb)) max(12px,calc(var(--sl) + 8px))}
+.edbar .big{width:50px;height:50px;border-radius:12px;background:var(--screen2);color:var(--screen-ink);box-shadow:none;font-size:18px;padding:0;flex:none}
+.edbar .big::before{display:none}
+.edbar .rec i{display:block;width:16px;height:16px;border-radius:50%;background:var(--rec);margin:auto}
+.edbar .rec.on{background:var(--rec)} .edbar .rec.on i{background:#fff}
+.edpos{display:flex;flex-direction:column;font-family:var(--mono);min-width:0} .edpos b{font-size:22px;font-weight:500;line-height:1.1} .edpos small{color:var(--screen-dim);font-size:11px}
+.edtoolkeys{display:flex;gap:4px;margin-left:auto}
+.edtoolkeys button{width:46px;height:50px;background:var(--screen2);color:var(--screen-dim);box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px}
+.edtoolkeys button.on{background:var(--screen-ink);color:var(--screen)} .edtoolkeys button::before{display:none}
+.edgrid{position:relative;height:50px;min-width:66px;border-radius:12px;background:var(--screen2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 12px;flex:none}
+.edgrid small{font-family:var(--mono);font-size:10px;color:var(--screen-dim)} .edgrid b{font-family:var(--mono);font-size:15px;font-weight:500}
+.edgrid select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px}
+@media (max-width:639px){
+  .edpick{flex:1 1 0}
+  .edmode{order:5;flex-basis:100%;justify-content:center;background:none;padding:0;gap:0;margin:0}
+  .edmode button{background:color-mix(in srgb,var(--ink) 9%,transparent);border-radius:0} .edmode button:first-child{border-radius:10px 0 0 10px} .edmode button:last-child{border-radius:0 10px 10px 0}
+  .edmode button.on{background:var(--dark-key)}
+  .edtools{margin-left:0}
+  .edact .info{display:none}
+  .edact>button{flex:1;width:auto}
+  .edpos{display:none}
+}
 /* the projects screen fills the screen, like capture mode: "projects" top left, close top right, this project's name,
    then every project ("+ new project" first) — one column in portrait, three in landscape */
 body.projopen .tbar{display:none}
@@ -1119,48 +1173,51 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 </section>
 
 <div class="editor hidden" id="editor" role="dialog" aria-label="Note editor">
-  <div class="etool">
+  <!-- top: done, the layer (as in the instrument settings), chords/notes, and undo · redo · more as one toolbar -->
+  <div class="edhead">
     <button id="edDone" class="primary">done</button>
-    <select id="edLayer" aria-label="Layer"></select>
-    <button id="edPlay" aria-label="Play / stop">▶</button>
-    <button id="edRec" class="danger" aria-label="Record">●</button>
-    <div class="spacer"></div>
-    <select id="edSnap" aria-label="Snap"></select>
-    <button id="edChordMode" title="Edit whole chords or single notes">chords</button>
-    <button id="edUndo" title="Undo (⌘Z)" aria-label="Undo">↶</button>
-    <button id="edRedo" title="Redo (⇧⌘Z)" aria-label="Redo">↷</button>
-    <button id="edMore" aria-label="More editor tools" aria-expanded="false">⋯</button>
-    <div class="edmenu hidden" id="edMenu">
-      <button id="edDraw" title="Draw mode (B): a single tap adds a chord">✎ draw mode</button>
-      <div class="row" style="gap:6px;flex-wrap:nowrap">
-        <button id="edZoomOut" aria-label="Zoom out">−</button>
-        <button id="edFit" title="Fit the loop">fit loop</button>
-        <button id="edZoomIn" aria-label="Zoom in">+</button>
+    <div class="instsel edpick"><span id="edLayerIcon"></span><span id="edLayerName"></span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      <select id="edLayer" aria-label="Layer"></select></div>
+    <div class="edmode" id="edChordMode" role="group" aria-label="Edit chords or single notes"><button data-m="1">chords</button><button data-m="0">notes</button></div>
+    <div class="edtools">
+      <button id="edUndo" title="Undo (⌘Z)" aria-label="Undo"></button><button id="edRedo" title="Redo (⇧⌘Z)" aria-label="Redo"></button><button id="edMore" aria-label="More editor tools" aria-expanded="false"></button>
+      <div class="edmenu hidden" id="edMenu">
+        <button id="edSelAll">select all</button>
+        <button id="edQuantAll" title="Snap all notes of this layer to the grid">snap everything to the grid</button>
       </div>
-      <button id="edQuantAll" title="Snap all notes of this layer to the grid">quantize all to snap</button>
     </div>
-  </div>
-  <div class="etool selrow">
-    <span class="info" id="edInfo"></span>
-    <span class="seltools">
-      <label class="vel">vel <input type="range" id="edVel" min="1" max="127" step="1"></label>
-      <button id="edQuant" title="Snap the selection to the grid (Q)">quantize</button>
-      <button id="edDup" title="Duplicate (⌘D)">duplicate</button>
-      <button id="edDel" class="danger" title="Delete (⌫)">delete</button>
-    </span>
   </div>
   <div class="ebanner hidden" id="edBake">
     <span>This layer's timing settings move the notes when they play (outlines).</span>
     <button id="edBakeBtn">Apply to notes</button>
   </div>
-  <canvas id="edCanvas"></canvas>
+  <!-- the timeline, with zoom keys in its top right corner and the trim lane at its bottom -->
+  <div class="edroll"><canvas id="edCanvas"></canvas>
+    <div class="edzoom"><button id="edZoomOut" aria-label="Zoom out">−</button><button id="edFit" title="Show the whole loop">fit</button><button id="edZoomIn" aria-label="Zoom in">+</button></div></div>
+  <!-- the whole loop, with a frame for what the timeline shows: drag it to scroll -->
+  <canvas id="edOv" aria-label="Loop overview"></canvas>
+  <!-- what you can do with the selection -->
+  <div class="edact">
+    <span class="info" id="edInfo"></span>
+    <button id="edSplit" title="Split in two on the grid"></button><button id="edDup" title="Copy after itself (⌘D)"></button><button id="edQuant" title="Snap to the grid (Q)"></button>
+    <button id="edVelBtn" title="Velocity"></button><button id="edDel" class="danger" title="Delete (⌫)"></button>
+    <div class="edvelpop hidden" id="edVelPop"><label><span>velocity</span><b id="edVelVal"></b></label><input type="range" id="edVel" min="1" max="127" step="1"></div>
+  </div>
+  <!-- bottom bar, as on the main screen: play, record, position, tools and the grid -->
+  <div class="edbar">
+    <button id="edPlay" class="big" aria-label="Play / stop">▶</button>
+    <button id="edRec" class="big rec" aria-label="Record"><i></i></button>
+    <div class="edpos"><b id="edPosB">1.1</b><small id="edPosS">stopped</small></div>
+    <div class="edtoolkeys" role="group" aria-label="Tool"><button data-tool="select" aria-label="Select and move"></button><button data-tool="draw" aria-label="Draw"></button><button data-tool="erase" aria-label="Erase"></button></div>
+    <div class="edgrid"><small>grid</small><b id="edGridVal">1/16</b><select id="edSnap" aria-label="Grid"></select></div>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 <input type="file" id="fileIn" accept="audio/*" class="hidden">
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.46';
+const PAGE_VERSION = '2026-11-11.47';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2969,8 +3026,8 @@ $('pads').addEventListener('pointerdown',e=>{ const b=e.target.closest('.pad'); 
 /* ============ piano roll editor ============ */
 const SNAPS=[['off','Off',0],['1/4','1/4',1],['1/8','1/8',0.5],['1/16','1/16',0.25],['1/32','1/32',0.125],['1/8T','1/8T',1/3],['1/16T','1/16T',1/6]];
 const KEYW=46, RULER=20, MINLEN=1/32;
-let VELH=64;   // the velocity lane gets smaller on short screens (phone in landscape)
-const ED={ open:false, li:0, snap:'1/16', draw:false, ppb:60, rowH:16, sx:0, sy:0, sel:new Set(), hist:[], fut:[],
+let VELH=56;   // the trim lane under the notes (smaller on short screens)
+const ED={ open:false, li:0, snap:'1/16', tool:'select', ppb:60, rowH:16, sx:0, sy:0, sel:new Set(), hist:[], fut:[],
   drag:null, pointers:new Map(), lastLen:0, lastTap:null, chordMode:true, lastShape:[0,4,7] };
 const edCv=$('edCanvas');
 const edLy = () => layers[ED.li];
@@ -3000,7 +3057,7 @@ function closeEditor(){
 }
 function edResize(){
   const dpr=devicePixelRatio||1, {W,H}=edDims();
-  VELH = H < 380 ? 40 : 64;
+  VELH = H < 330 ? 46 : 56;   // the trim lane: tall enough for its handles
   edCv.width=Math.round(W*dpr); edCv.height=Math.round(H*dpr);
 }
 function edClamp(){
@@ -3088,6 +3145,29 @@ function edVelHit(x){
   for(const e of edLy().events){ const d=Math.abs(xOf(e.beat)-x); const pref=ED.sel.has(e.id)?-1:0; if(d+pref<bd){ bd=d+pref; best=e; } }
   return best;
 }
+/* what the trim lane shows: chords (or single notes) as bars */
+function edTrimGroups(){ return ED.chordMode ? edChordBoxes() : edLy().events.map(e=>({notes:[e], beat:e.beat, end:e.beat+e.dur})); }
+function edEraseAt(x,y){
+  const hit=edHit(x,y); if(!hit) return;
+  const ids = ED.chordMode && hit.e.chord!=null ? new Set(edLy().events.filter(e=>e.chord===hit.e.chord).map(e=>e.id)) : new Set([hit.e.id]);
+  edLy().events=edLy().events.filter(e=>!ids.has(e.id)); ids.forEach(i=>ED.sel.delete(i)); if(ED.drag) ED.drag.changed=true;
+  edRenderTools(); edDraw(); renderLayerMeta();
+}
+/* split the selection in two, on the grid line nearest to the middle of each chord or note */
+function edSplitSel(){
+  const s=edSelected(); if(!s.length) return; edPush();
+  const g=snapGrid()||0.25, groups=new Map();
+  s.forEach(e=>{ const k=ED.chordMode&&e.chord!=null?e.chord:'n'+e.id; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(e); });
+  const keep=new Set();
+  groups.forEach(ns=>{
+    const b0=Math.min(...ns.map(e=>e.beat)), b1=Math.max(...ns.map(e=>e.beat+e.dur));
+    let m=Math.round((b0+b1)/2/g)*g; if(m<=b0+MINLEN/2||m>=b1-MINLEN/2) m=(b0+b1)/2;
+    const cid=chordSeq++;
+    ns.forEach(e=>{ keep.add(e.id); const end=e.beat+e.dur; if(m<=e.beat||m>=end) return;
+      e.dur=m-e.beat; const c={...e, id:evId++, beat:m, dur:end-m, take:0, chord: e.chord!=null&&ED.chordMode?cid:chordSeq++}; edLy().events.push(c); keep.add(c.id); });
+  });
+  ED.sel=keep; edAfterChange();
+}
 function edAddNote(x,y){
   const g=snapGrid(), L=loopLen();
   let b=beatOfX(x); b = g ? Math.floor(b/g)*g : b; b=clamp(b,0,L-MINLEN);
@@ -3150,11 +3230,23 @@ edCv.addEventListener('pointerdown', e=>{
   const touch = e.pointerType!=='mouse';
   if(y>=RULER && y<H-VELH && x<KEYW){ edAudition(noteOfY(y)); ED.drag={type:'none'}; return; }
   if(y<RULER){ ED.drag={type:'pan', x0:x, y0:y, sx0:ED.sx, sy0:ED.sy}; return; }
-  if(y>=H-VELH){
-    const ev=edVelHit(x); if(!ev){ ED.drag={type:'none'}; return; }
-    if(!ED.sel.has(ev.id)){ ED.sel.clear(); ED.sel.add(ev.id); edExpandSel(); }
-    edPush(); ED.drag={ type:'vel', anchor:ev, y0:y, pushed:true, changed:false, orig:new Map(edSelected().map(s=>[s.id,s.vel])) };
-    edRenderTools(); edDraw(); return;
+  if(y>=H-VELH){   // the trim lane: drag a handle to move a chord's start or end, drag between them to move it in time
+    const sel=edSelected();
+    const start=(zone, anchor)=>{ edPush(); ED.drag={ type:zone, anchor, x0:x, y0:y, pushed:true, changed:false, lastDn:0, timeOnly:true,
+      orig:new Map(edSelected().map(s=>[s.id,{beat:s.beat,dur:s.dur,note:s.note}])) }; edAudition(anchor.note, anchor.vel); edRenderTools(); edDraw(); };
+    if(sel.length){
+      const first=sel.reduce((a,b)=>a.beat<=b.beat?a:b), last=sel.reduce((a,b)=>a.beat+a.dur>=b.beat+b.dur?a:b);
+      const x0=xOf(first.beat), x1=xOf(last.beat+last.dur);
+      if(x>=x0-34 && x<=x0+6){ start('resize-l', first); return; }
+      if(x>=x1-6 && x<=x1+34){ start('resize-r', last); return; }
+      if(x>x0 && x<x1){ start('move', first); return; }
+    }
+    const c=edTrimGroups().find(c=>x>=xOf(c.beat)-4 && x<=xOf(c.end)+4);
+    if(c){ ED.sel=new Set(c.notes.map(n=>n.id)); start('move', c.notes.reduce((a,b)=>a.beat<=b.beat?a:b)); return; }
+    ED.drag={type:'none'}; return;
+  }
+  if(ED.tool==='erase'){   // the eraser: tap or drag over notes to delete them
+    edPush(); ED.drag={ type:'erase', pushed:true, changed:false }; edEraseAt(x,y); return;
   }
   const hit=edHit(x,y);
   if(hit){
@@ -3176,7 +3268,7 @@ edCv.addEventListener('pointerdown', e=>{
   // empty space
   const now=performance.now(), lt=ED.lastTap, dbl = lt && now-lt.t<350 && Math.hypot(x-lt.x,y-lt.y)<24;
   ED.lastTap={t:now,x,y};
-  if(ED.draw || dbl){
+  if(ED.tool==='draw' || dbl){
     edPush(); const n=edAddNote(x,y); ED.lastTap=null;
     ED.drag={ type:'resize-r', anchor:n, x0:xOf(n.beat+n.dur), y0:y, pushed:true, changed:true, created:true,
       orig:new Map([[n.id,{beat:n.beat,dur:n.dur,note:n.note}]]) };
@@ -3189,7 +3281,7 @@ edCv.addEventListener('pointerdown', e=>{
 });
 edCv.addEventListener('pointermove', e=>{
   if(!ED.pointers.has(e.pointerId)){ // hover cursor for the mouse
-    if(e.pointerType==='mouse' && !ED.drag){ const p=edPos(e), h=edHit(p.x,p.y); edCv.style.cursor = h ? (h.zone==='move'?'grab':'ew-resize') : (ED.draw?'crosshair':'default'); }
+    if(e.pointerType==='mouse' && !ED.drag){ const p=edPos(e), h=edHit(p.x,p.y); edCv.style.cursor = h ? (h.zone==='move'?'grab':'ew-resize') : (ED.tool==='draw'?'crosshair':'default'); }
     return;
   }
   const p=edPos(e); ED.pointers.set(e.pointerId,p);
@@ -3207,16 +3299,12 @@ edCv.addEventListener('pointermove', e=>{
     ED.sel=new Set(d.base); edLy().events.forEach(ev=>{ if(ev.beat<b1 && ev.beat+ev.dur>b0 && ev.note>=n0 && ev.note<=n1) ED.sel.add(ev.id); }); edExpandSel();
     edRenderTools(); edDraw(); return;
   }
-  if(d.type==='vel'){
-    const delta=Math.round(-(y-d.y0)/(VELH-10)*127);   // relative: drag up = louder
-    edSelected().forEach(s=>{ s.vel=clamp(d.orig.get(s.id)+delta,1,127); });
-    d.changed=true; edRenderTools(); edDraw(); return;
-  }
+  if(d.type==='erase'){ edEraseAt(x,y); return; }
   if(!d.orig) return;   // keyboard taps and other gestures without notes
   const o=d.orig.get(d.anchor.id), dxB=(x-d.x0)/ED.ppb, sel=edSelected();
   if(d.type==='move'){
     let db=snapB(o.beat+dxB, free)-o.beat;
-    let dn=Math.round(-(y-d.y0)/ED.rowH);
+    let dn=d.timeOnly ? 0 : Math.round(-(y-d.y0)/ED.rowH);
     const os=sel.map(s=>d.orig.get(s.id));
     db=clamp(db, -Math.min(...os.map(q=>q.beat)), L-MINLEN-Math.max(...os.map(q=>q.beat)));
     dn=clamp(dn, -Math.min(...os.map(q=>q.note)), 127-Math.max(...os.map(q=>q.note)));
@@ -3329,55 +3417,105 @@ function edDraw(){
     if(mod(n,12)===0 && ED.rowH>=11){ g.fillStyle=C.dim; g.font='600 10px IBM Plex Mono, monospace'; g.fillText(noteName(n), 4, y+ED.rowH/2); } }
   g.restore();
   g.fillStyle=C.bg; g.fillRect(0,0,KEYW,RULER);
-  // velocity lane
-  g.fillStyle=C.bg2; g.fillRect(KEYW,rollBottom,W-KEYW,VELH); g.fillStyle=C.line; g.fillRect(KEYW,rollBottom,W-KEYW,1);
-  g.fillStyle=C.dim; g.font='600 10px IBM Plex Mono, monospace'; g.fillText('VEL', 6, rollBottom+VELH/2);
+  // trim lane: every chord as a thin bar, the selection as a bar with a handle at each end
+  g.fillStyle=C.bg2; g.fillRect(0,rollBottom,W,VELH); g.fillStyle=C.line; g.fillRect(0,rollBottom,W,1);
+  g.fillStyle=C.dim; g.font='600 10px IBM Plex Mono, monospace'; g.textBaseline='middle'; g.fillText('TRIM', 6, rollBottom+VELH/2);
   g.save(); g.beginPath(); g.rect(KEYW,rollBottom,W-KEYW,VELH); g.clip();
-  const top=rollBottom+6, vh=VELH-10;
-  Ly.events.forEach(e=>{ const x=xOf(e.beat); if(x<KEYW-4||x>W) return; const h=vh*e.vel/127, s=ED.sel.has(e.id);
-    g.fillStyle= s ? C.ink : C.col; g.fillRect(x, top+vh-h, 2, h); g.beginPath(); g.arc(x+1, top+vh-h, s?4:3, 0, TAU); g.fill(); });
+  const mid=rollBottom+VELH/2, rr=(x,y,w,h,r)=>{ g.beginPath(); if(g.roundRect) g.roundRect(x,y,w,h,r); else g.rect(x,y,w,h); };
+  edTrimGroups().forEach(c=>{ if(c.notes.some(n=>ED.sel.has(n.id))) return; const x0=xOf(c.beat), x1=xOf(c.end); if(x1<KEYW||x0>W) return;
+    g.fillStyle=C.line; rr(x0,mid-4,Math.max(3,x1-x0),8,4); g.fill(); });
+  const tsel=edSelected();
+  if(tsel.length){
+    const b0=Math.min(...tsel.map(e=>e.beat)), b1=Math.max(...tsel.map(e=>e.beat+e.dur)), x0=xOf(b0), x1=xOf(b1), hh=VELH-12;
+    g.fillStyle=C.col; g.globalAlpha=0.45; rr(x0,mid-11,x1-x0,22,6); g.fill(); g.globalAlpha=1;
+    g.strokeStyle=C.ink; g.lineWidth=2; rr(x0+1,mid-10,x1-x0-2,20,6); g.stroke();
+    [[x0-26,x0],[x1,x1]].forEach(([hx])=>{ g.fillStyle=C.ink; rr(hx,mid-hh/2,26,hh,7); g.fill();
+      g.fillStyle=C.bg; g.fillRect(hx+10,mid-7,2,14); g.fillRect(hx+14,mid-7,2,14); });
+  }
   g.restore();
+  edDrawOverview();
+  // position in the bottom bar
+  if(S.playing && ctx){ const b=Math.max(0,mod(beatAt(ctx.currentTime),L)); $('edPosB').textContent=`${Math.floor(b/4)+1}.${Math.floor(mod(b,4))+1}`; $('edPosS').textContent=S.rec?'recording':'playing'; }
+  else { $('edPosB').textContent='1.1'; $('edPosS').textContent='stopped'; }
 }
+/* the overview strip: the whole loop, with a frame around what the timeline shows */
+const edOv=$('edOv');
+function edDrawOverview(){
+  const dpr=devicePixelRatio||1, w=edOv.clientWidth, h=edOv.clientHeight; if(!w) return;
+  if(edOv.width!==Math.round(w*dpr)||edOv.height!==Math.round(h*dpr)){ edOv.width=Math.round(w*dpr); edOv.height=Math.round(h*dpr); }
+  const g=edOv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  const L=loopLen(), col=cssVar('--l'+ED.li), ink=cssVar('--screen-ink');
+  g.fillStyle=cssVar('--screen'); g.fillRect(0,0,w,h);
+  edTrimGroups().forEach(c=>{ const s=c.notes.some(n=>ED.sel.has(n.id)); g.fillStyle=s?ink:col; g.globalAlpha=s?0.9:0.7;
+    g.fillRect(4+c.beat/L*(w-8), h/2-4, Math.max(2,(c.end-c.beat)/L*(w-8)-2), 8); });
+  g.globalAlpha=1;
+  const {W}=edDims(), v0=ED.sx/ED.ppb/L, v1=(ED.sx+W-KEYW)/ED.ppb/L;
+  const fx=4+clamp(v0,0,1)*(w-8), fw=Math.max(14,(clamp(v1,0,1)-clamp(v0,0,1))*(w-8));
+  g.fillStyle='rgba(0,0,0,.45)'; g.fillRect(0,0,fx,h); g.fillRect(fx+fw,0,w-fx-fw,h);
+  g.strokeStyle=ink; g.lineWidth=2; g.beginPath(); if(g.roundRect) g.roundRect(fx+1,1,fw-2,h-2,5); else g.rect(fx+1,1,fw-2,h-2); g.stroke();
+}
+{ let ovDrag=false; const ovTo=e=>{ const r=edOv.getBoundingClientRect(), {W}=edDims(), b=(e.clientX-r.left-4)/(r.width-8)*loopLen();
+    ED.sx=b*ED.ppb-(W-KEYW)/2; edClamp(); edDraw(); };
+  edOv.addEventListener('pointerdown',e=>{ ovDrag=true; try{ edOv.setPointerCapture(e.pointerId); }catch(err){} ovTo(e); });
+  edOv.addEventListener('pointermove',e=>{ if(ovDrag) ovTo(e); });
+  ['pointerup','pointercancel'].forEach(t=>edOv.addEventListener(t,()=>{ ovDrag=false; })); }
 function edRenderTools(){
   const Ly=edLy(), s=edSelected();
   $('edLayer').innerHTML=layers.map((l,i)=>(l.shown||i===ED.li)?`<option value="${i}" ${i===ED.li?'selected':''}>${i+1} · ${instName(l)}</option>`:'').join('');
-  document.querySelector('.selrow').classList.toggle('has-sel', s.length>0);
+  $('edLayerIcon').innerHTML=INST_ICON[Ly.inst]; $('edLayerName').textContent=`${ED.li+1} · ${instName(Ly).toLowerCase()}`;
   $('edSnap').innerHTML=SNAPS.map(([k,l])=>`<option value="${k}" ${k===ED.snap?'selected':''}>${l}</option>`).join('');
-  $('edDraw').classList.toggle('on',ED.draw);
-  $('edChordMode').classList.toggle('on',ED.chordMode); $('edChordMode').textContent = ED.chordMode ? 'Chords' : 'Single notes';
+  $('edGridVal').textContent=SNAPS.find(x=>x[0]===ED.snap)[1].toLowerCase();
+  $('edChordMode').querySelectorAll('button').forEach(b=>b.classList.toggle('on', (b.dataset.m==='1')===ED.chordMode));
+  document.querySelectorAll('.edtoolkeys button').forEach(b=>b.classList.toggle('on', b.dataset.tool===ED.tool));
   $('edPlay').textContent = S.playing ? '■' : '▶';
-  $('edRec').classList.toggle('on',S.rec); $('edRec').style.color = S.rec?'#fff':'var(--rec)';
+  $('edRec').classList.toggle('on',S.rec);
   $('edUndo').disabled=!ED.hist.length; $('edRedo').disabled=!ED.fut.length;
-  ['edDup','edDel'].forEach(id=>$(id).disabled=!s.length);
+  ['edSplit','edDup','edDel','edVelBtn'].forEach(id=>$(id).disabled=!s.length);
+  if(!s.length) $('edVelPop').classList.add('hidden');
   $('edQuant').disabled=!Ly.events.length;
-  $('edVel').disabled=!s.length; if(s.length) $('edVel').value=Math.round(s.reduce((a,e)=>a+e.vel,0)/s.length);
+  if(s.length){ const v=Math.round(s.reduce((a,e)=>a+e.vel,0)/s.length); $('edVel').value=v; $('edVelVal').textContent=v; }
   const selChords = ED.chordMode && s.length ? edChordBoxes().filter(c=>c.notes.some(n=>ED.sel.has(n.id))) : [];
   if(selChords.length===1 && selChords[0].notes.length>1){ const lo=selChords[0].lo; ED.lastShape=[...new Set(selChords[0].notes.map(n=>n.note-lo))].sort((a,b)=>a-b); }
-  $('edInfo').textContent = selChords.length===1 ? `${chordName(selChords[0].notes)} · start ${fmtPos(selChords[0].beat)} · length ${fmtLen(selChords[0].end-selChords[0].beat)} · ${selChords[0].notes.length} notes`
-    : selChords.length>1 ? `${selChords.length} chords selected`
-    : s.length===1 ? `${noteName(s[0].note)} · start ${fmtPos(s[0].beat)} · length ${fmtLen(s[0].dur)} · velocity ${s[0].vel}`
-    : s.length ? `${s.length} notes selected`
-    : Ly.events.length ? (matchMedia('(pointer:coarse)').matches ? (ED.chordMode?'Tap a chord to select it · drag to move or transpose · drag its end to resize · double-tap adds a chord':'Double-tap to add · drag a note to move · drag its end to resize · two fingers to zoom') : (ED.chordMode?'Click a chord to select it · drag to move or transpose · drag its end to resize · double-click adds a chord · Alt-drag copies':'Double-click to add · drag to move · drag the end to resize · drag empty space to select · Alt-drag to copy'))
-    : 'No notes yet: double-tap (or Draw) to add one, or record from the HiChord';
+  // a short read-out that always fits: what is selected, or what to do
+  const touch=matchMedia('(pointer:coarse)').matches;
+  $('edInfo').innerHTML = selChords.length===1 ? `<b>${chordName(selChords[0].notes)}</b> ${fmtPos(selChords[0].beat)} · ${fmtLen(selChords[0].end-selChords[0].beat)}`
+    : selChords.length>1 ? `<b>${selChords.length} chords</b>`
+    : s.length===1 ? `<b>${noteName(s[0].note)}</b> ${fmtPos(s[0].beat)} · ${fmtLen(s[0].dur)}`
+    : s.length ? `<b>${s.length} notes</b>`
+    : Ly.events.length ? (ED.tool==='draw' ? (touch?'tap to add':'click to add') : ED.tool==='erase' ? 'tap to erase' : (touch?'tap to select · double-tap adds':'click to select · double-click adds'))
+    : 'no notes yet: draw or record';
   $('edBake').classList.toggle('hidden', !timingActive(Ly));
 }
 $('edDone').onclick=closeEditor;
 $('edLayer').onchange=e=>{ selectLayer(+e.target.value); ED.li=S.sel; ED.sel.clear(); ED.hist=[]; ED.fut=[]; edCenterPitch(); edRenderTools(); edDraw(); };
-$('edSnap').onchange=e=>{ ED.snap=e.target.value; edDraw(); };
-$('edDraw').onclick=()=>{ ED.draw=!ED.draw; edRenderTools(); };
-$('edChordMode').onclick=()=>{ ED.chordMode=!ED.chordMode; if(ED.chordMode) edExpandSel(); edRenderTools(); edDraw(); };
+$('edSnap').onchange=e=>{ ED.snap=e.target.value; edRenderTools(); edDraw(); };
+$('edChordMode').onclick=e=>{ const b=e.target.closest('[data-m]'); if(!b) return; ED.chordMode=b.dataset.m==='1'; if(ED.chordMode) edExpandSel(); edRenderTools(); edDraw(); };
+document.querySelector('.edtoolkeys').onclick=e=>{ const b=e.target.closest('[data-tool]'); if(!b) return; ED.tool=b.dataset.tool; edRenderTools(); };
 $('edZoomIn').onclick=()=>edZoom(1.5); $('edZoomOut').onclick=()=>edZoom(1/1.5); $('edFit').onclick=()=>{ edFit(); edDraw(); };
 $('edUndo').onclick=edUndo; $('edRedo').onclick=edRedo;
 $('edMore').onclick=e=>{ e.stopPropagation(); const m=$('edMenu'), open=m.classList.toggle('hidden')===false; $('edMore').setAttribute('aria-expanded',open); $('edMore').classList.toggle('on',open); };
-document.addEventListener('pointerdown',e=>{ if(!e.target.closest('#edMenu,#edMore')){ $('edMenu').classList.add('hidden'); $('edMore').classList.remove('on'); $('edMore').setAttribute('aria-expanded','false'); } });
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('#edMenu,#edMore')){ $('edMenu').classList.add('hidden'); $('edMore').classList.remove('on'); $('edMore').setAttribute('aria-expanded','false'); }
+  if(!e.target.closest('#edVelPop,#edVelBtn')) $('edVelPop').classList.add('hidden'); });
 $('edQuantAll').onclick=()=>{ ED.sel.clear(); edQuantizeSel(); $('edMenu').classList.add('hidden'); };
-$('edDup').onclick=edDuplicate; $('edDel').onclick=edDeleteSel; $('edQuant').onclick=edQuantizeSel;
+$('edSelAll').onclick=()=>{ ED.sel=new Set(edLy().events.map(x=>x.id)); $('edMenu').classList.add('hidden'); edRenderTools(); edDraw(); };
+$('edDup').onclick=edDuplicate; $('edDel').onclick=edDeleteSel; $('edQuant').onclick=edQuantizeSel; $('edSplit').onclick=edSplitSel;
+$('edVelBtn').onclick=()=>$('edVelPop').classList.toggle('hidden');
 $('edBakeBtn').onclick=edBake;
 $('edPlay').onclick=()=>{ S.playing?stopTransport():startTransport(false); edRenderTools(); };
 $('edRec').onclick=()=>{ setRec(!S.rec); edRenderTools(); };
 let velPushed=false;
-$('edVel').addEventListener('input',e=>{ if(!velPushed){ edPush(); velPushed=true; } edSelected().forEach(s=>s.vel=+e.target.value); edDraw(); edRenderTools(); });
+$('edVel').addEventListener('input',e=>{ if(!velPushed){ edPush(); velPushed=true; } edSelected().forEach(s=>s.vel=+e.target.value); $('edVelVal').textContent=e.target.value; edDraw(); });
 $('edVel').addEventListener('change',()=>{ velPushed=false; save(); renderLayerMeta(); });
+// icons on the editor's keys
+{ const E2={ undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/>',
+    more:'<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>',
+    split:'<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.6 7.6 20 18M8.6 16.4 20 6"/>', copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+    snap:'<path d="M4 4v16M10 4v16M16 4v16M22 4v16"/><rect x="5.5" y="9" width="9" height="5" rx="1" fill="currentColor" stroke="none"/>', vel:'<path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/>',
+    select:'<path d="M5 3l14 8-6 2-2 6z"/>', draw:'<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>', erase:'<path d="M7 20h13M5 15l9-9 5 5-8 8H8z"/>' };
+  Object.assign(ICONS, E2);
+  $('edUndo').innerHTML=ic('undo',''); $('edRedo').innerHTML=ic('redo',''); $('edMore').innerHTML=ic('more','');
+  [['edSplit','split','split'],['edDup','copy','copy'],['edQuant','snap','snap'],['edVelBtn','vel','velocity'],['edDel','trash','delete']].forEach(([id,i,l])=>$(id).innerHTML=`${ic(i,'')}<small>${l}</small>`);
+  document.querySelectorAll('.edtoolkeys button').forEach(b=>b.innerHTML=ic(b.dataset.tool,'')); }
 $('editBtn').onclick=()=>openEditor();
 function edKey(e){
   const k=e.key, mod2=e.metaKey||e.ctrlKey;
@@ -3390,7 +3528,7 @@ function edKey(e){
   else if(k==='ArrowDown') edNudgeSel(0, e.shiftKey?-12:-1);
   else if(k==='ArrowLeft') edNudgeSel(-(snapGrid()||0.25), 0);
   else if(k==='ArrowRight') edNudgeSel(snapGrid()||0.25, 0);
-  else if(k==='b'||k==='B'){ ED.draw=!ED.draw; edRenderTools(); }
+  else if(k==='b'||k==='B'){ ED.tool=ED.tool==='draw'?'select':'draw'; edRenderTools(); }
   else if(k==='q'||k==='Q') edQuantizeSel();
   else if(e.code==='Space'){ S.playing?stopTransport():startTransport(false); edRenderTools(); }
   else return;
