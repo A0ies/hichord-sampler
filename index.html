@@ -567,7 +567,7 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
 .ctile.off .cstate{background:var(--line);color:var(--dim)}
 .tool.on{color:var(--acc)}
 /* layer panel: one fixed height on every tab, preview screen above it, danger keys at the bottom */
-:root{--prevh:clamp(96px,17dvh,150px)}
+:root{--prevh:clamp(130px,23dvh,200px)}
 .lsbody{display:flex;flex-direction:column;min-height:0;flex:1}
 #detail{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
 #detail>.hint{margin:0}
@@ -591,20 +591,18 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
 #detail .advt .xy{flex:1;min-height:80px;height:auto}
 @media (max-width:779px){
   .layersheet{overflow:visible;display:flex;flex-direction:column;max-height:none;padding-bottom:calc(12px);
-    height:min(calc(100dvh - var(--tbarh) - var(--st) - var(--prevh) - 26px),660px)}
+    height:min(calc(100dvh - var(--tbarh) - var(--st) - var(--prevh) - 26px),620px)}
   .layersheet .lsbody{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;margin:0 -4px;padding:0 4px}
   .layersheet .lprev{position:absolute;left:max(12px,calc(var(--sl) + 8px));right:max(12px,calc(var(--sr) + 8px));bottom:calc(100% + 10px);height:var(--prevh)}
 }
 /* short phones (iPhone SE): a smaller preview and tighter spacing, so nothing scrolls there either */
 @media (max-width:779px) and (max-height:740px){
-  :root{--prevh:84px}
+  :root{--prevh:124px}
   #detail>.hint{display:none}
   #detail{gap:8px}
   .layersheet .params{gap:6px 14px}
   .layersheet .sheethead{margin-bottom:6px}
   .layersheet .grab{margin:4px auto 6px}
-  .layersheet #editBtn{min-height:34px}
-  .layersheet .row[style*="margin-bottom:12px"]{margin-bottom:8px!important}
   .layersheet .tabs{margin-bottom:8px}
   .dangerkeys{padding-top:8px;margin-top:8px}
   .dangerkeys button{min-height:36px}
@@ -612,7 +610,7 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
 @media (min-width:780px){
   .layersheet{display:flex;flex-direction:column;height:calc(100dvh - 64px - 96px - var(--sb));overflow:hidden}
   .layersheet .lsbody{overflow-y:auto;overflow-x:hidden}
-  .layersheet .lprev{height:120px;flex:none;margin-bottom:10px}
+  .layersheet .lprev{height:160px;flex:none;margin-bottom:10px}
 }
 /* advanced timing: XY screen, grid keys, mini steppers — fits without scrolling */
 .advt{display:flex;flex-direction:column;gap:8px;margin-top:6px}
@@ -696,10 +694,8 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
       <div class="row sheethead">
         <h2 id="detailTitle" style="margin:0">Layer 1</h2>
         <div class="spacer"></div>
-        <button class="icon close" data-close aria-label="Close"></button>
-      </div>
-      <div class="row" style="margin-bottom:12px">
         <button id="editBtn" class="primary">Edit notes</button>
+        <button class="icon close" data-close aria-label="Close"></button>
       </div>
       <div class="tabs" id="tabs"></div>
       <div id="detail"></div>
@@ -860,7 +856,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.16';
+const PAGE_VERSION = '2026-11-11.17';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
