@@ -473,9 +473,7 @@ header.top .chip{flex:0 1 auto}
 .pnamerow .textin{flex:1;min-width:0}
 .pnamerow button{flex:none}
 .pbar{display:none}
-body.projopen .tbar{display:none}
-body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:12;height:var(--tbarh);align-items:center;background:var(--panel);box-shadow:0 -1px 0 var(--line);
-  padding:10px max(12px,calc(var(--sr) + 8px)) calc(10px + var(--sb)) max(12px,calc(var(--sl) + 8px))}
+body.projopen .pbar{display:none}
 .pbar button{flex:1;height:56px;font-size:14px;justify-content:center}
 .textin{width:100%;font-family:var(--sans);font-size:16px;font-weight:600;background:var(--key);border:none;border-radius:9px;padding:10px 12px;box-shadow:0 1px 0 var(--key-edge);color:var(--ink)}
 .projlist{display:flex;flex-direction:column;gap:8px}
@@ -494,7 +492,23 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
 .proj.armed .pbg{background:var(--rec)}
 .proj .pbg{opacity:0}
 .proj.swiping .pbg,.proj.armed .pbg{opacity:1}
-.pnew{display:none}
+.pnew{display:flex;align-items:center;justify-content:center;min-height:64px;border:2px dashed var(--line);border-radius:12px;background:transparent;box-shadow:none;color:var(--dim);font-size:13px;flex:none}
+.pnew::before{display:none}
+/* phone in portrait: the projects screen as one panel down to the bottom — name row on top, then the list with "+ new project" first */
+@media (max-width:779px){
+  body.projopen .tbar{display:none}
+  #projSheet{bottom:0;max-height:calc(94dvh - var(--st));padding-bottom:calc(16px + var(--sb));display:grid;grid-template-columns:minmax(0,1fr) auto;
+    grid-template-rows:auto auto auto minmax(0,1fr);column-gap:10px;row-gap:10px;overflow:hidden}
+  #projSheet .grab{grid-column:1/-1;grid-row:1}
+  #projSheet>div[style*="height:18px"]{display:none}
+  #projSheet .sheethead{display:contents}
+  #projSheet .sheethead h2,#projSheet .sheethead .spacer{display:none}
+  #projSheet .sheethead .close{grid-column:2;grid-row:2;align-self:end}
+  #projSheet>.p.wide{grid-column:1;grid-row:2;min-width:0}
+  #projSheet>h2{grid-column:1/-1;grid-row:3;margin:0}
+  #projSheet .projlist{grid-column:1/-1;grid-row:4;overflow:auto;align-content:start;min-height:0}
+  #projSheet .proj{flex:none}
+}
 .proj .pdel{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;font-weight:600;text-transform:lowercase}
 .proj .pdel svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
 .proj.armed .pdel svg{transform:scale(1.2)}
@@ -687,7 +701,7 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
 /* projects on a phone in landscape: a full-height panel, the name row on top, the projects as tiles in three columns,
    "+ new project" as the first tile (no bar at the bottom) */
 @media (min-width:780px) and (max-height:560px){
-  body.projopen .pbar{display:none}
+  body.projopen .tbar{display:none}
   #projSheet{left:max(12px,calc(var(--sl) + 8px));right:max(12px,calc(var(--sr) + 8px));width:auto;top:calc(8px + var(--st));bottom:calc(8px + var(--sb));max-height:none;
     border-radius:16px;transform:translateY(calc(100% + 24px));display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr);
     column-gap:10px;row-gap:10px;overflow:hidden;padding:14px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
@@ -951,7 +965,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.26';
+const PAGE_VERSION = '2026-11-11.27';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1965,7 +1979,7 @@ function renderProjects(){
     return `<div class="proj ${isCur?'cur':''}" data-id="${p.id}">
       <div class="pbg" aria-hidden="true"><span class="pdel">${ic('trash','')}<span class="pword">delete</span></span></div>
       <div class="pface">
-        <div class="pinfo"><b>${esc(p.name)}</b><small>${sm.layers} layer${sm.layers===1?'':'s'} · ${sm.notes} notes · ${sm.bpm} bpm · ${ago(p.updated)}</small></div>
+        <div class="pinfo"><b>${esc(p.name)}</b><small>${sm.layers} layer${sm.layers===1?'':'s'} · ${sm.notes} notes · ${sm.bpm} bpm<br>${ago(p.updated)}</small></div>
         ${isCur?'<span class="open-tag">open</span>':'<button data-pa="open">open</button>'}
       </div>
     </div>`; }).join('') || '<p class="hint">No projects yet.</p>';
