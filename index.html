@@ -852,7 +852,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.14';
+const PAGE_VERSION = '2026-11-11.15';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1012,7 +1012,7 @@ function newLayerData(i){
   const inst=DEFAULT_INST[i]||'keys', L=LIB[inst];
   return { inst, customName:null, root:60, snd:SOUND_VERSION, events:[], takes:0,
     q: inst==='drums'?'1/16':'off', strength:1, swing:0, nudge:0, gate:1, oct:0, semis:0, humanize:0,
-    a:L.a, r:L.r, cutoff:1, reso:0.1, vol:0.8, pan:0, rev: inst==='pad'||inst==='strings'?0.35:0.18, dly:0, mute:false, solo:false,
+    a:L.a, d:0.4, s:1, r:L.r, cutoff:1, reso:0.1, vol:0.8, pan:0, rev: inst==='pad'||inst==='strings'?0.35:0.18, dly:0, mute:false, solo:false,
     out:'app',   // 'app' = the app's instrument, 'hc' = the HiChord plays it, 'both'
     fx: inst==='drums' ? 'gate' : 'lp',   // what holding and dragging this layer does in capture mode
     shown:false };   // layers appear in the list once you add them
@@ -1034,7 +1034,7 @@ function setInstrument(Ly, key, keepEnv){
   Ly.inst=key; Ly.customName=null; Ly.mode = key==='drums' ? 'kit' : 'melodic'; Ly.slices=null;
   Ly.buffer = SND[key] ? SND[key].buffer : null;
   if(!SND[key]) loadSound(key).catch(()=>{});
-  if(!keepEnv){ Ly.a=LIB[key].a; Ly.r=LIB[key].r; }
+  if(!keepEnv){ Ly.a=LIB[key].a; Ly.d=0.4; Ly.s=1; Ly.r=LIB[key].r; }
 }
 // a layer saved with the old synthesised instruments keeps its notes and mix, but gets the new instrument's envelope
 // a layer saved with version 2 keeps its sound under the right name (what was called e-piano is strings, and so on)
@@ -1085,8 +1085,10 @@ function playNote(Ly, note, vel, when, durSec){
   const rate=src.playbackRate.value;
   if(Ly.bend) src.playbackRate.value=rate*Math.pow(2,Ly.bend/12);   // pitch bend from capture mode
   src.connect(g);
+  // envelope: attack up to the velocity, decay down to the sustain level, held until release
   g.gain.setValueAtTime(0,when);
   g.gain.linearRampToValueAtTime(v, when+Ly.a);
+  const sus=Ly.s??1; if(sus<0.999) g.gain.setTargetAtTime(Math.max(0.0001,v*sus), when+Ly.a, Math.max(0.005,(Ly.d??0.4)/3));
   const voice={note, g, src, when, released:false, one, Ly, rate};
   src.onended=()=>{ try{g.disconnect();}catch(e){} Ly.voices.delete(voice); };
   Ly.voices.add(voice);
@@ -1593,7 +1595,7 @@ function drawCapRec(){
 
 /* ============ the session is kept between visits ============ */
 const SAVE_KEY='hichord-looper-v1';
-const LAYER_KEYS=['inst','customName','root','snd','fx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown'];
+const LAYER_KEYS=['inst','customName','root','snd','fx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown'];
 let saveT;
 function sessionData(){
   return { v:1,
@@ -2149,7 +2151,8 @@ function drawPreview(){
   // envelope: attack up, hold, release down (log time so short values stay visible)
   const ex=W-ew, ey=6, eh=H-12, tl=v=>Math.log10(1+v*40)/Math.log10(1+4*40);
   g.fillStyle=cssVar('--screen-line'); g.fillRect(ex-6,4,1,H-8);
-  g.beginPath(); g.moveTo(ex,ey+eh); g.lineTo(ex+tl(Ly.a)*ew*0.45,ey); g.lineTo(ex+ew*0.55,ey); g.lineTo(ex+ew*0.55+tl(Ly.r)*ew*0.45,ey+eh);
+  const sy=ey+eh*(1-(Ly.s??1)), ax=ex+tl(Ly.a)*ew*0.3, dx=ax+tl(Ly.d??0.4)*ew*0.3, hx=ex+ew*0.68;
+  g.beginPath(); g.moveTo(ex,ey+eh); g.lineTo(ax,ey); g.lineTo(dx,sy); g.lineTo(hx,sy); g.lineTo(hx+tl(Ly.r)*ew*0.32,ey+eh);
   g.strokeStyle=cssVar('--acc'); g.lineWidth=1.5; g.stroke();
   if(!audible(Ly)){ g.font='11px '+cssVar('--mono'); g.textBaseline='top'; g.fillStyle=dim; g.fillText('muted',4,2); }
 }
@@ -2234,6 +2237,8 @@ function renderDetail(){
     selectParam(grid,'Instrument',opts,()=>Ly.inst,v=>{ if(v==='custom') return; Ly.voices.forEach(x=>releaseVoice(x,ctx.currentTime,0.05)); setInstrument(Ly,v); applyLayer(Ly); renderLayers(); renderDetail(); });
     param(grid,'Transpose',()=>Ly.semis,v=>{Ly.semis=v;},-12,12,1,v=>(v>0?'+':'')+v+' st');
     param(grid,'Attack',()=>Ly.a,v=>{Ly.a=v;},0.001,1.5,0.001,secs);
+    param(grid,'Decay',()=>Ly.d??0.4,v=>{Ly.d=v;},0.01,3,0.01,secs);
+    param(grid,'Sustain',()=>Ly.s??1,v=>{Ly.s=v;},0,1,0.01,pct);
     param(grid,'Release',()=>Ly.r,v=>{Ly.r=v;},0.02,4,0.01,secs);
     param(grid,'Filter',()=>Ly.cutoff,v=>{Ly.cutoff=v;applyLayer(Ly);},0,1,0.001,v=>{const f=80*Math.pow(18000/80,v);return f>=1000?(f/1000).toFixed(1)+' kHz':Math.round(f)+' Hz';});
     param(grid,'Resonance',()=>Ly.reso,v=>{Ly.reso=v;applyLayer(Ly);},0,1,0.01,pct);
