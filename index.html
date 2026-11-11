@@ -807,6 +807,9 @@ body.projopen .pbar{display:none}
 #settingsSheet .setpage[data-k=sync]>.params{flex:1;align-content:space-between}
 #settingsSheet .setpage[data-k=room] .roomgroups{flex:1}
 #settingsSheet .setpage[data-k=sound] .padsbox{margin-top:auto;padding-top:18px}
+#settingsSheet .setpage[data-k=sound] .row+.hint{margin-top:16px}
+#settingsSheet .setpage[data-k=sound] .hint+.hint{margin-top:10px}
+#settingsSheet .setpage[data-k=sound] .padsbox h2{margin-bottom:10px}
 #settingsSheet .setpage[data-k=room] .rgroup{display:flex;flex-direction:column}
 #settingsSheet .setpage[data-k=room] .rgroup .params{flex:1;align-content:space-around}
 /* the projects screen fills the screen, like capture mode: "projects" top left, close top right, this project's name,
@@ -1119,7 +1122,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.41';
+const PAGE_VERSION = '2026-11-11.42';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
