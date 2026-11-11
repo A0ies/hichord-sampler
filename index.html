@@ -440,6 +440,14 @@ button.danger{color:var(--rec-text)}
 @media (hover:hover){ .projbtn:hover{background:var(--key)} }
 header.top .chip{flex:0 1 auto}
 @media (max-width:420px){ header.top .chip #midiStatus{display:none} }
+.pnamerow{display:flex;gap:8px;align-items:stretch}
+.pnamerow .textin{flex:1;min-width:0}
+.pnamerow button{flex:none}
+.pbar{display:none}
+body.projopen .tbar{display:none}
+body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:12;height:var(--tbarh);align-items:center;background:var(--panel);box-shadow:0 -1px 0 var(--line);
+  padding:10px max(12px,calc(var(--sr) + 8px)) calc(10px + var(--sb)) max(12px,calc(var(--sl) + 8px))}
+.pbar button{flex:1;height:56px;font-size:14px;justify-content:center}
 .textin{width:100%;font-family:var(--sans);font-size:16px;font-weight:600;background:var(--key);border:none;border-radius:9px;padding:10px 12px;box-shadow:0 1px 0 var(--key-edge);color:var(--ink)}
 .projlist{display:flex;flex-direction:column;gap:8px}
 .proj{display:block;border-radius:12px;box-shadow:0 1px 0 var(--key-edge)}
@@ -707,6 +715,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
     <button class="tool" id="captureBtn" title="Capture mode: play your layers as touch pads (C)"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/><circle cx="17" cy="17" r="1.7" fill="currentColor" stroke="none"/></svg><small>Capture</small></button>
     <button class="tool" id="undoBtn" title="Undo (Z) · hold for redo (⇧Z)"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2"/></svg><small>Undo</small></button>
   </footer>
+  <footer class="pbar"><button id="projNew" class="primary">+ new project</button></footer>
 </div>
 
 <section class="capmode hidden" id="capMode" aria-label="Capture mode">
@@ -733,13 +742,8 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
   <div class="grab"></div>
   <div class="row sheethead"><h2 style="margin:0">projects</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
   <div class="p wide"><label><span>this project</span><b id="projStatus">saves automatically</b></label>
-    <input id="projNameInput" class="textin" maxlength="60" aria-label="Project name" enterkeyhint="done"></div>
-  <div class="row" style="margin:12px 0 18px">
-    <button id="projSave" class="primary">save</button>
-    <button id="projCopy">save as copy</button>
-    <div class="spacer"></div>
-    <button id="projNew">+ new project</button>
-  </div>
+    <div class="pnamerow"><input id="projNameInput" class="textin" maxlength="60" aria-label="Project name" enterkeyhint="done"><button id="projCopy" title="Duplicate this project and continue in the copy">duplicate</button></div></div>
+  <div style="height:18px"></div>
   <h2>all projects</h2>
   <div class="projlist" id="projList"></div>
 </section>
@@ -848,7 +852,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.13';
+const PAGE_VERSION = '2026-11-11.14';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2015,9 +2019,10 @@ $('menuList').onclick=e=>{
 $('instGrid').innerHTML = Object.entries(LIB).map(([k,v])=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${v.name}</button>`).join('');
 $('settingsBtn').innerHTML=ic('cog',''); $('themeBtn').innerHTML=ic('theme',''); $('projIcon').innerHTML=ic('folder','');
 $('projBtn').onclick=openProjects;
-$('projSave').onclick=()=>projSaveNow();
 $('projCopy').onclick=saveAsCopy;
 $('projNew').onclick=newProject;
+/* on the projects screen the transport gives way to one wide new-project key */
+new MutationObserver(()=>document.body.classList.toggle('projopen',$('projSheet').classList.contains('open'))).observe($('projSheet'),{attributes:true,attributeFilter:['class']});
 $('projNameInput').addEventListener('change',e=>renameProject(e.target.value));
 $('projNameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') e.target.blur(); e.stopPropagation(); });
 $('projList').onclick=e=>{
