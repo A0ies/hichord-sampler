@@ -650,6 +650,9 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
   .layersheet.full .lprev{display:none}
   .layersheet.full .close{display:inline-flex}
   .layersheet.full .lsbody{overflow-y:auto;flex:1;min-height:0}
+  .layersheet.full #detail{flex:none}
+  .layersheet.full #detail .advt{flex:none}
+  .layersheet.full #detail .advt .xy{flex:none;height:140px}
 }
 /* advanced timing: XY screen, grid keys, mini steppers — fits without scrolling */
 .advt{display:flex;flex-direction:column;gap:8px;margin-top:6px}
@@ -896,7 +899,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.19';
+const PAGE_VERSION = '2026-11-11.20';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
