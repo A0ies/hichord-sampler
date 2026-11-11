@@ -713,7 +713,7 @@ header.top .chip{flex:0 1 auto}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-11.3';
+const PAGE_VERSION='2026-11-11.4';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -994,7 +994,7 @@ function setRec(on){
     S.rec=true; Ly.takes=(Ly.takes||0)+1; S.curTake=Ly.takes;
     if(!S.playing) startTransport(S.countIn);
   } else {
-    const now=recBeat(); for(const [note,list] of held) list.forEach(h=>closeNote(Ly, note, h, now));
+    const now=recBeat(); for(const [note,list] of held) list.forEach(h=>{ if(!h.drop) closeNote(Ly, note, h, now); });
     held.clear(); S.rec=false; writeSave();
   }
   renderTransport();
@@ -1091,16 +1091,33 @@ const qPush=(m,k,v)=>{ const a=m.get(k); if(a) a.push(v); else m.set(k,[v]); };
 const qShift=(m,k)=>{ const a=m.get(k); if(!a) return undefined; const v=a.shift(); if(!a.length) m.delete(k); return v; };
 let evId = 1;
 function recBeat(){ const lat=(ctx.outputLatency||0)+(ctx.baseLatency||0); return beatAt(ctx.currentTime - lat - S.recOffset/1000); }
-function liveOn(note, vel){
+/* Bass and drums play single notes: of a chord, only its lowest note sounds and gets recorded.
+   The HiChord's drum pads (channel 10) are single hits already, and can hit two pads at once. */
+const MONO_INST=new Set(['bass','ebass','drums']);
+const monoLayer = (Ly, ch) => MONO_INST.has(Ly.inst) && !(Ly.inst==='drums' && ch===10);
+function liveOn(note, vel, ch){
   if(!ctx) return;
   if(ctx.state!=='running') ctx.resume();
   const Ly=selLayer();
-  qPush(Ly.live, note, playNote(Ly, note, vel, ctx.currentTime, null));
   midiSeen(note, vel);
+  let h=null;
+  if(monoLayer(Ly, ch)){
+    // the notes of one chord arrive a few milliseconds apart, in any order
+    const c=Ly.mono, now=performance.now();
+    if(c && now-c.t<45){
+      if(note>=c.note){ qPush(Ly.live, note, null); return; }   // not the lowest: neither heard nor recorded
+      if(c.voice) releaseVoice(c.voice, ctx.currentTime, 0.01);
+      if(c.held) c.held.drop=true;
+    }
+    Ly.mono={ t: c && now-c.t<45 ? c.t : now, note };
+  }
+  const v=playNote(Ly, note, vel, ctx.currentTime, null);
+  qPush(Ly.live, note, v);
   if(S.rec && S.playing){
     const b=Math.max(0, recBeat());   // chords played during the count-in land on beat 1
-    qPush(held, note, {beat:b, vel, chord:chordFor(b)});
+    h={beat:b, vel, chord:chordFor(b)}; qPush(held, note, h);
   }
+  if(Ly.mono && Ly.mono.note===note){ Ly.mono.voice=v; Ly.mono.held=h; }
 }
 /* notes that start together belong to one chord, so the editor can move them as one */
 let lastChord=null;
@@ -1127,7 +1144,7 @@ function liveOff(note){
   if(v && !v.one) releaseVoice(v, ctx.currentTime);
   midiOffs++;
   const h=qShift(held, note);
-  if(h) closeNote(Ly, note, h, recBeat());
+  if(h && !h.drop) closeNote(Ly, note, h, recBeat());
 }
 function closeNote(Ly, note, h, endBeat){
   const L=loopLen();
@@ -1176,7 +1193,7 @@ function handleMsg(d, fromHC){
   }
   if(S.input!=='all' && String(ch)!==S.input) return;
   if(fromHC && (type===0x90||type===0x80) && hcIsEcho(d[1], type===0x90 && d[2]>0)) return;   // our own loop notes coming back from the HiChord
-  if(type===0x90 && d[2]>0) liveOn(d[1],d[2]);
+  if(type===0x90 && d[2]>0) liveOn(d[1],d[2],ch);
   else if(type===0x80 || type===0x90) liveOff(d[1]);
 }
 function onClock(){
@@ -1808,7 +1825,7 @@ function selectLayer(i){
   if(i===S.sel) return;
   const wasRec=S.rec;
   if(wasRec) setRec(false);
-  layers.forEach(Ly=>{ Ly.live.forEach(list=>list.forEach(v=>releaseVoice(v,ctx.currentTime))); Ly.live.clear(); });
+  layers.forEach(Ly=>{ Ly.live.forEach(list=>list.forEach(v=>{ if(v) releaseVoice(v,ctx.currentTime); })); Ly.live.clear(); });
   S.sel=i;
   if(wasRec) setRec(true);   // keep recording, now into the new layer
   renderLayers(); renderDetail(); save();
