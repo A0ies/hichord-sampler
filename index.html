@@ -773,7 +773,18 @@ body.projopen .pbar{display:none}
   #settingsSheet .setbody{grid-template-columns:minmax(0,42%) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"screen tabs" "screen page";column-gap:18px;row-gap:10px}
   .hcscreen{align-self:start}
   .hcrow{flex-direction:column;align-items:flex-start;gap:6px}
-  #settingsSheet .setpage[data-k=sync] .params{grid-template-columns:1fr 1fr}
+  /* sync: the three switches first, then "recording offset" and "listen to" side by side, tops aligned */
+  #settingsSheet .setpage[data-k=sync] .params{grid-template-columns:1fr 1fr;align-items:start;row-gap:16px}
+  #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(1){grid-area:1/1}
+  #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(2){grid-area:1/2}
+  #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(3){grid-area:2/1}
+  #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(4){grid-area:3/2}
+  #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(5){grid-area:3/1}
+  /* sound check: more air between the test key, the read-outs and the test chords */
+  #settingsSheet .setpage[data-k=sound] .row+.hint{margin-top:18px}
+  #settingsSheet .setpage[data-k=sound] .hint+.hint{margin-top:10px}
+  #settingsSheet .setpage[data-k=sound] .padsbox{margin-top:26px}
+  #settingsSheet .setpage[data-k=sound] .padsbox h2{margin-bottom:10px}
   #settingsSheet .setpage[data-k=room] .params{grid-template-columns:repeat(3,minmax(0,1fr))}
   #settingsSheet .pads{grid-template-columns:repeat(7,minmax(0,1fr))}
   #settingsSheet .setpage[data-k=sync] .hint{display:none}
@@ -1089,7 +1100,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.37';
+const PAGE_VERSION = '2026-11-11.38';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
