@@ -713,7 +713,7 @@ header.top .chip{flex:0 1 auto}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.5';
+const PAGE_VERSION = '2026-11-11.6';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -758,7 +758,7 @@ let ctx, preFx, tape, master, limiter, recDest, revIn, convolver, revOut, dlyIn,
 const TAU = Math.PI*2;
 const LIB = {
   piano:  {name:'Grand piano',     a:0.002, r:0.35},
-  keys:   {name:'E-piano',         a:0.002, r:0.35},
+  keys:   {name:'Rhodes',          a:0.002, r:0.35},
   strings:{name:'Strings',         a:0.002, r:0.6},
   horns:  {name:'Horns',           a:0.002, r:0.25},
   guitar: {name:'Electric guitar', a:0.002, r:0.3},
@@ -772,7 +772,7 @@ const LIB = {
 // instruments of earlier versions get the closest new one
 const OLD_INST = { organ:'horns', pluck:'guitar', bell:'keys' };
 const instKey = (k, i) => LIB[k] ? k : OLD_INST[k] || DEFAULT_INST[i] || 'keys';
-const SOUND_VERSION = 2;   // layers saved before this get the new instruments' envelopes
+const SOUND_VERSION = 3;   // 2: the recorded instruments; 3: keys/strings/horns renamed to the sound they really are
 // HiChord drum pads send GM notes on channel 10: kick 36, snare 38, closed hat 42, tom 45, open hat 46, cowbell 56
 // recorded hits: 0 kick, 1 snare, 2 closed hat, 3 open hat, 4 crash, 5 tom, 6 perc
 const GM_KIT = {35:0,36:0,37:1,38:1,40:1,42:2,44:2,46:3,49:4,51:4,52:4,55:4,57:4,59:4,39:5,41:5,43:5,45:5,47:5,48:5,50:5,56:6};
@@ -898,8 +898,14 @@ function setInstrument(Ly, key, keepEnv){
   if(!keepEnv){ Ly.a=LIB[key].a; Ly.r=LIB[key].r; }
 }
 // a layer saved with the old synthesised instruments keeps its notes and mix, but gets the new instrument's envelope
+// a layer saved with version 2 keeps its sound under the right name (what was called e-piano is strings, and so on)
+const RENAMED_3={ keys:'strings', strings:'horns', horns:'keys' };
 function newSounds(Ly, saved){
-  if(saved && saved.snd!==SOUND_VERSION && Ly.inst!=='custom'){ Ly.a=LIB[Ly.inst].a; Ly.r=LIB[Ly.inst].r; }
+  if(saved && Ly.inst!=='custom'){
+    const v=saved.snd||0;
+    if(v===2 && RENAMED_3[Ly.inst]) Ly.inst=RENAMED_3[Ly.inst];
+    if(v<2){ Ly.a=LIB[Ly.inst].a; Ly.r=LIB[Ly.inst].r; }
+  }
   Ly.snd=SOUND_VERSION;
 }
 function applyLayer(Ly){

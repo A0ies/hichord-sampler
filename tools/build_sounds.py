@@ -8,9 +8,9 @@ PRE=0.05   # silence before each note in the packed file
 # key, name, first slot time, slot step, slots used (k range), first played note, stereo, kind, length, loop window
 I=[
  ('piano','Grand piano',   0,2, range(0,24), 'stereo','decay',  1.95,None),
- ('keys', 'E-piano',      50,2, range(7,21), 'stereo','sustain',1.75,(0.75,1.70)),
- ('strings','Strings',   100,2, range(0,14), 'stereo','sustain',1.75,(0.75,1.70)),
- ('horns','Horns',       150,2, range(0,24), 'stereo','sustain',1.75,(1.00,1.70)),
+ ('strings','Strings',     50,2, range(7,21), 'stereo','sustain',1.75,(0.75,1.70)),
+ ('horns','Horns',       100,2, range(0,14), 'stereo','sustain',1.75,(0.75,1.70)),
+ ('keys', 'Rhodes',      150,2, range(0,24), 'stereo','sustain',1.75,(1.00,1.70)),
  ('guitar','Electric guitar',200,2,range(0,24),'mono','decay',   1.95,None),
  ('lead', 'Saw lead',    250,2, range(0,24), 'mono',  'sustain',1.75,(0.70,1.70)),
  ('square','Square lead',300,2, range(0,24), 'stereo','sustain',1.75,(0.70,1.70)),
