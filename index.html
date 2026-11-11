@@ -642,6 +642,10 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
   .layersheet:not(.full) .lprev{flex:1;height:auto;min-height:0;margin-bottom:8px}
   .layersheet:not(.full) .sheethead{margin-bottom:0}
   .layersheet:not(.full) #setBtn{display:inline-flex}
+  .layersheet:not(.full) .sheethead{flex-wrap:nowrap;gap:8px}
+  .layersheet:not(.full) .sheethead .spacer{display:none}
+  .layersheet:not(.full) #detailTitle{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .layersheet:not(.full) #setBtn,.layersheet:not(.full) #editBtn{flex:none}
   .layersheet .sheethead{align-items:center}
   .layersheet .sheethead button{align-items:center;justify-content:center}
   .layer .open{display:inline-flex}
@@ -650,18 +654,18 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
   .layersheet.full{position:fixed;top:calc(8px + var(--st));bottom:calc(var(--tbarh) + 8px);left:max(12px,calc(var(--sl) + 8px));right:max(12px,calc(var(--sr) + 8px));
     width:auto;height:auto;max-height:none;z-index:20;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:14px 16px}
   .layersheet.full .lprev,.layersheet.full .grab{display:none}
-  .layersheet.full .lsbody{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:minmax(210px,28%) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:20px}
-  .layersheet.full .sheethead{grid-column:1;grid-row:1;flex-wrap:wrap;gap:8px;margin-bottom:10px}
-  .layersheet.full .sheethead h2{flex-basis:100%}
-  .layersheet.full .sheethead .spacer{display:none}
-  .layersheet.full #editBtn{flex:1}
-  .layersheet.full .close{display:inline-flex}
-  .layersheet.full .tabs{grid-column:1;grid-row:2;flex-direction:column;margin:0}
+  .layersheet.full .lsbody{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:minmax(210px,28%) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;column-gap:20px}
+  .layersheet.full .sheethead{display:contents}
+  .layersheet.full #detailTitle{grid-column:1/-1;grid-row:1;min-height:44px;display:flex;align-items:center;padding-right:56px;margin-bottom:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .layersheet.full .sheethead .spacer,.layersheet.full #setBtn{display:none}
+  .layersheet.full #editBtn{grid-column:1;grid-row:2;margin-bottom:10px}
+  .layersheet.full .close{display:inline-flex;position:absolute;top:14px;right:16px}
+  .layersheet.full .tabs{grid-column:1;grid-row:3;flex-direction:column;margin:0}
   .layersheet.full .tabs button{text-align:left;justify-content:flex-start;padding:8px 10px;border-bottom:0;border-left:2px solid transparent}
   .layersheet.full .tabs button.on{border-left-color:var(--acc)}
-  .layersheet.full .dangerkeys{grid-column:1;grid-row:4;margin-top:10px;padding-top:0;border-top:0}
+  .layersheet.full .dangerkeys{grid-column:1;grid-row:5;margin-top:10px;padding-top:0;border-top:0}
   .layersheet.full .dangerkeys button{min-height:36px;font-size:11px;padding:0 6px}
-  .layersheet.full #detail{grid-column:2;grid-row:1/-1;min-height:0;overflow:hidden;gap:10px}
+  .layersheet.full #detail{grid-column:2;grid-row:2/-1;min-height:0;overflow:hidden;gap:10px}
   .layersheet.full #detail .params{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 16px}
   .layersheet.full #detail .hint{display:none}
   .layersheet.full #detail .instpick{grid-column:span 2}
@@ -752,8 +756,8 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
       <div class="row sheethead">
         <h2 id="detailTitle" style="margin:0">Layer 1</h2>
         <div class="spacer"></div>
+        <button id="setBtn" class="icon" aria-label="Layer settings"></button>
         <button id="editBtn" class="primary">Edit notes</button>
-        <button id="setBtn" aria-label="Layer settings">settings</button>
         <button class="icon close" data-close aria-label="Close"></button>
       </div>
       <div class="tabs" id="tabs"></div>
@@ -915,7 +919,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.22';
+const PAGE_VERSION = '2026-11-11.23';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2182,7 +2186,7 @@ function openSheet(id){
 }
 function closeSheets(){ $('layerSheet').classList.remove('full'); document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open')); $('backdrop').classList.remove('show'); }
 $('backdrop').onclick=closeSheets;
-$('setBtn').onclick=openLayerFull;
+$('setBtn').onclick=openLayerFull; $('setBtn').innerHTML=SLIDERS;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
 $('settingsBtn').onclick=()=>openSheet('settingsSheet');
 $('midiChip').onclick=()=>openSheet('settingsSheet');
