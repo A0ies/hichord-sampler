@@ -442,12 +442,33 @@ header.top .chip{flex:0 1 auto}
 @media (max-width:420px){ header.top .chip #midiStatus{display:none} }
 .textin{width:100%;font-family:var(--sans);font-size:16px;font-weight:600;background:var(--key);border:none;border-radius:9px;padding:10px 12px;box-shadow:0 1px 0 var(--key-edge);color:var(--ink)}
 .projlist{display:flex;flex-direction:column;gap:8px}
-.proj{display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:12px;padding:10px 10px 10px 14px;box-shadow:0 1px 0 var(--key-edge)}
-.proj.cur{box-shadow:inset 0 0 0 2px var(--ink)}
+.proj{display:block;border-radius:12px;box-shadow:0 1px 0 var(--key-edge)}
 .proj .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .proj .pinfo b{font-family:var(--sans);font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .proj .pinfo small{font-family:var(--mono);font-size:11px;color:var(--dim)}
 .proj .open-tag{font-family:var(--mono);font-size:11px;color:var(--dim);padding:0 8px}
+/* swipe to delete */
+.proj{position:relative;overflow:hidden;padding:0;background:var(--rec);touch-action:pan-y}
+.proj .pface{position:relative;z-index:1;display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:12px;padding:10px 10px 10px 14px;
+  transition:transform .22s ease;min-width:0}
+.proj.cur .pface{box-shadow:inset 0 0 0 2px var(--ink)}
+.proj.swiping .pface{transition:none}
+.proj .pbg{position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;padding-right:18px;color:#fff;background:color-mix(in srgb,var(--rec) 70%,var(--panel));transition:background .15s}
+.proj.armed .pbg{background:var(--rec)}
+.proj .pdel{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;font-weight:600;text-transform:lowercase}
+.proj .pdel svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.proj.armed .pdel svg{transform:scale(1.2)}
+.proj .pword{display:inline-block;overflow:hidden;white-space:nowrap;max-width:0;opacity:0;transition:max-width .15s,opacity .15s}
+.proj.swiping .pword{transition:none}
+.pundo{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;width:100%;min-height:58px;padding:0 14px;border-radius:12px;
+  background:var(--panel);color:var(--ink);box-shadow:inset 0 0 0 2px var(--rec);text-transform:none;justify-content:space-between}
+.pundo::before{display:none}
+.pundo .pfill{position:absolute;inset:0;background:color-mix(in srgb,var(--rec) 22%,transparent);transform-origin:left}
+.pundo .ptxt,.pundo .pact{position:relative;display:flex;align-items:center;gap:8px;min-width:0}
+.pundo .ptxt>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);font-size:12px}
+.pundo .ptxt b{font-family:var(--sans);font-weight:600}
+.pundo .pact{flex:none;font-family:var(--mono);font-size:11px;color:var(--rec);font-weight:600}
+.pundo svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--rec);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 /* toast with an action */
 .toast{display:flex;align-items:center;gap:12px}
 .toast.act{pointer-events:auto}
@@ -827,7 +848,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.12';
+const PAGE_VERSION = '2026-11-11.13';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1765,16 +1786,30 @@ async function renameProject(name){
   const p=PRJ.list.find(x=>x.id===PRJ.current); name=(name||'').trim(); if(!p || !name || name===p.name) return;
   p.name=name.slice(0,60); p.named=true; await dbDo('projects','readwrite',st=>st.put(p)); renderProjName(); renderProjects();
 }
+/* swipe to delete: the project disappears from the list at once (soft delete) and a badge takes its place
+   for 5 seconds; tap the badge to restore it, otherwise it is deleted for good */
+const UNDO_MS=5000;
+PRJ.pend=new Map();   // id -> {until, timer}
 async function deleteProject(id){
-  const p=PRJ.list.find(x=>x.id===id); if(!p || id===PRJ.current) return;
-  const sounds=await soundsOf(id);
-  await dbDo('projects','readwrite',st=>st.delete(id));
-  await dbDo('sounds','readwrite',st=>st.delete(soundRange(id)));
-  PRJ.list=PRJ.list.filter(x=>x.id!==id); PRJ.deleted={p, sounds}; renderProjects();
-  toast(`deleted "${p.name}"`, 'undo', async()=>{ const z=PRJ.deleted; if(!z) return;
-    await dbDo('projects','readwrite',st=>st.put(z.p));
-    for(const [i,rec] of Object.entries(z.sounds)) await dbDo('sounds','readwrite',st=>st.put(rec, z.p.id+':'+i));
-    PRJ.list.push(z.p); PRJ.list.sort((a,b)=>b.updated-a.updated); PRJ.deleted=null; renderProjects(); });
+  const p=PRJ.list.find(x=>x.id===id); if(!p || PRJ.pend.has(id)) return;
+  PRJ.pend.set(id, { until:Date.now()+UNDO_MS, timer:setTimeout(()=>purgeProject(id), UNDO_MS) });
+  if(id===PRJ.current){
+    // the open project goes: continue in the most recent other one, or in a fresh project
+    await projSaveNow().catch(()=>{});
+    const next=PRJ.list.find(x=>x.id!==id && !PRJ.pend.has(x.id));
+    if(next){ const sounds=await soundsOf(next.id); applySession(next.data, sounds); setCurrent(next.id); }
+    else { await newProject(); return; }
+  }
+  renderProjects();
+}
+function restoreProject(id){
+  const z=PRJ.pend.get(id); if(!z) return;
+  clearTimeout(z.timer); PRJ.pend.delete(id); renderProjects(); toast('project restored');
+}
+async function purgeProject(id){
+  if(!PRJ.pend.has(id)) return; PRJ.pend.delete(id);
+  try{ await dbDo('projects','readwrite',st=>st.delete(id)); await dbDo('sounds','readwrite',st=>st.delete(soundRange(id))); }catch(e){}
+  PRJ.list=PRJ.list.filter(x=>x.id!==id); renderProjects();
 }
 const ago = t => { const s=(Date.now()-t)/1000; return s<10?'just now':s<60?`${Math.round(s)} s ago`:s<3600?`${Math.round(s/60)} min ago`:s<86400?`${Math.round(s/3600)} h ago`:new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'}); };
 function renderProjName(){ const p=PRJ.list.find(x=>x.id===PRJ.current); $('projName').textContent = p ? p.name : 'project'; }
@@ -1783,10 +1818,20 @@ function renderProjects(){
   renderProjName(); renderProjStatus();
   const cur=PRJ.list.find(x=>x.id===PRJ.current);
   const inp=$('projNameInput'); if(cur && document.activeElement!==inp) inp.value=cur.name;
-  $('projList').innerHTML = PRJ.list.map(p=>{ const sm=p.summary||summary(p.data); const isCur=p.id===PRJ.current;
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  $('projList').innerHTML = PRJ.list.map(p=>{
+    const z=PRJ.pend.get(p.id);
+    if(z){ const left=Math.max(0,z.until-Date.now());
+      return `<button class="pundo" data-undo="${p.id}" aria-label="Restore ${esc(p.name)}">
+        <i class="pfill" style="transform:scaleX(${left/UNDO_MS})"></i>
+        <span class="ptxt">${ic('trash','')}<span><b>${esc(p.name)}</b> deleted</span></span><span class="pact">tap to restore</span></button>`; }
+    const sm=p.summary||summary(p.data); const isCur=p.id===PRJ.current;
     return `<div class="proj ${isCur?'cur':''}" data-id="${p.id}">
-      <div class="pinfo"><b>${p.name.replace(/</g,'&lt;')}</b><small>${sm.layers} layer${sm.layers===1?'':'s'} · ${sm.notes} notes · ${sm.bpm} bpm · ${ago(p.updated)}</small></div>
-      ${isCur?'<span class="open-tag">open</span>':`<button data-pa="open">open</button><button data-pa="del" class="danger" aria-label="Delete ${p.name.replace(/"/g,'')}">delete</button>`}
+      <div class="pbg" aria-hidden="true"><span class="pdel">${ic('trash','')}<span class="pword">delete</span></span></div>
+      <div class="pface">
+        <div class="pinfo"><b>${esc(p.name)}</b><small>${sm.layers} layer${sm.layers===1?'':'s'} · ${sm.notes} notes · ${sm.bpm} bpm · ${ago(p.updated)}</small></div>
+        ${isCur?'<span class="open-tag">open</span>':'<button data-pa="open">open</button>'}
+      </div>
     </div>`; }).join('') || '<p class="hint">No projects yet.</p>';
 }
 async function openProjects(){ flushSave(); await refreshProjects().catch(()=>{}); renderProjects(); openSheet('projSheet'); }
@@ -1846,6 +1891,7 @@ function renderBarsSeg(){
 const noteCount = Ly => Ly.events.length ? `${Ly.events.length} note${Ly.events.length>1?'s':''}` : 'empty';
 /* pictograms: thin geometric lines, OP-1 style */
 const ICONS={
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h8a1.5 1.5 0 0 0 1.5-1.5l1-12.5M9 7V4.5h6V7"/>',
   cog:'<circle cx="12" cy="12" r="6.4" stroke-width="2"/><circle cx="12" cy="12" r="2.3"/>'+[0,45,90,135,180,225,270,315].map(a=>`<rect x="10.3" y="2.2" width="3.4" height="3.6" rx=".9" fill="currentColor" stroke="none" transform="rotate(${a} 12 12)"/>`).join(''),
   faders:'<path d="M6 4v16M12 4v16M18 4v16"/><rect x="3.8" y="12.5" width="4.4" height="3.6" rx="1" fill="currentColor" stroke="none"/><rect x="9.8" y="6" width="4.4" height="3.6" rx="1" fill="currentColor" stroke="none"/><rect x="15.8" y="10" width="4.4" height="3.6" rx="1" fill="currentColor" stroke="none"/>',
   theme:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>',
@@ -1974,8 +2020,39 @@ $('projCopy').onclick=saveAsCopy;
 $('projNew').onclick=newProject;
 $('projNameInput').addEventListener('change',e=>renameProject(e.target.value));
 $('projNameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') e.target.blur(); e.stopPropagation(); });
-$('projList').onclick=e=>{ const b=e.target.closest('[data-pa]'); if(!b) return; const id=b.closest('.proj').dataset.id;
-  if(b.dataset.pa==='open') openProject(id); else deleteProject(id); };
+$('projList').onclick=e=>{
+  const u=e.target.closest('[data-undo]'); if(u){ restoreProject(u.dataset.undo); return; }
+  const b=e.target.closest('[data-pa]'); if(!b) return; const row=b.closest('.proj'); if(row.dataset.swiped) return;
+  openProject(row.dataset.id); };
+/* swipe left on a project: the bin shows, then "delete" grows in, and past the threshold letting go deletes it */
+(()=>{ const list=$('projList'); let sw=null;
+  const DONE=0.5;   // part of the row width to pull for a delete
+  const paint=(dx)=>{ const w=sw.row.offsetWidth, pull=clamp(-dx/w,0,1);
+    sw.face.style.transform=`translateX(${Math.min(0,dx)}px)`;
+    sw.word.style.maxWidth=(clamp((pull-0.12)/(DONE-0.12),0,1)*6)+'ch';
+    sw.word.style.opacity=clamp((pull-0.12)/(DONE-0.2),0,1);
+    const armed=pull>=DONE; if(armed!==sw.armed){ sw.armed=armed; sw.row.classList.toggle('armed',armed); if(armed && navigator.vibrate) navigator.vibrate(10); } };
+  list.addEventListener('pointerdown',e=>{
+    const row=e.target.closest('.proj'); if(!row || e.button>0) return;
+    sw={ row, face:row.querySelector('.pface'), word:row.querySelector('.pword'), x0:e.clientX, y0:e.clientY, dx:0, on:false, armed:false, id:e.pointerId };
+  });
+  list.addEventListener('pointermove',e=>{
+    if(!sw || e.pointerId!==sw.id) return;
+    const dx=e.clientX-sw.x0, dy=e.clientY-sw.y0;
+    if(!sw.on){ if(Math.abs(dy)>10 && Math.abs(dy)>Math.abs(dx)){ sw=null; return; }   // a scroll, not a swipe
+      if(dx<-8 && Math.abs(dx)>Math.abs(dy)){ sw.on=true; sw.row.classList.add('swiping'); try{ sw.row.setPointerCapture(e.pointerId); }catch(err){} } else return; }
+    e.preventDefault(); sw.dx=Math.min(0,dx); paint(sw.dx);
+  });
+  const end=e=>{
+    if(!sw || e.pointerId!==sw.id) return; const s=sw; sw=null; if(!s.on) return;
+    s.row.dataset.swiped='1'; setTimeout(()=>{ delete s.row.dataset.swiped; },50);   // no "open" from the same gesture
+    s.row.classList.remove('swiping');
+    if(s.armed){ s.face.style.transform='translateX(-110%)'; s.word.style.maxWidth='6ch'; s.word.style.opacity=1;
+      setTimeout(()=>deleteProject(s.row.dataset.id),180); }
+    else { s.face.style.transform=''; s.word.style.maxWidth='0'; s.word.style.opacity=0; s.row.classList.remove('armed'); }
+  };
+  list.addEventListener('pointerup',end); list.addEventListener('pointercancel',end);
+})();
 setInterval(()=>{ if($('projSheet').classList.contains('open')) renderProjStatus(); },5000);
 document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close',''));
 $('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(b) addLayer(b.dataset.k); };
@@ -2292,6 +2369,7 @@ function frame(){
     if(S.playing || n!==edLastNotes){ edLastNotes=n; if(!ED.drag) edDraw(); }
   } else if(S.playing){ CAP.open ? drawCaptureRolls() : drawAll(); }
   if(S.playing) drawPos();
+  if(PRJ.pend.size) document.querySelectorAll('.pundo').forEach(b=>{ const z=PRJ.pend.get(b.dataset.undo); if(z) b.firstElementChild.style.transform=`scaleX(${Math.max(0,z.until-Date.now())/UNDO_MS})`; });   // restore badges drain
   if(CAP.open) drawCapRec();
   else if(ctx && layerSheetShown()) drawPreview();
   requestAnimationFrame(frame);
