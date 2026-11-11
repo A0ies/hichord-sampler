@@ -56,7 +56,7 @@ h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)
 .card{background:var(--panel);border-radius:16px;padding:14px;margin-bottom:14px;min-width:0}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .cols{display:block}
-@media (min-width:780px){
+@media (min-width:640px){
   .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
 }
 
@@ -202,7 +202,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 .layer .fxc{min-height:26px;height:26px;padding:0 9px;border-radius:999px;font-size:11px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--lc);color:var(--ink);text-transform:none}
 .layer .fxc::before{display:none}
 .layer .fxc.add{box-shadow:inset 0 0 0 1.5px var(--line);color:var(--dim)}
-@media (min-width:780px){
+@media (min-width:640px){
   .layer{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px}
   .layer .top{grid-column:1/-1}
   .layer canvas{grid-column:1}
@@ -242,7 +242,7 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
   .sheet.open{transform:translate(-50%,0)}
 }
 /* wide screens (also a phone in landscape): the selected layer's settings sit next to the layers */
-@media (min-width:780px){
+@media (min-width:640px){
   .main{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,420px);gap:16px;align-items:start}
   .layersheet{position:sticky;top:64px;left:auto;right:auto;width:auto;transform:none;visibility:visible;border-radius:16px;box-shadow:none;
     background:var(--panel);max-height:calc(100dvh - 64px - 96px - var(--sb));z-index:1;padding:14px}
@@ -287,6 +287,7 @@ select{background:var(--key);border:none;border-radius:8px;box-shadow:0 1px 0 va
   -webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8a86' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center;background-size:14px}
 .instpick{align-self:end}
+.params .ownsnd{grid-column:1/-1;margin-top:4px;gap:8px}
 .instsel{position:relative;display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px 0 10px;border-radius:9px;background:var(--key);box-shadow:0 1px 0 var(--key-edge),inset 0 -2px 0 rgba(0,0,0,.07);min-width:0}
 .instsel .ii{width:20px;height:20px;flex:none}
 .instsel>span{flex:1;min-width:0;font-family:var(--sans);font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -414,7 +415,7 @@ button.icon svg{display:block}
 .layer.sel .tag.t-target,.layer.sel.recording .tag.t-rec{display:inline}
 /* landscape and wide screens: the settings of the selected layer are always shown beside the list,
    so the per-layer settings button is not needed there */
-@media (min-width:780px){ .layer .open{display:none} }
+@media (min-width:640px){ .layer .open{display:none} }
 /* phase 3: readable sizes */
 h2{font-size:12px}
 .p label{font-size:12px}
@@ -526,7 +527,7 @@ body.projopen .pbar{display:none}
 .backdrop{background:rgba(0,0,0,.35)}
 .sheet{background:var(--bg);border-radius:16px 16px 0 0}
 .grab{background:var(--dim);opacity:.5;height:4px}
-@media (min-width:780px){ .layersheet{background:var(--panel);box-shadow:0 1px 0 var(--key-edge);border-radius:12px} }
+@media (min-width:640px){ .layersheet{background:var(--panel);box-shadow:0 1px 0 var(--key-edge);border-radius:12px} }
 .hcstate div{background:var(--screen);color:var(--screen-ink);border-radius:8px}
 .hcstate small{color:var(--screen-dim);text-transform:lowercase;font-family:var(--mono)}
 .hcstate b{font-weight:500}
@@ -619,26 +620,31 @@ body.projopen .pbar{display:none}
 .seg2{display:flex;gap:4px}
 .seg2 button{min-height:34px;padding:0 14px}
 #detail .advt{flex:1;min-height:0;margin-top:0}
-#detail .advt .xy{flex:1;min-height:80px;height:auto}
-@media (max-width:779px){
-  .layersheet{overflow:visible;display:flex;flex-direction:column;max-height:none;padding-bottom:calc(12px);
-    height:min(calc(100dvh - var(--tbarh) - var(--st) - var(--prevh) - 26px),620px)}
+#detail .advt .xy{flex:1;min-height:60px;height:auto}
+@media (max-width:639px){
+  /* the panel is as tall as its tallest page (measured by fitLayerSheet into --lsh), so no page ever overflows;
+     the preview above it takes the height that is left */
+  :root{--prevh:clamp(96px,calc(100dvh - var(--tbarh) - var(--st) - var(--lsh,460px) - 26px),290px)}
+  .layersheet{overflow:visible;display:flex;flex-direction:column;max-height:none;padding-bottom:calc(12px);height:var(--lsh,min(calc(100dvh - var(--tbarh) - var(--st) - 156px),620px))}
   .layersheet .lsbody{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;margin:0 -4px;padding:0 4px}
   .layersheet .lprev{position:absolute;left:max(12px,calc(var(--sl) + 8px));right:max(12px,calc(var(--sr) + 8px));bottom:calc(100% + 10px);height:var(--prevh)}
-}
-/* short phones (iPhone SE): a smaller preview and tighter spacing, so nothing scrolls there either */
-@media (max-width:779px) and (max-height:740px){
-  :root{--prevh:124px}
   #detail>.hint{display:none}
-  #detail{gap:8px}
-  .layersheet .params{gap:6px 14px}
-  .layersheet .sheethead{margin-bottom:6px}
-  .layersheet .grab{margin:4px auto 6px}
-  .layersheet .tabs{margin-bottom:8px}
-  .dangerkeys{padding-top:8px;margin-top:8px}
-  .dangerkeys button{min-height:36px}
+  .layersheet .params{gap:10px 14px}
+  /* while measuring: everything at its natural height */
+  .layersheet.measure{height:auto!important}
+  .layersheet.measure .lsbody,.layersheet.measure #detail,.layersheet.measure #detail .advt{flex:none}
+  .layersheet.measure #detail .advt .xy{flex:none;height:76px}   /* the XY screen grows into whatever room is left */
+  /* short phones (iPhone SE, mini): tighter spacing so the preview keeps some room */
+  .layersheet.tight #detail{gap:8px}
+  .layersheet.tight .params{gap:4px 14px}
+  .layersheet.tight .sheethead{margin-bottom:6px}
+  .layersheet.tight .grab{margin:4px auto 6px}
+  .layersheet.tight .tabs{margin-bottom:8px}
+  .layersheet.tight .dangerkeys{padding-top:8px;margin-top:8px}
+  .layersheet.tight .dangerkeys button{min-height:36px}
+  .layersheet.tight.measure #detail .advt .xy{height:64px}
 }
-@media (min-width:780px){
+@media (min-width:640px){
   .layersheet{display:flex;flex-direction:column;height:calc(100dvh - 64px - 96px - var(--sb));overflow:hidden}
   .layersheet .lsbody{overflow-y:auto;overflow-x:hidden}
   .layersheet .lprev{height:160px;flex:none;margin-bottom:10px}
@@ -646,7 +652,7 @@ body.projopen .pbar{display:none}
 .layersheet #setBtn{display:none}
 /* a phone in landscape: the docked pane only holds the preview and its header and never scrolls (a swipe on it
    scrolls the layers); "settings" opens the full layer settings as a panel over the right side */
-@media (min-width:780px) and (max-height:560px){
+@media (min-width:640px) and (max-height:560px){
   .layersheet:not(.full) .lsbody{overflow:hidden;flex:none}
   .layersheet:not(.full) .grab,.layersheet:not(.full) .tabs,.layersheet:not(.full) #detail,.layersheet:not(.full) .dangerkeys{display:none}
   .layersheet:not(.full) .lprev{flex:1;height:auto;min-height:0;margin-bottom:8px}
@@ -665,25 +671,62 @@ body.projopen .pbar{display:none}
   .layersheet.full .lprev,.layersheet.full .grab{display:none}
   .layersheet.full .lsbody{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:minmax(210px,28%) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;column-gap:20px}
   .layersheet.full .sheethead{display:contents}
-  .layersheet.full #detailTitle{grid-column:1/-1;grid-row:1;min-height:44px;display:flex;align-items:center;padding-right:56px;margin-bottom:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .layersheet.full #detailTitle{grid-column:1/-1;grid-row:1;min-height:44px;display:flex;align-items:center;padding-right:56px;margin-bottom:4px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .layersheet.full .sheethead .spacer,.layersheet.full #setBtn{display:none}
-  .layersheet.full #editBtn{grid-column:1;grid-row:2;margin-bottom:10px}
+  .layersheet.full #editBtn{grid-column:1;grid-row:2;margin-bottom:8px}
   .layersheet.full .close{display:inline-flex;position:absolute;top:14px;right:16px}
   .layersheet.full .tabs{grid-column:1;grid-row:3;flex-direction:column;margin:0}
-  .layersheet.full .tabs button{text-align:left;justify-content:flex-start;padding:8px 10px;border-bottom:0;border-left:2px solid transparent}
+  .layersheet.full .tabs button{text-align:left;justify-content:flex-start;padding:6px 10px;min-height:34px;border-bottom:0;border-left:2px solid transparent}
   .layersheet.full .tabs button.on{border-left-color:var(--acc)}
   .layersheet.full .dangerkeys{grid-column:1;grid-row:5;margin-top:10px;padding-top:0;border-top:0}
   .layersheet.full .dangerkeys button{min-height:36px;font-size:11px;padding:0 6px}
   .layersheet.full #detail{grid-column:2;grid-row:2/-1;min-height:0;overflow:hidden;gap:10px}
   .layersheet.full #detail .params{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 16px}
   .layersheet.full #detail .hint{display:none}
-  .layersheet.full #detail .instpick{grid-column:span 2}
+  .layersheet.full #detail .instpick{grid-column:1/span 2;grid-row:1}
+  /* instrument page: the instrument and your own sound on the first line, then every slider in one block of four columns */
+  .layersheet.full #detail .ownsnd{grid-column:3/span 2;grid-row:1;align-self:end;margin:0;flex-wrap:nowrap;gap:8px}
+  .layersheet.full #detail .ownsnd .sub{display:none}
+  .layersheet.full #detail .ownsnd button{flex:1;min-width:0;min-height:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .layersheet.full #detail .params>.p:not(.instpick):not(.wide){margin-top:6px}
   .layersheet.full #detail .params{row-gap:4px}
   .layersheet.full #detail>.row{margin-top:4px!important}
-  .layersheet.full #detail .advt{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;gap:8px 14px;margin:0}
-  .layersheet.full #detail .advt .xy{grid-column:1;grid-row:1/3;height:auto;min-height:0}
-  .layersheet.full #detail .advt .gridkeys{grid-column:2;grid-row:1;grid-template-columns:repeat(3,minmax(0,1fr))}
-  .layersheet.full #detail .advt .minis{grid-column:2;grid-row:2;align-self:start}
+  /* advanced timing: the XY screen with octave under it on the left; grid keys at the top and the steppers at the
+     bottom on the right, level with octave */
+  .layersheet.full #detail:has(.advt){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;gap:8px 14px}
+  .layersheet.full #detail:has(.advt)>.tsw{grid-column:1/-1}
+  .layersheet.full #detail .advt{display:contents}
+  .layersheet.full #detail .advt .xy{grid-column:1;grid-row:2/4;height:auto;min-height:0}
+  .layersheet.full #detail .advt .gridkeys{grid-column:2;grid-row:2;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .layersheet.full #detail .advt .minis{grid-column:2;grid-row:3/5;align-self:end}
+  .layersheet.full #detail:has(.advt)>.params{grid-column:1;grid-row:4;grid-template-columns:minmax(0,1fr);margin:0}
+}
+/* the small sheets may use the whole height above the bar, so they never need to scroll on a short phone */
+#menuSheet,#loopSheet,#newSheet{max-height:calc(100dvh - var(--tbarh) - var(--st) - 8px)}
+@media (max-width:639px) and (max-height:700px){ .inst{min-height:76px;padding:10px 6px} .instgrid{gap:8px} }
+/* a phone in landscape: the small sheets (layer menu, tempo and loop, new layer) use the full width and lay their
+   content out in columns, so they fit above the bar without scrolling */
+@media (min-width:640px) and (max-height:560px){
+  #menuSheet,#loopSheet,#newSheet{left:max(12px,calc(var(--sl) + 8px));right:max(12px,calc(var(--sr) + 8px));width:auto;
+    max-height:calc(100dvh - var(--tbarh) - var(--st) - 8px);transform:translateY(105%);padding:2px 16px 16px}
+  #menuSheet.open,#loopSheet.open,#newSheet.open{transform:none}
+  #menuSheet .grab,#loopSheet .grab,#newSheet .grab{margin:6px auto 4px}
+  #menuSheet .sheethead,#loopSheet .sheethead,#newSheet .sheethead{margin-bottom:8px}
+  .menulist{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  #newSheet .instgrid{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+  #loopSheet{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;row-gap:12px;align-items:center}
+  #loopSheet>.grab,#loopSheet>.sheethead{grid-column:1/-1}
+  #loopSheet>.row:not(.sheethead){margin-top:0!important}
+  #loopSheet .panic-row{margin:0;padding:0;border:0}
+}
+/* slider labels never run into their value: a long name is cut short instead */
+.p label>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* the narrowest landscape phones (iPhone SE): a narrower right pane, so the layers keep room */
+@media (min-width:640px) and (max-width:779px){
+  .main{grid-template-columns:minmax(0,1fr) minmax(0,40%)}
+  .layersheet.full .lsbody{grid-template-columns:minmax(170px,27%) minmax(0,1fr)}
+  .layersheet.full #detail .params{column-gap:12px}
+  .mini button{width:26px}
 }
 /* the projects screen fills the screen, like capture mode: "projects" top left, close top right, this project's name,
    then every project ("+ new project" first) — one column in portrait, three in landscape */
@@ -710,8 +753,8 @@ body.projopen .tbar{display:none}
 #projSheet .pundo{min-height:72px}
 .curbadge{font-family:var(--mono);font-size:11px;font-weight:600;background:var(--ink);color:var(--bg);border-radius:999px;padding:4px 10px;white-space:nowrap}
 .st-short{display:none}
-@media (min-width:780px){ #projSheet .projlist{grid-template-columns:repeat(3,minmax(0,1fr))} }
-@media (max-width:779px){ .st-long{display:none} .st-short{display:inline} }
+@media (min-width:640px){ #projSheet .projlist{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:639px){ .st-long{display:none} .st-short{display:inline} }
 /* advanced timing: XY screen, grid keys, mini steppers — fits without scrolling */
 .advt{display:flex;flex-direction:column;gap:8px;margin-top:6px}
 .xy{position:relative;height:clamp(110px,18dvh,170px);border-radius:10px;background:var(--screen);touch-action:none;cursor:crosshair;overflow:hidden;
@@ -782,7 +825,7 @@ body[data-state="count"] .tbar,body[data-state="recording"] .tbar{background:var
 body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 .main{padding-bottom:calc(150px + var(--sb))}
 /* phone in landscape: the docked pane fills the right side, so undo sits bottom left, over the layer list */
-@media (min-width:780px) and (max-height:560px){
+@media (min-width:640px) and (max-height:560px){
   .undofab{right:auto;left:max(14px,calc(var(--sl) + 10px))}
   /* landscape: the home indicator is thin there, so the bar doesn't need its full safe-area padding */
   :root{--tbarh:calc(70px + var(--sb) * .3)}
@@ -2251,12 +2294,32 @@ twoTap($('clearBtn'),'clear notes',clearLayer);
 
 
 /* sheets */
-const isWide = () => matchMedia('(min-width:780px)').matches;
-const isShortWide = () => matchMedia('(min-width:780px) and (max-height:560px)').matches;
+const isWide = () => matchMedia('(min-width:640px)').matches;
+const isShortWide = () => matchMedia('(min-width:640px) and (max-height:560px)').matches;
 function openLayerFull(){ $('layerSheet').classList.add('full'); $('backdrop').classList.add('show'); document.body.classList.add('sheetopen'); }
+/* portrait: the layer panel gets the height of its tallest page, measured on this phone, so nothing overflows or
+   scrolls on any screen size; if that leaves the preview too little room, the panel tightens its spacing */
+let fitProbe=null;
+function fitLayerSheet(){
+  const sh=$('layerSheet'), root=document.documentElement;
+  if(isWide() || !layers.some(l=>l.shown)){ root.style.removeProperty('--lsh'); sh.classList.remove('tight'); return; }
+  if(!fitProbe){ fitProbe=document.createElement('div'); fitProbe.style.cssText='position:fixed;visibility:hidden;pointer-events:none;width:1px;height:calc(var(--tbarh) + var(--st))'; document.body.appendChild(fitProbe); }
+  const keep=[S.tab,S.advOpen];
+  const measure=()=>{ let h=0; sh.classList.add('measure');
+    for(const [t,a] of [['timing',false],['timing',true],['sound',false],['mix',false]]){ S.tab=t; S.advOpen=a; renderDetail(); h=Math.max(h,sh.offsetHeight); }
+    sh.classList.remove('measure'); return Math.ceil(h); };
+  sh.classList.remove('tight');
+  let h=measure();
+  const room=()=>innerHeight-fitProbe.offsetHeight-26-h;
+  if(room()<150){ sh.classList.add('tight'); h=measure(); }
+  root.style.setProperty('--lsh',h+'px');
+  [S.tab,S.advOpen]=keep; renderDetail();
+}
+addEventListener('resize',()=>{ if($('layerSheet').classList.contains('open')) fitLayerSheet(); });
 function openSheet(id){
   if(id==='layerSheet' && isShortWide()){ openLayerFull(); return; }
   if(id==='layerSheet' && isWide()) return;   // docked next to the layers
+  if(id==='layerSheet') fitLayerSheet();
   document.querySelectorAll('.sheet.open').forEach(x=>{ if(x.id!==id) x.classList.remove('open'); });
   $(id).classList.add('open'); $('backdrop').classList.add('show'); document.body.classList.add('sheetopen');
 }
@@ -2362,7 +2425,7 @@ function advTiming(host, Ly){
     dot.style.left=`calc(12px + ${Ly.strength} * (100% - 24px))`; dot.style.top=`calc(12px + ${1-Ly.humanize} * (100% - 24px))`;
     pad.classList.toggle('nogrid',!grid);
     pad.querySelector('.xyh').textContent=`humanize ${pct(Ly.humanize)}`;
-    pad.querySelector('.xys').textContent= grid ? `strength ${pct(Ly.strength)}` : 'strength: pick a grid';
+    pad.querySelector('.xys').textContent= grid ? `strength ${pct(Ly.strength)}` : 'pick a grid';
     box.querySelectorAll('.mini').forEach(m=>{ const k=m.dataset.k; m.querySelector('b').textContent=MINI[k].fmt(Ly[k]);
       if(k==='swing'){ m.classList.toggle('dis',!swingOk); m.querySelectorAll('button').forEach(b=>b.disabled=!swingOk); } });
   };
@@ -2426,9 +2489,9 @@ function renderDetail(){
     param(grid,'Release',()=>Ly.r,v=>{Ly.r=v;},0.02,4,0.01,secs);
     param(grid,'Filter',()=>Ly.cutoff,v=>{Ly.cutoff=v;applyLayer(Ly);},0,1,0.001,v=>{const f=80*Math.pow(18000/80,v);return f>=1000?(f/1000).toFixed(1)+' kHz':Math.round(f)+' Hz';});
     param(grid,'Resonance',()=>Ly.reso,v=>{Ly.reso=v;applyLayer(Ly);},0,1,0.01,pct);
-    const row=document.createElement('div'); row.className='row'; row.style.marginTop='14px';
+    const row=document.createElement('div'); row.className='row ownsnd';
     row.innerHTML=`<span class="sub">Your own sound:</span><button id="fileBtn">Audio file…</button><button id="micBtn" class="${mic?'on':''}">${mic?'Stop recording':'Microphone'}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
-    host.appendChild(row);
+    grid.appendChild(row);   // in the grid: under the sliders on a phone, next to the instrument in landscape
     $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=toggleMic;
   } else {
     param(grid,'Volume',()=>Ly.vol,v=>{Ly.vol=v;applyLayer(Ly);},0,1,0.01,pct);
