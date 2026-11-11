@@ -689,7 +689,7 @@ body.projopen .pbar{display:none}
   .layersheet.full #detail .ownsnd .sub{display:none}
   .layersheet.full #detail .ownsnd button{flex:1;min-width:0;min-height:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .layersheet.full #detail .params>.p:has(>input[type=range]){margin-top:6px}
-  .layersheet.full #detail{padding:0 10px;margin:0 -10px}   /* room for a knob at either end of a slider */
+  .layersheet.full .lsbody{margin-right:-12px;padding-right:12px}   /* room for a knob at the right end of a slider */
   /* mix page: capture effect and "plays on" share the line under the four sliders, each two columns wide */
   .layersheet.full #detail .params>.p:has(>select),.layersheet.full #detail .params>.p.wide:has(>.seg){grid-column:span 2}
   .layersheet.full #detail .params>.p:has(>select) select{width:100%}
@@ -1037,7 +1037,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.34';
+const PAGE_VERSION = '2026-11-11.35';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
