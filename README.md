@@ -15,6 +15,7 @@ Open it at https://a0ies.github.io/hichord-sampler/ (Chrome or Edge), or use the
 - **Loop.** 1 to 16 bars, ×2 to double, count-in and click.
 - **Note editor (piano roll).** Works on whole chords by default (with chord names), or on single notes. Like in Ableton: double-click/double-tap to add, drag to move in time and pitch, drag an edge to lengthen or shorten, drag empty space to select, Alt-drag to copy, a velocity lane, snap from 1/4 to 1/32, quantize, duplicate, undo/redo and keyboard shortcuts (⌫, ⌘D, ⌘A, ⌘Z, arrows, Q, B). On a phone: one finger pans, two fingers zoom, Draw adds with a single tap.
 - **HiChord.** Notes always come in over USB MIDI. Connect HiChord to also see and set its key, scale, octave, play mode and sound, follow its tempo or send yours, and let its start/stop run the loop.
+- **Settings.** The HiChord's screen sits at the top (on the left in landscape): connect, and once connected tap key, scale, octave, mode or sound to change it on the HiChord. Tabs underneath switch between sync, sound check and room; nothing scrolls.
 - **Projects.** Every session is a project that saves itself (IndexedDB), including your own sounds. A new project is named after its creation date and time ("11 Nov 2026 · 14:32") until you rename it; a name you type stays. Open the projects sheet from the project name at the top to rename, duplicate, start a new project (the “+ new project” tile above your projects), open, or swipe a project to the left to delete it: a badge lets you restore it for 5 seconds before it is gone for good.
 
 ## iPhone app

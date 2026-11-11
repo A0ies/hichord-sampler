@@ -733,6 +733,52 @@ body.projopen .pbar{display:none}
   .layersheet.full #detail .params{column-gap:12px}
   .mini button{width:26px}
 }
+/* app settings: the HiChord screen on top (in landscape on the left), tabs for sync / sound check / room under it.
+   All pages share one grid cell, so the sheet is as tall as the tallest page and never jumps or scrolls */
+#settingsSheet .setbody{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"screen" "tabs" "page";row-gap:12px}
+#settingsSheet .sheethead{margin-bottom:8px}
+#settingsSheet{padding-bottom:14px}
+@media (max-width:639px) and (max-height:700px){ #settingsSheet .setbody{row-gap:8px} #settingsSheet .grab{margin:4px auto 6px} }
+.hcscreen{grid-area:screen;background:var(--screen);color:var(--screen-ink);border-radius:14px;padding:10px}
+.hcrow{display:flex;align-items:center;gap:10px;min-width:0}
+.hcrow #hcConnect{background:var(--acc);color:#fff;box-shadow:none;flex:none}
+.hcrow #hcConnect.on{background:var(--screen2);color:var(--screen-ink)}
+.hcrow #hcConnect.on::before{display:none}
+.hcrow .stat{color:var(--screen-dim);min-width:0;align-items:flex-start;line-height:1.35}
+.hcrow .stat .dot{margin-top:4px;flex:none}
+.hcsub i{font-style:normal}
+.hcscreen .hcstate{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin:10px 0 0;background:var(--screen-line);border-radius:8px;overflow:hidden}
+.hcscreen .hcstate div{position:relative;border-radius:0;background:var(--screen2);min-width:0;padding:7px 10px}
+.hcscreen .hcstate b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcscreen .hcstate select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer}
+.hcscreen .hcstate div:has(select)::after{content:"";position:absolute;right:9px;top:50%;width:6px;height:6px;margin-top:-5px;border-right:1.5px solid var(--screen-dim);border-bottom:1.5px solid var(--screen-dim);transform:rotate(45deg)}
+.settabs{grid-area:tabs;margin:0}
+#settingsSheet .setpage{grid-area:page;min-width:0}
+#settingsSheet .setpage[hidden]{display:block;visibility:hidden;pointer-events:none}
+#settingsSheet .setpage>.hint{margin:8px 0 0}
+#settingsSheet .setpage .row+.hint{margin-top:8px}
+#settingsSheet .check{white-space:normal;align-items:flex-start;line-height:1.3}
+#settingsSheet .p label>span{white-space:normal;overflow:visible}
+#usbOutRow{margin-top:8px}
+.padsbox{margin-top:12px} .padsbox h2{margin:0 0 6px}
+#settingsSheet .pads{margin-top:0;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+#settingsSheet .pad{padding:10px 0;font-size:14px}
+#settingsSheet .pad small{display:none}
+@media (max-width:639px){ .hcsub{display:block} .hcsub i{display:none} }
+@media (min-width:640px) and (max-height:560px){
+  #settingsSheet{left:max(12px,calc(var(--sl) + 8px));right:max(12px,calc(var(--sr) + 8px));width:auto;top:calc(8px + var(--st));bottom:calc(8px + var(--sb) * .5);z-index:20;
+    max-height:none;overflow:hidden;transform:translateY(calc(100% + 120px));border-radius:16px;padding:12px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+  #settingsSheet.open{transform:none}
+  #settingsSheet .grab{display:none}
+  #settingsSheet .setbody{grid-template-columns:minmax(0,42%) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"screen tabs" "screen page";column-gap:18px;row-gap:10px}
+  .hcscreen{align-self:start}
+  .hcrow{flex-direction:column;align-items:flex-start;gap:6px}
+  #settingsSheet .setpage[data-k=sync] .params{grid-template-columns:1fr 1fr}
+  #settingsSheet .setpage[data-k=room] .params{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #settingsSheet .pads{grid-template-columns:repeat(7,minmax(0,1fr))}
+  #settingsSheet .setpage[data-k=sync] .hint{display:none}
+  #settingsSheet .setpage .hint{font-size:11px}
+}
 /* the projects screen fills the screen, like capture mode: "projects" top left, close top right, this project's name,
    then every project ("+ new project" first) — one column in portrait, three in landscape */
 body.projopen .tbar{display:none}
@@ -971,29 +1017,34 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 <section class="sheet tall" id="settingsSheet" aria-label="Settings">
   <div class="grab"></div>
   <div class="row sheethead"><h2 style="margin:0">Settings</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
-  <h2>HiChord</h2>
-  <div class="row">
-    <button id="hcConnect">Connect HiChord</button>
-    <span class="stat"><span class="dot" id="hcDot"></span><span id="hcStatus">not connected</span></span>
+  <!-- the HiChord screen stays on top; tabs below pick sync, sound check or room -->
+  <div class="setbody">
+    <div class="hcscreen">
+      <div class="hcrow">
+        <button id="hcConnect">Connect HiChord</button>
+        <span class="stat"><span class="dot" id="hcDot"></span><span id="hcStatus">not connected</span></span>
+      </div>
+      <div class="hcstate" id="hcState"></div>
+    </div>
+    <div class="tabs settabs" id="setTabs"><button data-k="sync" class="on">Sync</button><button data-k="sound">Sound check</button><button data-k="room">Room</button></div>
+    <div class="setpage" data-k="sync">
+      <div class="params" id="pSync"></div>
+      <p class="hint">Don't use the HiChord's own looper while you record here: its replays would come in as notes too.</p>
+    </div>
+    <div class="setpage" data-k="sound" hidden>
+      <div class="row">
+        <button id="testBtn">▶ Test sound</button>
+        <span class="stat"><span class="dot" id="audioDot"></span><span id="audioStatus">audio not started</span></span>
+      </div>
+      <p class="hint" id="routeInfo"></p>
+      <p class="hint" id="midiMon">Notes in: none yet — play on the HiChord</p>
+      <label class="check hidden" id="usbOutRow"><input type="checkbox" id="usbOutChk"> Send the app's sound to the HiChord's USB port (for recording on another device)</label>
+      <div class="padsbox"><h2>test chords · keys 1–7</h2><div class="pads" id="pads"></div></div>
+    </div>
+    <div class="setpage" data-k="room" hidden>
+      <div class="params" id="pGlobal"></div>
+    </div>
   </div>
-  <div class="hcstate" id="hcState"></div>
-  <div class="params" id="pHiChord"></div>
-  <div class="params" style="margin-top:14px" id="pSync"></div>
-  <p class="hint">Don't use the HiChord's own looper while you record here: its replays would come in as notes too.</p>
-  <h2 style="margin-top:22px">Sound check</h2>
-  <div class="row">
-    <button id="testBtn">▶ Test sound</button>
-    <span class="stat"><span class="dot" id="audioDot"></span><span id="audioStatus">audio not started</span></span>
-  </div>
-  <p class="hint" id="routeInfo"></p>
-  <p class="hint" id="midiMon">Notes in: none yet — play on the HiChord</p>
-  <label class="check hidden" id="usbOutRow" style="margin-top:8px"><input type="checkbox" id="usbOutChk"> Send the app's sound to the HiChord's USB port (for recording on another device)</label>
-  <h2 style="margin-top:22px">Room and output</h2>
-  <div class="params" id="pGlobal"></div>
-  <details id="padsBox" style="margin-top:22px">
-    <summary><h2>Test chords (keys 1–7)</h2></summary>
-    <div class="pads" id="pads"></div>
-  </details>
 </section>
 
 <div class="editor hidden" id="editor" role="dialog" aria-label="Note editor">
@@ -1038,7 +1089,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.36';
+const PAGE_VERSION = '2026-11-11.37';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2332,6 +2383,9 @@ function closeSheets(){ document.body.classList.remove('sheetopen'); $('layerShe
 $('backdrop').onclick=closeSheets;
 $('setBtn').onclick=openLayerFull; $('setBtn').innerHTML=SLIDERS;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
+$('setTabs').onclick=e=>{ const b=e.target.closest('[data-k]'); if(!b) return;
+  $('setTabs').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('#settingsSheet .setpage').forEach(p=>p.hidden=p.dataset.k!==b.dataset.k); };
 $('settingsBtn').onclick=()=>openSheet('settingsSheet');
 $('midiChip').onclick=()=>openSheet('settingsSheet');
 $('loopBtn').onclick=()=>openSheet('loopSheet');
@@ -2534,23 +2588,27 @@ function renderSync(){
 }
 function renderHCState(flashKey){
   const s=HC.state, P=Object.fromEntries(HC_PRESETS);
-  const cells=[['key','Key',s.key!=null?NOTE[s.key]:'—'],['scale','Scale',s.scale!=null?(HC_SCALES[s.scale]||s.scale):'—'],['octave','Octave',s.octave!=null?HC_OCT[s.octave]:'—'],
-    ['mode','Mode',s.mode!=null?(HC_MODES[s.mode]||s.mode):'—'],['preset','Sound',s.preset!=null?(P[s.preset]||'#'+s.preset):'—'],['bpm','Tempo',s.bpm!=null?s.bpm:'—']];
-  $('hcState').innerHTML=cells.map(([k,l,v])=>`<div><small>${l}</small><b class="${k===flashKey?'flash':''}">${v}</b></div>`).join('');
+  // [key, label, shown value, options to pick from (when connected), CC]
+  const cells=[['key','Key',s.key!=null?NOTE[s.key]:'—',NOTE.map((n,i)=>[i,n]),HC.CC.KEY],
+    ['scale','Scale',s.scale!=null?(HC_SCALES[s.scale]||s.scale):'—',HC_SCALES.map((n,i)=>[i,n]),HC.CC.SCALE],
+    ['octave','Octave',s.octave!=null?HC_OCT[s.octave]:'—',HC_OCT_LIST,HC.CC.OCTAVE],
+    ['mode','Mode',s.mode!=null?(HC_MODES[s.mode]||s.mode):'—',HC_MODES.map((n,i)=>[i,n]),HC.CC.MODE],
+    ['preset','Sound',s.preset!=null?(P[s.preset]||'#'+s.preset):'—',HC_PRESETS,HC.CC.PRESET],
+    ['bpm','Tempo',s.bpm!=null?s.bpm:'—',null]];
+  const box=$('hcState'); box.classList.toggle('live',HC.connected);
+  // when connected, each cell is a key: tapping it opens the phone's own picker and sends the change to the HiChord
+  box.innerHTML=cells.map(([k,l,v,opts])=>`<div data-k="${k}"><small>${l}</small><b class="${k===flashKey?'flash':''}">${v}</b>${HC.connected&&opts?
+    `<select aria-label="HiChord ${l.toLowerCase()}">${opts.map(([ov,ol])=>`<option value="${ov}">${ol}</option>`).join('')}</select>`:''}</div>`).join('');
+  cells.forEach(([k,,,opts,cc])=>{ const sel=box.querySelector(`[data-k="${k}"] select`); if(!sel) return;
+    if(s[k]!=null) sel.value=s[k]; else sel.selectedIndex=-1;
+    sel.onchange=()=>{ s[k]=+sel.value; hcCC(cc,+sel.value); renderHCState(k); }; });
 }
-function renderHCControls(){
-  const p=$('pHiChord'); p.innerHTML=''; if(!HC.connected) return; const s=HC.state;
-  selectParam(p,'Key',NOTE.map((n,i)=>[i,n]),()=>s.key,v=>{ s.key=+v; hcCC(HC.CC.KEY,+v); renderHCState('key'); });
-  selectParam(p,'Scale',HC_SCALES.map((n,i)=>[i,n]),()=>s.scale,v=>{ s.scale=+v; hcCC(HC.CC.SCALE,+v); renderHCState('scale'); });
-  selectParam(p,'Octave',HC_OCT_LIST,()=>s.octave,v=>{ s.octave=+v; hcCC(HC.CC.OCTAVE,+v); renderHCState('octave'); });
-  selectParam(p,'Play mode',HC_MODES.map((n,i)=>[i,n]),()=>s.mode,v=>{ s.mode=+v; hcCC(HC.CC.MODE,+v); renderHCState('mode'); });
-  selectParam(p,'HiChord sound',HC_PRESETS,()=>s.preset,v=>{ s.preset=+v; hcCC(HC.CC.PRESET,+v); renderHCState('preset'); });
-}
+function renderHCControls(){}   // the HiChord's own settings are picked on its screen cells (renderHCState)
 function renderHC(){
   $('hcConnect').textContent = HC.connected?'Disconnect':'Connect HiChord';
   $('hcConnect').classList.toggle('on',HC.connected);
   $('hcDot').className='dot'+(HC.connected?' ok':'');
-  $('hcStatus').textContent = HC.connected?`connected to ${HC.out.name}`:'not connected · notes still come in';
+  $('hcStatus').innerHTML = HC.connected?`connected to ${String(HC.out.name).replace(/&/g,'&amp;').replace(/</g,'&lt;')}`:'not connected<span class="hcsub"><i> · </i>notes still come in</span>';
   renderHCState(); renderHCControls();
 }
 
