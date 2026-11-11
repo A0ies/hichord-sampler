@@ -689,6 +689,12 @@ body.projopen .pbar{display:none}
   .layersheet.full #detail .ownsnd .sub{display:none}
   .layersheet.full #detail .ownsnd button{flex:1;min-width:0;min-height:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .layersheet.full #detail .params>.p:has(>input[type=range]){margin-top:6px}
+  /* every page fills the panel's height: rows spread out evenly, so the hierarchy reads clearly and switching
+     between timing, instrument and mix keeps the same block */
+  .layersheet.full #detail[data-tab=sound]>.params,.layersheet.full #detail[data-tab=mix]>.params{flex:1;align-content:space-evenly;row-gap:16px}
+  .layersheet.full #detail[data-tab=timing]{justify-content:space-between}
+  .layersheet.full #detail[data-tab=timing]>.tsw{margin-bottom:auto}
+  .layersheet.full #detail[data-tab=timing]>.feels{margin-bottom:auto}
   .layersheet.full .lsbody{margin-right:-12px;padding-right:12px}
   .layersheet.full #detail{overflow:visible}   /* a knob at the right end of a slider sticks out a little */
   /* mix page: capture effect and "plays on" share the line under the four sliders, each two columns wide */
@@ -1113,7 +1119,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.40';
+const PAGE_VERSION = '2026-11-11.41';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2536,7 +2542,7 @@ function stepper(host,label,get,set,min,max,step,fmt){
 }
 function renderDetail(){
   $('tabs').innerHTML = TABS.map(([k,l])=>`<button data-t="${k}" class="${S.tab===k?'on':''}">${l}</button>`).join('');
-  const host=$('detail'); host.innerHTML=''; const Ly=selLayer();
+  const host=$('detail'); host.innerHTML=''; const Ly=selLayer(); host.dataset.tab=S.tab+(S.tab==='timing'&&S.advOpen?'-adv':'');
   const grid=document.createElement('div'); grid.className='params'; host.appendChild(grid);
   if(S.tab==='timing'){
     // feel presets or the advanced XY screen, never both: the panel keeps one height
