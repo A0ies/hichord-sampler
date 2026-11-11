@@ -808,7 +808,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.9';
+const PAGE_VERSION = '2026-11-11.10';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2871,7 +2871,8 @@ $('playBtn').onclick=()=>{
   if(!ctx) return;
   if(S.playing){ stopTransport(); return; }
   startTransport(false);
-  if(!layers.some(Ly=>Ly.events.length && audible(Ly))) toast('Nothing recorded yet: tap ● (record), then play on the HiChord');
+  // the hint points at the record key, which capture mode doesn't have: there, play just starts the loop
+  if(!CAP.open && !layers.some(Ly=>Ly.events.length && audible(Ly))) toast('Nothing recorded yet: tap ● (record), then play on the HiChord');
 };
 $('testBtn').onclick=testSound;
 $('captureBtn').onclick=()=>CAP.open?closeCapture():openCapture();
