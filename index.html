@@ -827,7 +827,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.11';
+const PAGE_VERSION = '2026-11-11.12';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1675,7 +1675,7 @@ function projAutosave(d){
   if(!PRJ.current) return;
   clearTimeout(PRJ.saveT);
   PRJ.saveT=setTimeout(async()=>{
-    const p=PRJ.list.find(x=>x.id===PRJ.current) || { id:PRJ.current, name:'project', created:Date.now() };
+    const p=PRJ.list.find(x=>x.id===PRJ.current) || { id:PRJ.current, name:stampName(Date.now()), created:Date.now() };
     Object.assign(p, { data:d, updated:Date.now(), summary:summary(d) });
     try{ await dbDo('projects','readwrite',st=>st.put(p)); PRJ.savedAt=Date.now(); renderProjStatus(); }catch(e){ setAlert('save','could not save the project — storage may be full'); }
   },700);
@@ -1711,14 +1711,21 @@ function applySession(d, sounds){
   HIST.undo=[]; HIST.redo=[]; HIST.last=histData(sessionData()); renderUndo();
   try{ localStorage.setItem(SAVE_KEY, JSON.stringify(sessionData())); }catch(e){}
 }
+/* a project is named after when it was made ("11 Nov 2026 · 14:32") until you rename it;
+   a name you type is yours for good (p.named) */
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const stampName = ts => { const d=new Date(ts), two=n=>String(n).padStart(2,'0'); return `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()} · ${two(d.getHours())}:${two(d.getMinutes())}`; };
+function newProjRec(d){ const now=Date.now(); return { id:newId(), name:stampName(now), created:now, updated:now, data:d, summary:summary(d) }; }
 /* first start: the work you already have becomes your first project; later: reopen the last one */
 async function initProjects(){
   try{
     await refreshProjects();
+    // projects that still carry an old default name ("project 3") get their creation date and time
+    for(const x of PRJ.list) if(!x.named && /^project( \d+)?$/.test(x.name||'')){ x.name=stampName(x.created||x.updated||Date.now()); await dbDo('projects','readwrite',st=>st.put(x)); }
     let id=null; try{ id=localStorage.getItem('hcl-project'); }catch(e){}
     let p=PRJ.list.find(x=>x.id===id);
     if(!p){
-      const d=sessionData(); p={ id:newId(), name:`project ${PRJ.list.length+1}`, created:Date.now(), updated:Date.now(), data:d, summary:summary(d) };
+      p=newProjRec(sessionData());
       await dbDo('projects','readwrite',st=>st.put(p)); PRJ.list.unshift(p);
     }
     setCurrent(p.id);
@@ -1740,7 +1747,7 @@ async function newProject(){
   const d=sessionData();
   d.S={...d.S, bpm:100, bars:4, sel:0};
   d.layers=layers.map((_,i)=>{ const l=newLayerData(i); if(i===0) l.shown=true; return Object.fromEntries(LAYER_KEYS.map(k=>[k,l[k]])); });
-  const p={ id:newId(), name:`project ${PRJ.list.length+1}`, created:Date.now(), updated:Date.now(), data:d, summary:summary(d) };
+  const p=newProjRec(d);
   await dbDo('projects','readwrite',st=>st.put(p)); PRJ.list.unshift(p);
   applySession(d, {}); setCurrent(p.id); renderProjects();
   toast(`new project "${p.name}"`);
@@ -1756,7 +1763,7 @@ async function saveAsCopy(){
 }
 async function renameProject(name){
   const p=PRJ.list.find(x=>x.id===PRJ.current); name=(name||'').trim(); if(!p || !name || name===p.name) return;
-  p.name=name.slice(0,60); await dbDo('projects','readwrite',st=>st.put(p)); renderProjName(); renderProjects();
+  p.name=name.slice(0,60); p.named=true; await dbDo('projects','readwrite',st=>st.put(p)); renderProjName(); renderProjects();
 }
 async function deleteProject(id){
   const p=PRJ.list.find(x=>x.id===id); if(!p || id===PRJ.current) return;
