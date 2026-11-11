@@ -713,7 +713,7 @@ header.top .chip{flex:0 1 auto}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-11.4';
+const PAGE_VERSION = '2026-11-11.5';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -925,7 +925,7 @@ function playNote(Ly, note, vel, when, durSec){
   const v=clamp(vel/127,0.05,1);
   let one=false;
   if(lib && lib.kind==='kit'){
-    const zs=lib.zones, z = zs[GM_KIT[n]!=null ? GM_KIT[n] : mod(n,zs.length)];
+    const zs=lib.zones, z = zs[GM_KIT[n]!=null ? GM_KIT[n] : DEG_ZONE[mod(n,12)]];
     src.playbackRate.value=Math.pow(2,Ly.semis/12);
     src.start(when, z.start, z.len); one=true;
   } else if(lib){
@@ -994,7 +994,7 @@ function setRec(on){
     S.rec=true; Ly.takes=(Ly.takes||0)+1; S.curTake=Ly.takes;
     if(!S.playing) startTransport(S.countIn);
   } else {
-    const now=recBeat(); for(const [note,list] of held) list.forEach(h=>{ if(!h.drop) closeNote(Ly, note, h, now); });
+    const now=recBeat(); for(const [note,list] of held) list.forEach(h=>{ if(h) closeNote(Ly, h.note ?? note, h, now); });
     held.clear(); S.rec=false; writeSave();
   }
   renderTransport();
@@ -1091,33 +1091,62 @@ const qPush=(m,k,v)=>{ const a=m.get(k); if(a) a.push(v); else m.set(k,[v]); };
 const qShift=(m,k)=>{ const a=m.get(k); if(!a) return undefined; const v=a.shift(); if(!a.length) m.delete(k); return v; };
 let evId = 1;
 function recBeat(){ const lat=(ctx.outputLatency||0)+(ctx.baseLatency||0); return beatAt(ctx.currentTime - lat - S.recOffset/1000); }
-/* Bass and drums play single notes: of a chord, only its lowest note sounds and gets recorded.
+/* Bass and drums play single notes. Of a chord, bass plays its root (at or below the lowest note you hear),
+   drums play one drum per chord key: I kick, II snare, III hat, IV open hat, V tom, VI perc, VII crash.
    The HiChord's drum pads (channel 10) are single hits already, and can hit two pads at once. */
 const MONO_INST=new Set(['bass','ebass','drums']);
 const monoLayer = (Ly, ch) => MONO_INST.has(Ly.inst) && !(Ly.inst==='drums' && ch===10);
+const DRUM_GM=[36,38,42,46,49,45,56];          // kit zone -> GM drum note
+const DEG_ZONE=[0,1,1,2,2,3,3,5,6,6,4,4];      // semitones above the key -> kit zone
+function chordRoot(ns){
+  const s=[...ns].sort((a,b)=>a-b), bass=mod(s[0],12), pcs=[...new Set(s.map(n=>mod(n,12)))];
+  for(const root of [bass, ...pcs.filter(p=>p!==bass)]){
+    const set=[...new Set(pcs.map(p=>mod(p-root,12)))].sort((a,b)=>a-b).join(',');
+    if(CHORD_SHAPES.some(([,iv])=>[...iv].sort((a,b)=>a-b).join(',')===set)) return root;
+  }
+  return bass;
+}
+function monoTarget(Ly, ns){
+  const lo=Math.min(...ns), r=chordRoot(ns);
+  if(Ly.inst==='drums') return DRUM_GM[DEG_ZONE[mod(r-(HC.state.key??0),12)]] - 12*Ly.oct;
+  return lo - mod(lo-r,12);
+}
+function swapQ(m,k,old,nw){ const a=m.get(k); if(!a) return; const i=a.lastIndexOf(old); if(i>=0) a[i]=nw; }
 function liveOn(note, vel, ch){
   if(!ctx) return;
   if(ctx.state!=='running') ctx.resume();
   const Ly=selLayer();
   midiSeen(note, vel);
-  let h=null;
   if(monoLayer(Ly, ch)){
-    // the notes of one chord arrive a few milliseconds apart, in any order
-    const c=Ly.mono, now=performance.now();
+    // the notes of one chord arrive a few milliseconds apart, in any order: rework the target as they come in
+    let c=Ly.mono; const now=performance.now();
     if(c && now-c.t<45){
-      if(note>=c.note){ qPush(Ly.live, note, null); return; }   // not the lowest: neither heard nor recorded
-      if(c.voice) releaseVoice(c.voice, ctx.currentTime, 0.01);
-      if(c.held) c.held.drop=true;
+      c.notes.push(note); qPush(Ly.live, note, null);
+      const out=monoTarget(Ly, c.notes);
+      if(out!==c.out){
+        const v=playNote(Ly, out, vel, ctx.currentTime, null);
+        swapQ(Ly.live, c.key, c.voice, v);
+        if(c.voice) releaseVoice(c.voice, ctx.currentTime, 0.01);
+        c.voice=v; c.out=out; if(c.held) c.held.note=out;
+      }
+      return;
     }
-    Ly.mono={ t: c && now-c.t<45 ? c.t : now, note };
+    c=Ly.mono={ t:now, notes:[note], key:note };
+    c.out=monoTarget(Ly, c.notes);
+    c.voice=playNote(Ly, c.out, vel, ctx.currentTime, null); c.held=null;
+    qPush(Ly.live, note, c.voice);
+    if(S.rec && S.playing){
+      const b=Math.max(0, recBeat());
+      c.held={beat:b, vel, chord:chordFor(b), note:c.out}; qPush(held, note, c.held);
+    }
+    return;
   }
   const v=playNote(Ly, note, vel, ctx.currentTime, null);
   qPush(Ly.live, note, v);
   if(S.rec && S.playing){
     const b=Math.max(0, recBeat());   // chords played during the count-in land on beat 1
-    h={beat:b, vel, chord:chordFor(b)}; qPush(held, note, h);
+    qPush(held, note, {beat:b, vel, chord:chordFor(b)});
   }
-  if(Ly.mono && Ly.mono.note===note){ Ly.mono.voice=v; Ly.mono.held=h; }
 }
 /* notes that start together belong to one chord, so the editor can move them as one */
 let lastChord=null;
@@ -1144,7 +1173,7 @@ function liveOff(note){
   if(v && !v.one) releaseVoice(v, ctx.currentTime);
   midiOffs++;
   const h=qShift(held, note);
-  if(h && !h.drop) closeNote(Ly, note, h, recBeat());
+  if(h) closeNote(Ly, h.note ?? note, h, recBeat());
 }
 function closeNote(Ly, note, h, endBeat){
   const L=loopLen();
