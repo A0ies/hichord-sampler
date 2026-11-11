@@ -668,30 +668,51 @@ body.projopen .pbar{display:none}
      on the right — nothing scrolls */
   .layersheet.full{position:fixed;top:calc(8px + var(--st));bottom:calc(var(--tbarh) + 8px);left:max(12px,calc(var(--sl) + 8px));right:max(12px,calc(var(--sr) + 8px));
     width:auto;height:auto;max-height:none;z-index:20;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:14px 16px}
-  .layersheet.full .lprev,.layersheet.full .grab{display:none}
-  .layersheet.full .lsbody{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:minmax(210px,28%) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;column-gap:20px}
+  /* like the app settings: the preview screen on the left (moved into the panel by openLayerFull), clear / remove under it,
+     the tabs on top on the right with the page under them; edit notes sits next to close */
+  .layersheet.full .grab{display:none}
+  .layersheet.full .lsbody{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;column-gap:20px;row-gap:10px}
+  .layersheet.full .lprev{grid-column:1;grid-row:3;display:flex;height:auto;min-height:0;margin:0}
+  /* play and solo sit above the preview, level with the tabs, so the graphs keep their width */
+  .layersheet.full .lsbody>.pkeys{grid-column:1;grid-row:2;display:flex;gap:6px}
+  .layersheet.full .lsbody>.pkeys button{flex:1;min-height:0;height:100%;background:var(--dark-key);color:var(--dark-key-ink);box-shadow:0 1px 0 var(--key-edge);border-radius:10px}
+  .layersheet.full .lsbody>.pkeys button.on{background:var(--acc);color:#fff}
+  .layersheet.full .lsbody>.pkeys button::before{display:none}
+  .layersheet.full .dangerkeys #clearBtn{flex:0 0 auto;padding:0 16px}
+  .layersheet.full .dangerkeys #removeBtn{flex:1}
   .layersheet.full .sheethead{display:contents}
-  .layersheet.full #detailTitle{grid-column:1/-1;grid-row:1;min-height:44px;display:flex;align-items:center;padding-right:56px;margin-bottom:4px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .layersheet.full #detailTitle{grid-column:1/-1;grid-row:1;min-height:44px;display:flex;align-items:center;padding-right:230px;margin-bottom:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .layersheet.full .sheethead .spacer,.layersheet.full #setBtn{display:none}
-  .layersheet.full #editBtn{grid-column:1;grid-row:2;margin-bottom:8px}
+  .layersheet.full #editBtn{position:absolute;top:14px;right:68px;margin:0;min-height:44px}
   .layersheet.full .close{display:inline-flex;position:absolute;top:14px;right:16px}
-  .layersheet.full .tabs{grid-column:1;grid-row:3;flex-direction:column;margin:0}
-  .layersheet.full .tabs button{text-align:left;justify-content:flex-start;padding:6px 10px;min-height:34px;border-bottom:0;border-left:2px solid transparent}
-  .layersheet.full .tabs button.on{border-left-color:var(--acc)}
-  .layersheet.full .dangerkeys{grid-column:1;grid-row:5;margin-top:10px;padding-top:0;border-top:0}
+  .layersheet.full .tabs{grid-column:2;grid-row:2;margin:0}
+  .layersheet.full .dangerkeys{grid-column:1;grid-row:4;margin:0;padding-top:0;border-top:0}
   .layersheet.full .dangerkeys button{min-height:36px;font-size:11px;padding:0 6px}
-  .layersheet.full #detail{grid-column:2;grid-row:2/-1;min-height:0;overflow:hidden;gap:10px}
+  .layersheet.full #detail{grid-column:2;grid-row:3/5;min-height:0;overflow:hidden;gap:10px}
   .layersheet.full #detail .params{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 16px}
   .layersheet.full #detail .hint{display:none}
-  .layersheet.full #detail .instpick{grid-column:1/span 2;grid-row:1}
+  .layersheet.full #detail .instpick{grid-column:1/span 3;grid-row:1}
+  .layersheet.full #detail .pwide{grid-column:span 2}   /* the filter gets two columns: finer control, and the block is full */
   /* instrument page: the instrument and your own sound on the first line, then every slider in one block of four columns */
-  .layersheet.full #detail .ownsnd{grid-column:3/span 2;grid-row:1;align-self:end;margin:0;flex-wrap:nowrap;gap:8px}
+  .layersheet.full #detail .ownsnd{grid-column:4;grid-row:1;align-self:end;justify-content:flex-end;margin:0;flex-wrap:nowrap;gap:8px}
   .layersheet.full #detail .ownsnd .sub{display:none}
-  .layersheet.full #detail .ownsnd button{flex:1;min-width:0;min-height:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .layersheet.full #detail .params>.p:has(>input[type=range]){margin-top:6px}
   /* every page fills the panel's height: rows spread out evenly, so the hierarchy reads clearly and switching
      between timing, instrument and mix keeps the same block */
-  .layersheet.full #detail[data-tab=sound]>.params,.layersheet.full #detail[data-tab=mix]>.params{flex:1;align-content:space-evenly;row-gap:16px}
+  .layersheet.full #detail[data-tab=sound]>.params,.layersheet.full #detail[data-tab=mix]>.params{flex:1;align-content:space-evenly;row-gap:6px}
+  .layersheet.full #detail[data-tab=sound] .params>.p:has(>input[type=range]){margin-top:0}
+  .layersheet.full .lsbody{row-gap:8px}
+  .layersheet.full .tabs button{min-height:34px;padding:6px 4px}
+  .layersheet.full #detail{gap:8px}
+  .layersheet.full #detail .seg2 button{min-height:30px}
+  .layersheet.full #detail .advt .gridkeys button{min-height:30px;padding:4px 2px}
+  .layersheet.full #detail .advt .gridkeys{gap:4px}
+  .layersheet.full #detail .mini button{min-height:30px;width:26px!important}
+  .layersheet.full #detail:has(.advt){grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)!important}
+  .layersheet.full #detail .xy .xyl{font-size:10px}
+  .layersheet.full #detail .xy .xyh{left:6px}.layersheet.full #detail .xy .xys{right:6px}
+  .layersheet.full #detail .mini b{font-size:10px;overflow:visible;letter-spacing:-.02em}
+  .layersheet.full #detail .mini>div{gap:2px}
   .layersheet.full #detail[data-tab=timing]{justify-content:space-between}
   .layersheet.full #detail[data-tab=timing]>.tsw{margin-bottom:auto}
   .layersheet.full #detail[data-tab=timing]>.feels{margin-bottom:auto}
@@ -735,7 +756,11 @@ body.projopen .pbar{display:none}
 /* the narrowest landscape phones (iPhone SE): a narrower right pane, so the layers keep room */
 @media (min-width:640px) and (max-width:779px){
   .main{grid-template-columns:minmax(0,1fr) minmax(0,40%)}
-  .layersheet.full .lsbody{grid-template-columns:minmax(170px,27%) minmax(0,1fr)}
+  .layersheet.full .lsbody{grid-template-columns:minmax(0,30%) minmax(0,1fr);column-gap:16px}
+  .layersheet.full #detail .p label{font-size:10px;gap:4px}
+  .layersheet.full #detail .ownsnd{gap:6px}
+  .layersheet.full #detail .ownsnd button.icon{width:38px}
+  .layersheet.full .dangerkeys button{font-size:10px;padding:0 4px}
   .layersheet.full #detail .params{column-gap:12px}
   .mini button{width:26px}
 }
@@ -818,6 +843,10 @@ body.projopen .pbar{display:none}
   text-transform:lowercase;white-space:nowrap;pointer-events:none;color:var(--ink)}
 .setlogo span{font-weight:400}
 .setlogo::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--acc);margin-left:5px;vertical-align:3px}
+/* your own sound as two icon keys; the microphone key turns red while it records */
+.ownsnd button.icon{width:40px;height:40px;padding:0;flex:none}
+.ownsnd button.icon::before{display:none}
+.ownsnd button.micrec{background:var(--rec);color:#fff}
 /* the projects screen fills the screen, like capture mode: "projects" top left, close top right, this project's name,
    then every project ("+ new project" first) — one column in portrait, three in landscape */
 body.projopen .tbar{display:none}
@@ -967,7 +996,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
       <div class="tabs" id="tabs"></div>
       <div id="detail"></div>
       <div class="dangerkeys" id="dangerKeys">
-        <button id="clearBtn" class="danger">clear notes</button>
+        <button id="clearBtn" class="danger" aria-label="Clear notes">clear</button>
         <button id="removeBtn" class="danger">remove layer</button>
       </div>
       </div>
@@ -1128,7 +1157,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.43';
+const PAGE_VERSION = '2026-11-11.45';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2225,6 +2254,8 @@ const ICONS={
   bell:'<path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4M12 3V2"/>',
   drums:'<ellipse cx="12" cy="10" rx="8" ry="3"/><path d="M4 10v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M6 3l5 5M18 3l-5 5"/>',
   custom:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+  upload:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9.5 14.5 12 12l2.5 2.5"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
   folder:'<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.2h7.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>',
 };
 const ic=(name,cls='ii')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]||''}</svg>`;
@@ -2385,13 +2416,13 @@ function twoTap(btn, label, fn){
   };
 }
 twoTap($('removeBtn'),'remove layer',removeLayer);
-twoTap($('clearBtn'),'clear notes',clearLayer);
+twoTap($('clearBtn'),'clear',clearLayer);
 
 
 /* sheets */
 const isWide = () => matchMedia('(min-width:640px)').matches;
 const isShortWide = () => matchMedia('(min-width:640px) and (max-height:560px)').matches;
-function openLayerFull(){ $('layerSheet').classList.add('full'); $('backdrop').classList.add('show'); document.body.classList.add('sheetopen'); }
+function openLayerFull(){ const sh=$('layerSheet'); sh.querySelector('.lsbody').prepend($('lprev')); sh.querySelector('.lsbody').append(sh.querySelector('.lprev .pkeys')||sh.querySelector('.lsbody>.pkeys')); sh.classList.add('full'); $('backdrop').classList.add('show'); document.body.classList.add('sheetopen'); }
 /* portrait: the layer panel gets the height of its tallest page, measured on this phone, so nothing overflows or
    scrolls on any screen size; if that leaves the preview too little room, the panel tightens its spacing */
 let fitProbe=null;
@@ -2418,7 +2449,7 @@ function openSheet(id){
   document.querySelectorAll('.sheet.open').forEach(x=>{ if(x.id!==id) x.classList.remove('open'); });
   $(id).classList.add('open'); $('backdrop').classList.add('show'); document.body.classList.add('sheetopen');
 }
-function closeSheets(){ document.body.classList.remove('sheetopen'); $('layerSheet').classList.remove('full'); document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open')); $('backdrop').classList.remove('show'); }
+function closeSheets(){ document.body.classList.remove('sheetopen'); const ls=$('layerSheet'); ls.classList.remove('full'); if($('lprev').parentNode!==ls) ls.prepend($('lprev')); const pk=ls.querySelector('.lsbody>.pkeys'); if(pk) ls.querySelector('.lprev .pstrip').append(pk); document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open')); $('backdrop').classList.remove('show'); }
 $('backdrop').onclick=closeSheets;
 $('setBtn').onclick=openLayerFull; $('setBtn').innerHTML=SLIDERS;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
@@ -2585,10 +2616,11 @@ function renderDetail(){
     param(grid,'Decay',()=>Ly.d??0.4,v=>{Ly.d=v;},0.01,3,0.01,secs);
     param(grid,'Sustain',()=>Ly.s??1,v=>{Ly.s=v;},0,1,0.01,pct);
     param(grid,'Release',()=>Ly.r,v=>{Ly.r=v;},0.02,4,0.01,secs);
-    param(grid,'Filter',()=>Ly.cutoff,v=>{Ly.cutoff=v;applyLayer(Ly);},0,1,0.001,v=>{const f=80*Math.pow(18000/80,v);return f>=1000?(f/1000).toFixed(f>=9950?0:1)+' kHz':Math.round(f)+' Hz';});
+    const fp=param(grid,'Filter',()=>Ly.cutoff,v=>{Ly.cutoff=v;applyLayer(Ly);},0,1,0.001,v=>{const f=80*Math.pow(18000/80,v);return f>=1000?(f/1000).toFixed(f>=9950?0:1)+' kHz':Math.round(f)+' Hz';});
+    fp.classList.add('pwide');
     param(grid,'Resonance',()=>Ly.reso,v=>{Ly.reso=v;applyLayer(Ly);},0,1,0.01,pct);
     const row=document.createElement('div'); row.className='row ownsnd';
-    row.innerHTML=`<span class="sub">Your own sound:</span><button id="fileBtn">Audio file…</button><button id="micBtn" class="${mic?'on':''}">${mic?'Stop recording':'Microphone'}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
+    row.innerHTML=`<span class="sub">Your own sound</span><button id="fileBtn" class="icon" aria-label="Load your own sound from an audio file" title="Audio file">${ic('upload','')}</button><button id="micBtn" class="icon${mic?' on micrec':''}" aria-label="${mic?'Stop recording':'Record your own sound with the microphone'}" title="${mic?'Stop recording':'Microphone'}">${ic('mic','')}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
     grid.appendChild(row);   // in the grid: under the sliders on a phone, next to the instrument in landscape
     $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=toggleMic;
   } else {
