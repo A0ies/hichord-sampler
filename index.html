@@ -570,6 +570,14 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
 .ctile.touch{box-shadow:inset 0 0 0 3px var(--lc)}
 .ctile.touch .cfx{color:var(--ink)}
 .ctile.off{opacity:.45}
+.ctile .capnotes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;flex:none;pointer-events:auto;touch-action:manipulation}
+.ctile .capnotes button{min-height:30px;height:30px;padding:0;font-size:11px;justify-content:center}
+.ctile .capnotes button::before{display:none}
+.ctile .capnotes button.on{background:var(--lc);color:#fff}
+@media (min-width:560px){ .ctile .capnotes{grid-template-columns:repeat(6,minmax(0,1fr))} }
+.fxpop .gnotes{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.fxpop .gnotes button{min-height:38px;padding:0;font-size:12px;justify-content:center}
+.fxpop .gnotes button::before{display:none}
 .ctile .cfxchip{pointer-events:auto;flex:none;min-height:0;height:24px;padding:0 8px;border-radius:999px;font-size:11px;background:transparent;color:var(--ink);
   box-shadow:inset 0 0 0 1.5px var(--lc);white-space:nowrap;text-transform:lowercase}
 .ctile .cfxchip::before{display:none}
@@ -648,7 +656,6 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
   .layersheet:not(.full) #setBtn,.layersheet:not(.full) #editBtn{flex:none}
   .layersheet .sheethead{align-items:center}
   .layersheet .sheethead button{align-items:center;justify-content:center}
-  .layer .open{display:inline-flex}
   /* the full settings use the whole width: header, tabs and danger keys on the left, the settings in four columns
      on the right — nothing scrolls */
   .layersheet.full{position:fixed;top:calc(8px + var(--st));bottom:calc(var(--tbarh) + 8px);left:max(12px,calc(var(--sl) + 8px));right:max(12px,calc(var(--sr) + 8px));
@@ -919,7 +926,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.24';
+const PAGE_VERSION = '2026-11-11.25';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1081,6 +1088,7 @@ function newLayerData(i){
     q: inst==='drums'?'1/16':'off', strength:1, swing:0, nudge:0, gate:1, oct:0, semis:0, humanize:0,
     a:L.a, d:0.4, s:1, r:L.r, cutoff:1, reso:0.1, vol:0.8, pan:0, rev: inst==='pad'||inst==='strings'?0.35:0.18, dly:0, mute:false, solo:false,
     out:'app',   // 'app' = the app's instrument, 'hc' = the HiChord plays it, 'both'
+    gateDiv: 4,   // the gate's note: chops per beat (1 = 1/4, 2 = 1/8, 4 = 1/16, 8 = 1/32, 3 = 1/8t, 6 = 1/16t)
     fxs: [],   // effects that stay on: [{k, v}] with v from 0 to 1
     fx: inst==='drums' ? 'gate' : 'lp',   // what holding and dragging this layer does in capture mode
     shown:false };   // layers appear in the list once you add them
@@ -1139,13 +1147,14 @@ function fxValText(k,v){
   if(k==='pitch'){ const st=FX_PARAM.pitch(v); return (st>0?'+':'')+st+'st'; }
   return Math.round(v*100)+'';
 }
+const chipText = (Ly,k,v) => k==='gate' ? `${gateName(Ly)} · ${fxValText(k,v)}` : fxValText(k,v);
 function capHeld(Ly){ const i=layers.indexOf(Ly); for(const t of (CAP?CAP.touch.values():[])) if(t.i===i && t.active) return true; return false; }
 function applyFx(Ly){
   if(!ctx || !Ly.fxLP || capHeld(Ly)) return;   // while a finger plays the capture effect, that one wins
   const now=ctx.currentTime, T=0.03, lp=fxAmt(Ly,'lp'), hp=fxAmt(Ly,'hp'), gate=fxAmt(Ly,'gate'), drive=fxAmt(Ly,'drive'), pitch=fxAmt(Ly,'pitch');
   Ly.fxLP.frequency.setTargetAtTime(lp!=null?FX_PARAM.lp(lp):20000, now, T); Ly.fxLP.Q.setTargetAtTime(0.7, now, T);
   Ly.fxHP.frequency.setTargetAtTime(hp!=null?FX_PARAM.hp(hp):10, now, T); Ly.fxHP.Q.setTargetAtTime(0.7, now, T);
-  if(gate!=null && gate>0.01) gateOn(Ly, 4, gate); else gateOff(Ly);
+  if(gate!=null && gate>0.01) gateOn(Ly, Ly.gateDiv||4, gate); else gateOff(Ly);
   const k = drive!=null && drive>0.01 ? 1+drive*30 : 0;
   if(Math.abs((Ly.driveK||0)-k)>0.4 || (!k && Ly.driveK)){ Ly.fxDrive.curve = k ? driveCurve(k) : null; Ly.driveK=k; }
   const pb = pitch!=null ? FX_PARAM.pitch(pitch) : 0;
@@ -1691,7 +1700,7 @@ function drawCapRec(){
 
 /* ============ the session is kept between visits ============ */
 const SAVE_KEY='hichord-looper-v1';
-const LAYER_KEYS=['inst','customName','root','snd','fx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown','fxs'];
+const LAYER_KEYS=['inst','customName','root','snd','fx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown','fxs','gateDiv'];
 let saveT;
 function sessionData(){
   return { v:1,
@@ -2033,7 +2042,7 @@ function renderLayers(){
         <button class="open" data-act="open" aria-label="Settings of layer ${i+1}">${SLIDERS}</button>
       </div>
       <canvas id="roll${i}"></canvas>
-      <div class="fxrow">${(Ly.fxs||[]).map(f=>`<button class="fxc" data-act="fxedit" data-k="${f.k}" aria-label="${FX[f.k].name} ${fxValText(f.k,f.v)}: tap to adjust">${FX_SHORT[f.k][0]} ${fxValText(f.k,f.v)}</button>`).join('')}<button class="fxc add" data-act="fxadd" aria-label="Add an effect to layer ${i+1}">${(Ly.fxs||[]).length?'+':'+ fx'}</button></div>
+      <div class="fxrow">${(Ly.fxs||[]).map(f=>`<button class="fxc" data-act="fxedit" data-k="${f.k}" aria-label="${FX[f.k].name} ${chipText(Ly,f.k,f.v)}: tap to adjust">${FX_SHORT[f.k][0]} ${chipText(Ly,f.k,f.v)}</button>`).join('')}<button class="fxc add" data-act="fxadd" aria-label="Add an effect to layer ${i+1}">${(Ly.fxs||[]).length?'+':'+ fx'}</button></div>
     </div>`).join('') +
     (layers.some(Ly=>!Ly.shown) ? '<button class="newlayer" id="newLayerBtn">+ New layer</button>' : '');
   $('detailTitle').textContent = `Layer ${S.sel+1} · ${instName(selLayer())}`;
@@ -2509,10 +2518,17 @@ function fxPop(i, k){
     const f=Ly.fxs.find(x=>x.k===k); if(!f) return;
     pn.innerHTML=`<h2>layer ${i+1} · <span style="color:var(--lc)">${FX_SHORT[k][0]}</span> ${FX[k].name.toLowerCase()}</h2><div class="params"></div>
       <div class="fxkeys"><button data-x="remove" class="danger">remove</button><button data-x="done" class="primary">done</button></div>`;
-    const AMT={lp:['cutoff','up: darker'],hp:['cutoff','up: thinner'],gate:['depth','1/16 stutter'],delay:['amount','more echo'],reverb:['amount','more reverb'],pitch:['pitch','−12 … +12 st'],drive:['amount','more distortion']};
-    param(pn.querySelector('.params'), AMT[k][0], ()=>f.v, v=>{ f.v=v; applyLayer(Ly); const c=document.querySelector(`.layer[data-i="${i}"] [data-k="${k}"]`); if(c) c.innerHTML=`${FX_SHORT[k][0]} ${fxValText(k,v)}`; }, 0, 1, 0.01,
+    const AMT={lp:['cutoff','up: darker'],hp:['cutoff','up: thinner'],gate:['depth',''],delay:['amount','more echo'],reverb:['amount','more reverb'],pitch:['pitch','−12 … +12 st'],drive:['amount','more distortion']};
+    param(pn.querySelector('.params'), AMT[k][0], ()=>f.v, v=>{ f.v=v; applyLayer(Ly); const c=document.querySelector(`.layer[data-i="${i}"] [data-k="${k}"]`); if(c) c.innerHTML=`${FX_SHORT[k][0]} ${chipText(Ly,k,v)}`; }, 0, 1, 0.01,
       v=>k==='lp'||k==='hp' ? hz(FX_PARAM[k](v)) : k==='pitch' ? fxValText(k,v) : pct(v));
     pn.querySelector('.params .p').classList.add('wide');
+    if(k==='gate'){   // which note the gate chops on
+      const nk=document.createElement('div'); nk.className='p wide'; nk.innerHTML=`<label><span>note</span><b>${gateName(Ly)}</b></label>${noteKeys(Ly,'gnotes')}`;
+      nk.querySelector('.gnotes').onclick=e=>{ const b=e.target.closest('[data-gdiv]'); if(!b) return; Ly.gateDiv=+b.dataset.gdiv; gateOff(Ly); applyFx(Ly); save();
+        nk.querySelectorAll('[data-gdiv]').forEach(x=>x.classList.toggle('on',x===b)); nk.querySelector('label b').textContent=gateName(Ly);
+        const c=document.querySelector(`.layer[data-i="${i}"] [data-k="gate"]`); if(c) c.innerHTML=`${FX_SHORT.gate[0]} ${chipText(Ly,'gate',f.v)}`; };
+      pn.insertBefore(nk, pn.querySelector('.params'));
+    }
     pn.onclick=e=>{ const b=e.target.closest('[data-x]'); if(!b) return;
       if(b.dataset.x==='remove'){ Ly.fxs=Ly.fxs.filter(x=>x.k!==k); applyLayer(Ly); renderLayers(); save(); }
       fxPopClose(); };
@@ -2526,7 +2542,7 @@ function fxPopClose(){ document.querySelectorAll('.fxbg,.fxpop').forEach(x=>x.re
 const FX = {
   lp:    {name:'Low-pass filter',  how:'up: darker · right: resonance'},
   hp:    {name:'High-pass filter', how:'up: thinner · right: resonance'},
-  gate:  {name:'Stutter gate',     how:'up: faster · right: deeper'},
+  gate:  {name:'Stutter gate',     how:'tap a note · drag up: deeper'},
   delay: {name:'Delay throw',      how:'up: more echo'},
   reverb:{name:'Reverb wash',      how:'up: more reverb'},
   pitch: {name:'Pitch bend',       how:'drag up or down: up to an octave'},
@@ -2536,7 +2552,9 @@ const FX = {
 const fxOf = Ly => FX[Ly.fx] ? Ly.fx : (Ly.inst==='drums' ? 'gate' : 'lp');
 const FX_SHORT={ lp:['◢','low-pass'], hp:['◣','high-pass'], gate:['▥','gate'], delay:['⋯','delay'], reverb:['≋','reverb'], pitch:['↕','pitch'], drive:['∿','drive'], off:['∅','none'] };
 const fxChip = k => `<b>${FX_SHORT[k][0]}</b> ${FX_SHORT[k][1]}`;
-const GATE_DIVS=[[1,'1/4'],[2,'1/8'],[4,'1/16'],[8,'1/32']];
+const GATE_NOTES=[[1,'1/4'],[2,'1/8'],[4,'1/16'],[8,'1/32'],[3,'1/8t'],[6,'1/16t']];
+const gateName = Ly => (GATE_NOTES.find(g=>g[0]===(Ly.gateDiv||4))||GATE_NOTES[2])[1];
+const noteKeys = (Ly, cls) => `<div class="${cls}">${GATE_NOTES.map(([d,l])=>`<button data-gdiv="${d}" class="${(Ly.gateDiv||4)===d?'on':''}">${l}</button>`).join('')}</div>`;
 const hz = f => f>=1000 ? (f/1000).toFixed(1)+' kHz' : Math.round(f)+' Hz';
 function driveCurve(k){ const n=1024, c=new Float32Array(n); for(let i=0;i<n;i++){ const x=i/(n-1)*2-1; c[i]=Math.tanh(k*x)/Math.tanh(k); } return c; }
 // x and y from 0 to 1 (y counts upwards); y0 is where the finger came down. Returns what to show.
@@ -2544,7 +2562,7 @@ function fxSet(Ly, x, y, y0){
   const now=ctx.currentTime, T=0.015, fx=fxOf(Ly);
   if(fx==='lp'){ const f=18000*Math.pow(120/18000,y); Ly.fxLP.frequency.setTargetAtTime(f,now,T); Ly.fxLP.Q.setTargetAtTime(0.7+x*12,now,T); return hz(f); }
   if(fx==='hp'){ const f=20*Math.pow(6000/20,y); Ly.fxHP.frequency.setTargetAtTime(f,now,T); Ly.fxHP.Q.setTargetAtTime(0.7+x*12,now,T); return hz(f); }
-  if(fx==='gate'){ const [per,l]=GATE_DIVS[Math.min(3,Math.floor(y*4))], depth=0.55+0.45*x; gateOn(Ly,per,depth); return `${l} · ${pct(depth)}`; }
+  if(fx==='gate'){ const depth=0.3+0.7*y; gateOn(Ly, Ly.gateDiv||4, depth); return `${gateName(Ly)} · ${pct(depth)}`; }   // the note is picked with the keys on the pad
   if(fx==='delay'){ const v=Math.max(dlyBase(Ly),y); Ly.dlyS.gain.setTargetAtTime(v,now,T); return 'echo '+pct(v); }
   if(fx==='reverb'){ const v=Math.max(revBase(Ly),y*1.3); Ly.revS.gain.setTargetAtTime(v,now,T); return 'reverb '+pct(v/1.3); }
   if(fx==='pitch'){ const st=clamp((y-y0)*24,-12,12); setBend(Ly,st); return `${st>=0?'+':''}${st.toFixed(1)} st`; }
@@ -2608,6 +2626,7 @@ function renderCaptureMode(){
       <div class="chead"><span class="num">${i+1}</span>${INST_ICON[Ly.inst]||''}<span class="cname">${instName(Ly)}</span><button class="cfxchip" data-fxi="${i}" aria-label="Capture effect: ${FX[fxOf(Ly)].name}. Tap to change">${fxChip(fxOf(Ly))} ▾</button><span class="cstate">${audible(Ly)?'on':'off'}</span></div>
       <canvas id="croll${i}"></canvas>
       <div class="cpad"></div>
+      ${fxOf(Ly)==='gate' ? noteKeys(Ly,'capnotes') : ''}
       <div class="cfx">${FX[fxOf(Ly)].how}</div>
       <i class="cdot"></i>
     </div>`).join('');
@@ -2626,6 +2645,9 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
   const capEl=$('capMode');
   capEl.addEventListener('click',e=>{
     const chip=e.target.closest('.cfxchip'), item=e.target.closest('[data-fxset]');
+    const gk=e.target.closest('.capnotes [data-gdiv]');
+    if(gk){ const Ly=layers[+gk.closest('.ctile').dataset.i]; Ly.gateDiv=+gk.dataset.gdiv; gateOff(Ly); applyFx(Ly); save();
+      gk.parentElement.querySelectorAll('[data-gdiv]').forEach(x=>x.classList.toggle('on',x===gk)); return; }
     if(item){ const Ly=layers[+item.dataset.fxl]; fxReset(Ly); Ly.fx=item.dataset.fxset; item.closest('.cfxmenu').remove(); save(); renderCaptureMode(); return; }
     const open=capEl.querySelector('.cfxmenu'); if(open){ const same=chip && open.dataset.fxl===chip.dataset.fxi; open.remove(); if(same || !chip) return; }
     if(!chip) return;
@@ -2635,7 +2657,7 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
     capEl.appendChild(m);
   });
   grid.addEventListener('pointerdown',e=>{
-    if(e.target.closest('.cfxchip,.cfxmenu')) return;
+    if(e.target.closest('.cfxchip,.cfxmenu,.capnotes')) return;
     if(capEl.querySelector('.cfxmenu')){ capEl.querySelector('.cfxmenu').remove(); e.preventDefault(); return; }
     const el=e.target.closest('.ctile'); if(!el) return; e.preventDefault();
     try{ el.setPointerCapture(e.pointerId); }catch(err){}
