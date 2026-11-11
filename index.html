@@ -512,6 +512,21 @@ header.top .chip{flex:0 1 auto}
 .ctile.touch{box-shadow:inset 0 0 0 3px var(--lc)}
 .ctile.touch .cfx{color:var(--ink)}
 .ctile.off{opacity:.45}
+.ctile .cfxchip{pointer-events:auto;flex:none;min-height:0;height:24px;padding:0 8px;border-radius:999px;font-size:11px;background:transparent;color:var(--ink);
+  box-shadow:inset 0 0 0 1.5px var(--lc);white-space:nowrap;text-transform:lowercase}
+.ctile .cfxchip::before{display:none}
+.ctile .cfxchip b{color:var(--lc);font-weight:600}
+.cfxmenu{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,calc(100% - 32px));z-index:3;display:grid;grid-template-columns:1fr 1fr;gap:6px;
+  padding:12px;border-radius:14px;background:var(--panel);box-shadow:0 0 0 2px var(--lc),0 12px 40px rgba(0,0,0,.3)}
+.cfxmenu h2{grid-column:1/-1;margin:0 0 4px}
+.cfxmenu button{min-height:40px;padding:0 8px;font-size:11px;justify-content:flex-start;text-align:left;white-space:nowrap}
+.cfxmenu button.on{box-shadow:inset 0 0 0 2px var(--lc)}
+.cfxmenu button.on::before{display:none}
+@media (max-width:560px){ .ctile .cstate{display:none} .ctile .cfxchip{padding:0 7px} }
+/* the effect chip wraps onto its own line when the pad is too narrow for name and chip */
+.ctile .chead{flex-wrap:wrap;row-gap:6px}
+.ctile .cname{flex:1 1 60px;min-width:60px}
+.ctile .cfxchip{flex:none;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .ctile.off .cstate{background:var(--line);color:var(--dim)}
 .tool.on{color:var(--acc)}
 /* layer panel: one fixed height on every tab, preview screen above it, danger keys at the bottom */
@@ -523,8 +538,11 @@ header.top .chip{flex:0 1 auto}
 .dangerkeys button{flex:1;min-height:40px}
 .dangerkeys button.armed{background:var(--rec);color:#fff}
 .lprev{background:var(--screen);border-radius:14px;position:relative;overflow:hidden}
-.lprev canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-.lprev .pkeys{position:absolute;right:8px;bottom:8px;display:flex;gap:6px}
+.lprev{display:flex;flex-direction:column;gap:5px;padding:6px}
+.lprev #prevRoll{flex:1;min-height:0;width:100%;display:block;border-radius:6px;background:var(--screen2)}
+.lprev .pstrip{flex:none;height:clamp(38px,40%,58px);display:flex;gap:6px;align-items:center}
+.lprev #prevCv{flex:1;min-width:0;height:100%;display:block}
+.lprev .pkeys{display:flex;gap:6px;flex:none}
 .lprev .pkeys button{background:var(--screen2);color:var(--screen-ink);box-shadow:none;min-height:34px;min-width:44px;padding:0 10px}
 .lprev .pkeys button::before{display:none}
 .lprev .pkeys button.on{background:var(--acc);color:#fff}
@@ -632,8 +650,9 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
     <!-- settings of the selected layer: a bottom sheet on phones, a side panel on wide screens -->
     <section class="sheet layersheet" id="layerSheet" aria-label="Layer settings">
       <div class="lprev" id="lprev">
-        <canvas id="prevCv" aria-hidden="true"></canvas>
-        <div class="pkeys"><button id="prevPlay" aria-label="Play a preview of this layer's sound">▶</button><button id="prevSolo" aria-label="Hear only this layer">solo</button></div>
+        <canvas id="prevRoll" aria-hidden="true"></canvas>
+        <div class="pstrip"><canvas id="prevCv" aria-hidden="true"></canvas>
+          <div class="pkeys"><button id="prevPlay" aria-label="Play a preview of this layer's sound">▶</button><button id="prevSolo" aria-label="Hear only this layer">solo</button></div></div>
       </div>
       <div class="lsbody">
       <div class="grab"></div>
@@ -808,7 +827,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.10';
+const PAGE_VERSION = '2026-11-11.11';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2016,41 +2035,34 @@ const PREV={f:null,mag:null,ph:null,wave:null};
 function layerSheetShown(){ return $('layerSheet').classList.contains('open') || isWide(); }
 function drawPreview(){
   const cv=$('prevCv'); if(!cv || !cv.offsetWidth) return;
-  const Ly=selLayer(), i=S.sel, dpr=devicePixelRatio||1, W=cv.offsetWidth, H=cv.offsetHeight;
-  if(cv.width!==Math.round(W*dpr) || cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+  const Ly=selLayer(), i=S.sel;
   if($('prevSolo').classList.contains('on')!==!!Ly.solo) renderPrevSolo();
+  drawRoll(Ly, i, $('prevRoll'));   // the layer's timeline with its playhead
+  // the graph strip: live waveform and filter curve, envelope on the right
+  const dpr=devicePixelRatio||1, W=cv.offsetWidth, H=cv.offsetHeight;
+  if(cv.width!==Math.round(W*dpr) || cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
-  const col=cssVar('--l'+i), dim=cssVar('--screen-dim'), line=cssVar('--screen-line');
-  g.fillStyle=line; for(let k=1;k<4;k++) g.fillRect(Math.round(W*k/4),0,1,H); g.fillRect(0,Math.round(H/2),W,1);
-  // filter curve: 40 Hz – 18 kHz, −24 … +18 dB
+  const col=cssVar('--l'+i), dim=cssVar('--screen-dim');
+  const ew=Math.min(84,W*0.3), gw=W-ew-10;   // graph width, envelope width
   if(!PREV.f){ const n=96; PREV.f=new Float32Array(n); PREV.mag=new Float32Array(n); PREV.ph=new Float32Array(n);
     for(let k=0;k<n;k++) PREV.f[k]=40*Math.pow(18000/40,k/(n-1)); }
   Ly.filter.getFrequencyResponse(PREV.f,PREV.mag,PREV.ph);
-  g.beginPath(); for(let k=0;k<PREV.f.length;k++){ const db=20*Math.log10(PREV.mag[k]||1e-6), x=k/(PREV.f.length-1)*W, y=H-8-clamp((db+24)/42,0,1)*(H*0.55);
+  g.beginPath(); for(let k=0;k<PREV.f.length;k++){ const db=20*Math.log10(PREV.mag[k]||1e-6), x=k/(PREV.f.length-1)*gw, y=H-3-clamp((db+24)/42,0,1)*(H*0.6);
     k?g.lineTo(x,y):g.moveTo(x,y); }
   g.strokeStyle=dim; g.lineWidth=1.25; g.stroke();
-  // envelope: attack up, hold, release down (log time so short values stay visible)
-  const ew=Math.min(96,W*0.3), eh=28, ex=W-ew-8, ey=22, tl=v=>Math.log10(1+v*40)/Math.log10(1+4*40);
-  const ax=ex+tl(Ly.a)*ew*0.45, rx=ex+ew*0.55+tl(Ly.r)*ew*0.45;
-  g.beginPath(); g.moveTo(ex,ey+eh); g.lineTo(ax,ey); g.lineTo(ex+ew*0.55,ey); g.lineTo(rx,ey+eh);
-  g.strokeStyle=cssVar('--acc'); g.lineWidth=1.5; g.stroke();
-  // live waveform
   if(!Ly.an){ Ly.an=ctx.createAnalyser(); Ly.an.fftSize=2048; Ly.panner.connect(Ly.an); }
   if(!PREV.wave || PREV.wave.length!==Ly.an.fftSize) PREV.wave=new Float32Array(Ly.an.fftSize);
   Ly.an.getFloatTimeDomainData(PREV.wave);
-  let st=0; for(let k=1;k<PREV.wave.length/2;k++) if(PREV.wave[k-1]<0 && PREV.wave[k]>=0){ st=k; break; }   // steady trace: start on a rising zero crossing
-  const span=Math.min(800,PREV.wave.length-st);
-  g.beginPath(); for(let k=0;k<span;k++){ const x=k/(span-1)*W, y=H/2-clamp(PREV.wave[st+k]*2.2,-1,1)*(H/2-6); k?g.lineTo(x,y):g.moveTo(x,y); }
-  g.strokeStyle=col; g.lineWidth=2; g.stroke();
-  // labels
-  g.font='11px '+cssVar('--mono'); g.textBaseline='top';
-  g.fillStyle=col; g.fillText(`${i+1} · ${instName(Ly).toLowerCase()}${audible(Ly)?'':' · muted'}`,8,6);
-  g.fillStyle=dim; g.textBaseline='bottom';
-  const f=80*Math.pow(18000/80,Ly.cutoff);
-  const info = S.tab==='timing' ? `grid ${Ly.q} · str ${pct(Ly.strength)} · hum ${pct(Ly.humanize)}`
-    : S.tab==='mix' ? `vol ${pct(Ly.vol)} · pan ${Ly.pan===0?'c':(Ly.pan<0?'l':'r')+Math.round(Math.abs(Ly.pan)*100)} · rev ${pct(Ly.rev)}`
-    : `atk ${secs(Ly.a)} · rel ${secs(Ly.r)} · ${f>=1000?(f/1000).toFixed(1)+'k':Math.round(f)}`;
-  g.fillText(info,8,H-5);
+  let st=0; for(let k=1;k<PREV.wave.length/2;k++) if(PREV.wave[k-1]<0 && PREV.wave[k]>=0){ st=k; break; }
+  const span=Math.min(700,PREV.wave.length-st);
+  g.beginPath(); for(let k=0;k<span;k++){ const x=k/(span-1)*gw, y=H/2-clamp(PREV.wave[st+k]*2.2,-1,1)*(H/2-3); k?g.lineTo(x,y):g.moveTo(x,y); }
+  g.strokeStyle=col; g.lineWidth=1.75; g.stroke();
+  // envelope: attack up, hold, release down (log time so short values stay visible)
+  const ex=W-ew, ey=6, eh=H-12, tl=v=>Math.log10(1+v*40)/Math.log10(1+4*40);
+  g.fillStyle=cssVar('--screen-line'); g.fillRect(ex-6,4,1,H-8);
+  g.beginPath(); g.moveTo(ex,ey+eh); g.lineTo(ex+tl(Ly.a)*ew*0.45,ey); g.lineTo(ex+ew*0.55,ey); g.lineTo(ex+ew*0.55+tl(Ly.r)*ew*0.45,ey+eh);
+  g.strokeStyle=cssVar('--acc'); g.lineWidth=1.5; g.stroke();
+  if(!audible(Ly)){ g.font='11px '+cssVar('--mono'); g.textBaseline='top'; g.fillStyle=dim; g.fillText('muted',4,2); }
 }
 function renderPrevSolo(){ const b=$('prevSolo'), on=!!selLayer().solo; b.classList.toggle('on',on); b.textContent= on?'solo':'all'; 
   b.setAttribute('aria-label', on?'Hearing only this layer: tap to hear all layers':'Hearing all layers: tap to hear only this layer'); }
@@ -2293,6 +2305,8 @@ const FX = {
   off:   {name:'None',             how:'only on/off'},
 };
 const fxOf = Ly => FX[Ly.fx] ? Ly.fx : (Ly.inst==='drums' ? 'gate' : 'lp');
+const FX_SHORT={ lp:['◢','low-pass'], hp:['◣','high-pass'], gate:['▥','gate'], delay:['⋯','delay'], reverb:['≋','reverb'], pitch:['↕','pitch'], drive:['∿','drive'], off:['∅','none'] };
+const fxChip = k => `<b>${FX_SHORT[k][0]}</b> ${FX_SHORT[k][1]}`;
 const GATE_DIVS=[[1,'1/4'],[2,'1/8'],[4,'1/16'],[8,'1/32']];
 const hz = f => f>=1000 ? (f/1000).toFixed(1)+' kHz' : Math.round(f)+' Hz';
 function driveCurve(k){ const n=1024, c=new Float32Array(n); for(let i=0;i<n;i++){ const x=i/(n-1)*2-1; c[i]=Math.tanh(k*x)/Math.tanh(k); } return c; }
@@ -2349,6 +2363,7 @@ function openCapture(){
 function closeCapture(){
   CAP.touch.forEach(t=>clearTimeout(t.timer)); CAP.touch.clear(); layers.forEach(fxReset);
   if(bouncer) bouncer.stop();   // leaving capture mode saves a running output recording
+  document.querySelector('.cfxmenu')?.remove();
   CAP.open=false; document.body.classList.remove('cap'); $('capMode').classList.add('hidden'); $('captureBtn').classList.remove('on');
   renderLayers();
 }
@@ -2360,10 +2375,10 @@ function renderCaptureMode(){
   const grid=$('cgrid'); grid.style.gridTemplateColumns=`repeat(${cols},minmax(0,1fr))`; grid.style.gridTemplateRows=`repeat(${rows},minmax(0,1fr))`;
   grid.innerHTML = vis.map(([Ly,i])=>`
     <div class="ctile ${audible(Ly)?'':'off'}" data-i="${i}" style="--lc:var(--l${i})">
-      <div class="chead"><span class="num">${i+1}</span>${INST_ICON[Ly.inst]||''}<span class="cname">${instName(Ly)}</span><span class="cstate">${audible(Ly)?'on':'off'}</span></div>
+      <div class="chead"><span class="num">${i+1}</span>${INST_ICON[Ly.inst]||''}<span class="cname">${instName(Ly)}</span><button class="cfxchip" data-fxi="${i}" aria-label="Capture effect: ${FX[fxOf(Ly)].name}. Tap to change">${fxChip(fxOf(Ly))} ▾</button><span class="cstate">${audible(Ly)?'on':'off'}</span></div>
       <canvas id="croll${i}"></canvas>
       <div class="cpad"></div>
-      <div class="cfx">${FX[fxOf(Ly)].name}</div>
+      <div class="cfx">${FX[fxOf(Ly)].how}</div>
       <i class="cdot"></i>
     </div>`).join('');
   requestAnimationFrame(drawCaptureRolls);
@@ -2375,9 +2390,23 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
   const where=(t,e)=>{ const r=t.el.getBoundingClientRect(); return [clamp((e.clientX-r.left)/r.width,0,1), clamp(1-(e.clientY-r.top)/r.height,0,1), e.clientX-r.left, e.clientY-r.top]; };
   const apply=(t,e)=>{ const [x,y,px,py]=where(t,e); const Ly=layers[t.i];
     const dot=t.el.querySelector('.cdot'); dot.style.left=px+'px'; dot.style.top=py+'px';
-    const fx=fxOf(Ly); t.el.querySelector('.cfx').textContent = fx==='off' ? FX.off.name : `${FX[fx].name} · ${fxSet(Ly,x,y,t.y0)}`; };
+    const fx=fxOf(Ly); t.el.querySelector('.cfx').textContent = fx==='off' ? FX.off.how : `${FX_SHORT[fx][1]} · ${fxSet(Ly,x,y,t.y0)}`; };
   const start=(t,e)=>{ if(t.active) return; t.active=true; clearTimeout(t.timer); t.el.classList.add('touch'); if(navigator.vibrate) navigator.vibrate(8); apply(t, t.last||e); };
+  // the effect chip and its menu are keys, not part of the pad
+  const capEl=$('capMode');
+  capEl.addEventListener('click',e=>{
+    const chip=e.target.closest('.cfxchip'), item=e.target.closest('[data-fxset]');
+    if(item){ const Ly=layers[+item.dataset.fxl]; fxReset(Ly); Ly.fx=item.dataset.fxset; item.closest('.cfxmenu').remove(); save(); renderCaptureMode(); return; }
+    const open=capEl.querySelector('.cfxmenu'); if(open){ const same=chip && open.dataset.fxl===chip.dataset.fxi; open.remove(); if(same || !chip) return; }
+    if(!chip) return;
+    const i=+chip.dataset.fxi, cur=fxOf(layers[i]), m=document.createElement('div'); m.className='cfxmenu'; m.dataset.fxl=i;
+    m.style.setProperty('--lc',`var(--l${i})`);
+    m.innerHTML=`<h2>layer ${i+1} · capture effect</h2>`+Object.keys(FX).map(k=>`<button data-fxset="${k}" data-fxl="${i}" class="${k===cur?'on':''}">${fxChip(k)}</button>`).join('');
+    capEl.appendChild(m);
+  });
   grid.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.cfxchip,.cfxmenu')) return;
+    if(capEl.querySelector('.cfxmenu')){ capEl.querySelector('.cfxmenu').remove(); e.preventDefault(); return; }
     const el=e.target.closest('.ctile'); if(!el) return; e.preventDefault();
     try{ el.setPointerCapture(e.pointerId); }catch(err){}
     const i=+el.dataset.i, t={el, i, x0:e.clientX, cy0:e.clientY, y0:0, active:false, last:e}; t.y0=where(t,e)[1];
