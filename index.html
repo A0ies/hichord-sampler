@@ -645,14 +645,29 @@ body.projopen .pbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:
   .layersheet .sheethead{align-items:center}
   .layersheet .sheethead button{align-items:center;justify-content:center}
   .layer .open{display:inline-flex}
-  .layersheet.full{position:fixed;top:calc(8px + var(--st));bottom:calc(var(--tbarh) + 8px);right:max(12px,calc(var(--sr) + 8px));left:auto;width:min(560px,62vw);
-    height:auto;max-height:none;z-index:20;box-shadow:0 12px 40px rgba(0,0,0,.35)}
-  .layersheet.full .lprev{display:none}
+  /* the full settings use the whole width: header, tabs and danger keys on the left, the settings in four columns
+     on the right — nothing scrolls */
+  .layersheet.full{position:fixed;top:calc(8px + var(--st));bottom:calc(var(--tbarh) + 8px);left:max(12px,calc(var(--sl) + 8px));right:max(12px,calc(var(--sr) + 8px));
+    width:auto;height:auto;max-height:none;z-index:20;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:14px 16px}
+  .layersheet.full .lprev,.layersheet.full .grab{display:none}
+  .layersheet.full .lsbody{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:minmax(210px,28%) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:20px}
+  .layersheet.full .sheethead{grid-column:1;grid-row:1;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .layersheet.full .sheethead h2{flex-basis:100%}
+  .layersheet.full .sheethead .spacer{display:none}
+  .layersheet.full #editBtn{flex:1}
   .layersheet.full .close{display:inline-flex}
-  .layersheet.full .lsbody{overflow-y:auto;flex:1;min-height:0}
-  .layersheet.full #detail{flex:none}
-  .layersheet.full #detail .advt{flex:none}
-  .layersheet.full #detail .advt .xy{flex:none;height:140px}
+  .layersheet.full .tabs{grid-column:1;grid-row:2;flex-direction:column;margin:0}
+  .layersheet.full .tabs button{text-align:left;justify-content:flex-start;padding:8px 10px;border-bottom:0;border-left:2px solid transparent}
+  .layersheet.full .tabs button.on{border-left-color:var(--acc)}
+  .layersheet.full .dangerkeys{grid-column:1;grid-row:4;margin-top:10px;padding-top:0;border-top:0}
+  .layersheet.full .dangerkeys button{min-height:36px;font-size:11px;padding:0 6px}
+  .layersheet.full #detail{grid-column:2;grid-row:1/-1;min-height:0;overflow:hidden;gap:10px}
+  .layersheet.full #detail .params{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 16px}
+  .layersheet.full #detail .hint{display:none}
+  .layersheet.full #detail .advt{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;gap:8px 14px;margin:0}
+  .layersheet.full #detail .advt .xy{grid-column:1;grid-row:1/3;height:auto;min-height:0}
+  .layersheet.full #detail .advt .gridkeys{grid-column:2;grid-row:1;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .layersheet.full #detail .advt .minis{grid-column:2;grid-row:2;align-self:start}
 }
 /* advanced timing: XY screen, grid keys, mini steppers — fits without scrolling */
 .advt{display:flex;flex-direction:column;gap:8px;margin-top:6px}
@@ -899,7 +914,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.20';
+const PAGE_VERSION = '2026-11-11.21';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
