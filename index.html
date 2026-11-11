@@ -1217,7 +1217,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.47';
+const PAGE_VERSION = '2026-11-11.48';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3237,8 +3237,9 @@ edCv.addEventListener('pointerdown', e=>{
     if(sel.length){
       const first=sel.reduce((a,b)=>a.beat<=b.beat?a:b), last=sel.reduce((a,b)=>a.beat+a.dur>=b.beat+b.dur?a:b);
       const x0=xOf(first.beat), x1=xOf(last.beat+last.dur);
-      if(x>=x0-34 && x<=x0+6){ start('resize-l', first); return; }
-      if(x>=x1-6 && x<=x1+34){ start('resize-r', last); return; }
+      const hl=Math.max(KEYW,x0-26), hr=Math.min(edDims().W-26,x1);
+      if(x>=hl-8 && x<=hl+30 && (x<=x0+6 || hl>x0-26)){ start('resize-l', first); return; }
+      if(x>=hr-4 && x<=hr+34){ start('resize-r', last); return; }
       if(x>x0 && x<x1){ start('move', first); return; }
     }
     const c=edTrimGroups().find(c=>x>=xOf(c.beat)-4 && x<=xOf(c.end)+4);
@@ -3429,7 +3430,8 @@ function edDraw(){
     const b0=Math.min(...tsel.map(e=>e.beat)), b1=Math.max(...tsel.map(e=>e.beat+e.dur)), x0=xOf(b0), x1=xOf(b1), hh=VELH-12;
     g.fillStyle=C.col; g.globalAlpha=0.45; rr(x0,mid-11,x1-x0,22,6); g.fill(); g.globalAlpha=1;
     g.strokeStyle=C.ink; g.lineWidth=2; rr(x0+1,mid-10,x1-x0-2,20,6); g.stroke();
-    [[x0-26,x0],[x1,x1]].forEach(([hx])=>{ g.fillStyle=C.ink; rr(hx,mid-hh/2,26,hh,7); g.fill();
+    [[Math.max(KEYW,x0-26)],[Math.min(W-26,x1)]].forEach(([hx])=>{   // a handle stays visible at the loop's start or the screen's edge
+      g.fillStyle=C.ink; rr(hx,mid-hh/2,26,hh,7); g.fill();
       g.fillStyle=C.bg; g.fillRect(hx+10,mid-7,2,14); g.fillRect(hx+14,mid-7,2,14); });
   }
   g.restore();
