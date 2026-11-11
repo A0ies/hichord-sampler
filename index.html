@@ -713,7 +713,7 @@ header.top .chip{flex:0 1 auto}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.6';
+const PAGE_VERSION = '2026-11-11.7';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -964,6 +964,7 @@ function releaseVoice(v, t, r){
   p.setTargetAtTime(0, t, Math.max(0.005, r/4));
   try{ v.src.stop(t + r*1.4 + 0.05); }catch(e){}
 }
+function stopLiveVoices(){ layers.forEach(Ly=>{ Ly.live.forEach(list=>list.forEach(v=>{ if(v && !v.one) releaseVoice(v, ctx.currentTime, 0.05); })); }); }
 function stopAllVoices(fast){ layers.forEach(Ly=>{ Ly.voices.forEach(v=>releaseVoice(v, ctx.currentTime, fast?0.02:0.12)); Ly.live.clear(); }); }
 
 /* ============ clock & transport ============ */
@@ -1167,11 +1168,11 @@ function ensureChords(Ly){
   for(const e of free){ if(!cur || e.beat-cur.beat>=0.12){ cur={id:chordSeq++, beat:e.beat}; } e.chord=cur.id; }
 }
 /* MIDI monitor: shows that notes really arrive */
-let midiCount=0, midiOffs=0, midiLast='', monT=0;
+let allOffs=0, midiCount=0, midiOffs=0, midiLast='', monT=0;
 function midiSeen(note, vel){
   midiCount++; midiLast=`${noteName(note)} vel ${vel}`;
   if(!monT) monT=requestAnimationFrame(()=>{ monT=0;
-    $('midiMon').textContent=`Notes in: ${midiCount} on / ${midiOffs} off · last ${midiLast} · ${S.rec&&S.playing?`recording into layer ${S.sel+1}`:'not recording — tap ● to record'}`; });
+    $('midiMon').textContent=`Notes in: ${midiCount} on / ${midiOffs} off · last ${midiLast} · ${S.rec&&S.playing?`recording into layer ${S.sel+1}`:'not recording — tap ● to record'}${allOffs?` · all-notes-off: ${allOffs}`:''}`; });
 }
 function liveOff(note){
   if(!ctx) return;
@@ -1222,7 +1223,8 @@ function handleMsg(d, fromHC){
   if(st>=0xF0) return;
   const type=st&0xF0, ch=(st&0x0F)+1;
   if(type===0xB0){
-    if(d[1]===123||d[1]===120){ stopAllVoices(true); return; }
+    // All Notes Off / All Sound Off from a keyboard only stops what you play live, never the loop's own notes
+    if(d[1]===123||d[1]===120){ stopLiveVoices(); allOffs++; return; }
     if(fromHC) hcIncomingCC(d[1],d[2]);
     return;
   }
