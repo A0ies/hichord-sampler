@@ -795,6 +795,14 @@ body.projopen .pbar{display:none}
 .rgroup h2{margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em;font-size:11px}
 #settingsSheet .rgroup .params{grid-template-columns:minmax(0,1fr);gap:10px}
 .rgroup .params .p:nth-child(2) input[type=range]{--knob:var(--enc2)}
+/* the three settings pages fill the same height (the tallest page sets it): their rows spread out, so switching tabs
+   keeps the same block of content instead of jumping between a full and a half-empty page */
+#settingsSheet .setpage{display:flex;flex-direction:column}
+#settingsSheet .setpage[data-k=sync]>.params{flex:1;align-content:space-between}
+#settingsSheet .setpage[data-k=room] .roomgroups{flex:1}
+#settingsSheet .setpage[data-k=sound] .padsbox{margin-top:auto;padding-top:18px}
+#settingsSheet .setpage[data-k=room] .rgroup{display:flex;flex-direction:column}
+#settingsSheet .setpage[data-k=room] .rgroup .params{flex:1;align-content:space-around}
 /* the projects screen fills the screen, like capture mode: "projects" top left, close top right, this project's name,
    then every project ("+ new project" first) — one column in portrait, three in landscape */
 body.projopen .tbar{display:none}
@@ -1105,7 +1113,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.39';
+const PAGE_VERSION = '2026-11-11.40';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
