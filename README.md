@@ -7,7 +7,7 @@ Open it at https://a0ies.github.io/hichord-sampler/ (Chrome or Edge), or use the
 ## How it works
 
 - **Layers.** Eight layers; whatever you play goes into the selected one. Press record (R), play, press record again. Each pass is a take you can undo.
-- **Capture.** Forgot to record? Everything you play is kept for a while: Capture (C) puts your last phrase into the selected layer, in time with the loop or, when stopped, starting on beat 1.
+- **Capture mode.** Capture (C) turns every layer into a full-screen touch pad, with its icon and a small timeline. Tap a pad to switch the layer on or off; hold and drag to play its effect (low-pass, high-pass, stutter gate, delay throw, reverb wash, pitch bend or drive, chosen per layer under Mix). Let go and the effect springs back.
 - **MIDI, not audio.** The app stores the notes you played. That is why timing and instruments stay editable after recording.
 - **Timing, live.** Per layer: quantize (1/4 to 1/16 triplets), strength, swing, nudge, note length, humanize, octave. Your original timing is never changed; Quantize Off brings it back. Tempo changes re-time every layer at once.
 - **Instruments.** Multisampled in Ableton: grand piano, e-piano, strings, horns, electric guitar, saw lead, square lead, pad, electric bass, synth bass and drums (the drums follow the HiChord's drum pads). Each lives in `sounds/` as one AAC file with a note every 3 semitones; `sounds/sounds.json` holds where each note and its loop start. Or use your own sound from the microphone or an audio file.
