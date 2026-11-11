@@ -681,7 +681,7 @@ header.top .chip{flex:0 1 auto}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-10.18';
+const PAGE_VERSION='2026-11-11.1';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -719,46 +719,59 @@ const S = { bpm:100, bars:4, playing:false, rec:false, metro:true, countIn:true,
 const layers = [];
 let ctx, preFx, tape, master, limiter, recDest, revIn, convolver, revOut, dlyIn, delay, dlyFb, dlyLp, dlyOut;
 
-/* ============ instruments (synthesised once, on demand) ============ */
+/* ============ instruments (multisampled, recorded in Ableton) ============
+   Each instrument is one compressed file in sounds/ with a note recorded every 3 semitones;
+   sounds/sounds.json says where each note starts and, for sustained sounds, where its loop is.
+   A played note uses the nearest recording, shifted by at most a semitone and a half. */
 const TAU = Math.PI*2;
-function synth(len, fn){ const sr=ctx.sampleRate, n=Math.floor(len*sr), b=ctx.createBuffer(1,n,sr), d=b.getChannelData(0); fn(d,sr,n); return normalize(b); }
-function fadeOut(d,sr,n,sec){ const f=Math.floor(sec*sr); for(let i=0;i<f;i++) d[n-1-i]*=i/f; }
 const LIB = {
-  keys:{name:'FM Keys', root:60, mode:'melodic', a:0.005, r:0.5, make:()=>synth(3,(d,sr,n)=>{ const f=261.63;
-    for(let i=0;i<n;i++){ const t=i/sr, idx=0.3+2.4*Math.exp(-t*4), tine=Math.sin(TAU*f*14*t)*Math.exp(-t*30)*0.12;
-      d[i]=(Math.sin(TAU*f*t + idx*Math.sin(TAU*f*t)) + tine)*Math.exp(-t*1.2)*Math.min(1,t*400); } fadeOut(d,sr,n,0.1); })},
-  piano:{name:'Soft piano', root:60, mode:'melodic', a:0.003, r:0.6, make:()=>synth(3.5,(d,sr,n)=>{ const f=261.63, H=[[1,1,1.6],[2,0.55,2.4],[3,0.3,3.2],[4,0.18,4],[5,0.1,5],[6,0.06,6.5]];
-    for(let i=0;i<n;i++){ const t=i/sr; let s=0; for(const [h,a,dc] of H) s+=Math.sin(TAU*f*h*1.0007*t)*a*Math.exp(-t*dc); d[i]=s*Math.min(1,t*600); } fadeOut(d,sr,n,0.1); })},
-  pad:{name:'Warm pad', root:48, mode:'looped', a:0.35, r:1.6, make:()=>synth(3.2,(d,sr,n)=>{ const f=130.81, det=[-0.11,-0.05,0,0.06,0.12]; let lp=0; const ph=det.map(()=>Math.random());
-    for(let i=0;i<n;i++){ const t=i/sr; let s=0; det.forEach((dt,k)=>{ const fr=f*Math.pow(2,dt/12); s+=((ph[k]+t*fr)%1)*2-1; }); lp+=(s/det.length-lp)*0.06; d[i]=lp*Math.min(1,t/0.05); } })},
-  strings:{name:'Strings', root:60, mode:'melodic', a:0.25, r:1.2, make:()=>synth(5,(d,sr,n)=>{ const f=261.63, det=[-0.08,0,0.07]; let lp=0;
-    for(let i=0;i<n;i++){ const t=i/sr, vib=1+0.004*Math.sin(TAU*5.2*t)*Math.min(1,t); let s=0; det.forEach(dt=>{ s+=((t*f*vib*Math.pow(2,dt/12))%1)*2-1; }); lp+=(s/3-lp)*0.12; d[i]=lp*Math.min(1,t/0.1); } fadeOut(d,sr,n,0.4); })},
-  organ:{name:'Organ', root:60, mode:'melodic', a:0.01, r:0.15, make:()=>synth(5,(d,sr,n)=>{ const f=261.63, H=[[0.5,0.5],[1,1],[2,0.7],[3,0.35],[4,0.4],[6,0.15],[8,0.2]];
-    for(let i=0;i<n;i++){ const t=i/sr; let s=0; for(const [h,a] of H) s+=Math.sin(TAU*f*h*t)*a; d[i]=s*Math.min(1,t*200)*(1+0.03*Math.sin(TAU*6*t)); } fadeOut(d,sr,n,0.3); })},
-  lead:{name:'Soft lead', root:60, mode:'melodic', a:0.01, r:0.25, make:()=>synth(4,(d,sr,n)=>{ const f=261.63; let lp=0, ph=0;
-    for(let i=0;i<n;i++){ const t=i/sr, vib=1+0.006*Math.sin(TAU*5.5*t)*Math.min(1,t*2); ph+=f*vib/sr; const sq=(ph%1)<0.5?1:-1; lp+=(sq-lp)*0.18; d[i]=lp*Math.min(1,t*300); } fadeOut(d,sr,n,0.3); })},
-  bass:{name:'Sub bass', root:36, mode:'melodic', a:0.005, r:0.2, make:()=>synth(2,(d,sr,n)=>{ const f=65.41; let lp=0;
-    for(let i=0;i<n;i++){ const t=i/sr, saw=((t*f)%1)*2-1, sq=Math.sin(TAU*f*t)>0?0.6:-0.6, cut=0.02+0.25*Math.exp(-t*9);
-      lp+=((saw*0.6+sq*0.4+Math.sin(TAU*f*t))-lp)*cut; d[i]=lp*Math.exp(-t*0.9)*Math.min(1,t*300); } fadeOut(d,sr,n,0.1); })},
-  pluck:{name:'Pluck', root:60, mode:'melodic', a:0.002, r:0.3, make:()=>synth(2.2,(d,sr,n)=>{ const p=Math.round(sr/261.63), buf=new Float32Array(p);
-    for(let i=0;i<p;i++) buf[i]=Math.random()*2-1; let k=0; for(let i=0;i<n;i++){ const nx=(k+1)%p, v=buf[k]; buf[k]=0.497*(v+buf[nx]); d[i]=v; k=nx; } })},
-  bell:{name:'Glass bell', root:72, mode:'melodic', a:0.002, r:1.2, make:()=>synth(3,(d,sr,n)=>{ const f=523.25, P=[[1,1,1.2],[2.76,0.5,2.5],[5.4,0.3,4],[8.93,0.18,6],[0.5,0.25,1]];
-    for(let i=0;i<n;i++){ const t=i/sr; let s=0; for(const [r,a,dc] of P) s+=Math.sin(TAU*f*r*t)*a*Math.exp(-t*dc); d[i]=s*Math.min(1,t*800); } })},
-  drums:{name:'Drum kit', root:60, mode:'kit', a:0.001, r:0.1, make:()=>synth(3.6,(d,sr,n)=>{ const slot=0.6;
-    const hit=(k,fn)=>{ const o=Math.floor(k*slot*sr); for(let i=0;i<slot*sr*0.9&&o+i<n;i++) d[o+i]+=fn(i/sr); };
-    let ph=0, lp=0, hp=0, pr=0;
-    hit(0,t=>{ ph+=TAU*(45+120*Math.exp(-t*30))/sr; return Math.sin(ph)*Math.exp(-t*7)+(t<0.004?(Math.random()-.5):0); });
-    hit(1,t=>{ const nz=Math.random()*2-1; lp+=(nz-lp)*0.5; return lp*Math.exp(-t*14)*0.8+Math.sin(TAU*190*t)*Math.exp(-t*20)*0.6; });
-    hit(2,t=>{ const nz=Math.random()*2-1; hp=nz-pr; pr=nz; return hp*Math.exp(-t*45)*0.6; });
-    ph=0; hit(3,t=>{ ph+=TAU*(110+60*Math.exp(-t*20))/sr; return Math.sin(ph)*Math.exp(-t*6); });
-    pr=0; hit(4,t=>{ const nz=Math.random()*2-1; hp=nz-pr; pr=nz; return hp*Math.exp(-t*7)*0.5; });
-    hit(5,t=>{ const s=(Math.sin(TAU*560*t)>0?1:-1)+(Math.sin(TAU*845*t)>0?1:-1); return s*0.25*Math.exp(-t*12); });
-  }), slices:[0,0.6,1.2,1.8,2.4,3.0]},
+  piano:  {name:'Grand piano',     a:0.002, r:0.35},
+  keys:   {name:'E-piano',         a:0.002, r:0.35},
+  strings:{name:'Strings',         a:0.002, r:0.6},
+  horns:  {name:'Horns',           a:0.002, r:0.25},
+  guitar: {name:'Electric guitar', a:0.002, r:0.3},
+  lead:   {name:'Saw lead',        a:0.002, r:0.15},
+  square: {name:'Square lead',     a:0.002, r:0.15},
+  pad:    {name:'Pad',             a:0.002, r:1.0},
+  ebass:  {name:'Electric bass',   a:0.002, r:0.2},
+  bass:   {name:'Synth bass',      a:0.002, r:0.12},
+  drums:  {name:'Drums',           a:0.001, r:0.1},
 };
+// instruments of earlier versions get the closest new one
+const OLD_INST = { organ:'horns', pluck:'guitar', bell:'keys' };
+const instKey = (k, i) => LIB[k] ? k : OLD_INST[k] || DEFAULT_INST[i] || 'keys';
+const SOUND_VERSION = 2;   // layers saved before this get the new instruments' envelopes
 // HiChord drum pads send GM notes on channel 10: kick 36, snare 38, closed hat 42, tom 45, open hat 46, cowbell 56
-const GM_KIT = {35:0,36:0,37:1,38:1,39:1,40:1,42:2,44:2,41:3,43:3,45:3,47:3,48:3,50:3,46:4,49:4,51:4,56:5};
-const bufCache = {};
-function libBuffer(k){ return bufCache[k] || (bufCache[k]=LIB[k].make()); }
+// recorded hits: 0 kick, 1 snare, 2 closed hat, 3 open hat, 4 crash, 5 tom, 6 perc
+const GM_KIT = {35:0,36:0,37:1,38:1,40:1,42:2,44:2,46:3,49:4,51:4,52:4,55:4,57:4,59:4,39:5,41:5,43:5,45:5,47:5,48:5,50:5,56:6};
+const SND = {};   // key -> {buffer, zones, kind} once loaded
+let soundMap = null;
+const soundLoads = {};
+function soundManifest(){
+  return soundMap || (soundMap = fetch(`sounds/sounds.json?v=${PAGE_VERSION}`).then(r=>{ if(!r.ok) throw new Error('sounds.json '+r.status); return r.json(); }));
+}
+function loadSound(key){
+  if(SND[key]) return Promise.resolve(SND[key]);
+  return soundLoads[key] || (soundLoads[key] = (async()=>{
+    const man = (await soundManifest())[key];
+    const data = await (await fetch(`sounds/${key}.m4a?v=${PAGE_VERSION}`)).arrayBuffer();
+    const buffer = await new Promise((ok,no)=>ctx.decodeAudioData(data, ok, no));
+    // decoders differ in how much silence they put in front: measure it on the first note and shift every position
+    const ch=[...Array(buffer.numberOfChannels)].map((_,c)=>buffer.getChannelData(c)), lim=Math.min(buffer.length, Math.floor(buffer.sampleRate*1.5));
+    let first=0; while(first<lim && !ch.some(d=>Math.abs(d[first])>0.01)) first++;
+    const shift = first<lim ? first/buffer.sampleRate - man.probe : 0;
+    const zones = man.zones.map(z=>({...z, start:z.start+shift, loop: z.loop && [z.loop[0]+shift, z.loop[1]+shift]}));
+    SND[key] = { buffer, zones, kind:man.kind };
+    layers.forEach(Ly=>{ if(Ly.inst===key) Ly.buffer=buffer; });
+    return SND[key];
+  })().catch(e=>{ delete soundLoads[key]; console.warn('sound', key, e); toast(`Couldn't load ${LIB[key].name}. Check the connection.`); throw e; }));
+}
+// the nearest recorded note; between two, the one below (shifting up sounds more natural than down)
+function zoneFor(zones, n){
+  let best=zones[0];
+  for(const z of zones){ const d=Math.abs(n-z.note), bd=Math.abs(n-best.note); if(d<bd || (d===bd && z.note<best.note)) best=z; }
+  return best;
+}
 function normalize(b){
   let peak=0; for(let c=0;c<b.numberOfChannels;c++){ const d=b.getChannelData(c); for(let i=0;i<d.length;i++){ const v=Math.abs(d[i]); if(v>peak) peak=v; } }
   if(peak<1e-4) return b; const g=0.89/peak;
@@ -823,12 +836,12 @@ function buildIR(){ clearTimeout(irT); irT=setTimeout(()=>{
 function updateDelayTime(){ if(ctx) delay.delayTime.setTargetAtTime(clamp(S.dlyDiv*60/S.bpm,0.01,3.9), ctx.currentTime, 0.05); }
 
 /* ============ layers ============ */
-const DEFAULT_INST = ['keys','bass','pad','drums','pluck','strings','bell','lead'];
+const DEFAULT_INST = ['keys','bass','pad','drums','guitar','strings','horns','lead'];
 function newLayerData(i){
   const inst=DEFAULT_INST[i]||'keys', L=LIB[inst];
-  return { inst, customName:null, root:L.root, events:[], takes:0,
+  return { inst, customName:null, root:60, snd:SOUND_VERSION, events:[], takes:0,
     q: inst==='drums'?'1/16':'off', strength:1, swing:0, nudge:0, gate:1, oct:0, semis:0, humanize:0,
-    a:L.a, r:L.r, cutoff:1, reso:0.1, vol:0.8, pan:0, rev: inst==='pad'||inst==='bell'?0.35:0.18, dly:0, mute:false, solo:false,
+    a:L.a, r:L.r, cutoff:1, reso:0.1, vol:0.8, pan:0, rev: inst==='pad'||inst==='strings'?0.35:0.18, dly:0, mute:false, solo:false,
     out:'app',   // 'app' = the app's instrument, 'hc' = the HiChord plays it, 'both'
     shown:false };   // layers appear in the list once you add them
 }
@@ -842,9 +855,15 @@ function attachNodes(Ly){
   applyLayer(Ly);
 }
 function setInstrument(Ly, key, keepEnv){
-  Ly.inst=key; Ly.customName=null; Ly.buffer=libBuffer(key); Ly.mode=LIB[key].mode; Ly.root=LIB[key].root;
-  Ly.slices = LIB[key].slices ? LIB[key].slices.map(s=>({start:s,end:s+0.55})) : null;
+  Ly.inst=key; Ly.customName=null; Ly.mode = key==='drums' ? 'kit' : 'melodic'; Ly.slices=null;
+  Ly.buffer = SND[key] ? SND[key].buffer : null;
+  if(!SND[key]) loadSound(key).catch(()=>{});
   if(!keepEnv){ Ly.a=LIB[key].a; Ly.r=LIB[key].r; }
+}
+// a layer saved with the old synthesised instruments keeps its notes and mix, but gets the new instrument's envelope
+function newSounds(Ly, saved){
+  if(saved && saved.snd!==SOUND_VERSION && Ly.inst!=='custom'){ Ly.a=LIB[Ly.inst].a; Ly.r=LIB[Ly.inst].r; }
+  Ly.snd=SOUND_VERSION;
 }
 function applyLayer(Ly){
   const now=ctx.currentTime;
@@ -860,20 +879,25 @@ const selLayer = () => layers[S.sel];
 
 /* ============ voices ============ */
 function playNote(Ly, note, vel, when, durSec){
-  if(!Ly.buffer) return null;
+  const lib = Ly.inst!=='custom' && SND[Ly.inst];
+  if(!lib && (Ly.inst!=='custom' || !Ly.buffer)){ if(LIB[Ly.inst]) loadSound(Ly.inst).catch(()=>{}); return null; }
   const n = note + 12*Ly.oct;
   if(Ly.voices.size>28){ const old=[...Ly.voices].find(v=>!v.released); if(old) releaseVoice(old, ctx.currentTime, 0.02); }
   const g=ctx.createGain(); g.connect(Ly.filter);
-  const src=ctx.createBufferSource(); src.buffer=Ly.buffer;
+  const src=ctx.createBufferSource(); src.buffer = lib ? lib.buffer : Ly.buffer;
   const v=clamp(vel/127,0.05,1);
   let one=false;
-  if(Ly.mode==='kit'){
-    const sl=Ly.slices, idx = GM_KIT[n]!=null ? GM_KIT[n] : mod(n,sl.length);
+  if(lib && lib.kind==='kit'){
+    const zs=lib.zones, z = zs[GM_KIT[n]!=null ? GM_KIT[n] : mod(n,zs.length)];
     src.playbackRate.value=Math.pow(2,Ly.semis/12);
-    src.start(when, sl[idx].start, sl[idx].end-sl[idx].start); one=true;
-  } else {
+    src.start(when, z.start, z.len); one=true;
+  } else if(lib){
+    const z=zoneFor(lib.zones, n);
+    src.playbackRate.value=Math.pow(2,(n - z.note + Ly.semis)/12);
+    if(z.loop){ src.loop=true; src.loopStart=z.loop[0]; src.loopEnd=z.loop[1]; src.start(when, z.start); }
+    else src.start(when, z.start, z.len);
+  } else {   // your own sound
     src.playbackRate.value=Math.pow(2,(n - Ly.root + Ly.semis)/12);
-    if(Ly.mode==='looped'){ src.loop=true; src.loopStart=Ly.buffer.duration*0.3; src.loopEnd=Ly.buffer.duration*0.95; }
     src.start(when,0);
   }
   src.connect(g);
@@ -1356,7 +1380,7 @@ function toggleBounce(){
 
 /* ============ the session is kept between visits ============ */
 const SAVE_KEY='hichord-looper-v1';
-const LAYER_KEYS=['inst','customName','root','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown'];
+const LAYER_KEYS=['inst','customName','root','snd','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown'];
 let saveT;
 function sessionData(){
   return { v:1,
@@ -1485,7 +1509,7 @@ function applySession(d, sounds){
     Object.assign(Ly, newLayerData(i), JSON.parse(JSON.stringify(nd)));
     const snd=sounds && sounds[i];
     if(Ly.inst==='custom' && snd){ Ly.buffer=bufferFrom(snd); Ly.customName=snd.name; Ly.mode='melodic'; Ly.slices=null; }
-    else { if(Ly.inst==='custom' || !LIB[Ly.inst]) Ly.inst=DEFAULT_INST[i]; setInstrument(Ly, Ly.inst, true); }
+    else { Ly.inst = Ly.inst==='custom' ? DEFAULT_INST[i] : instKey(Ly.inst,i); newSounds(Ly, nd); setInstrument(Ly, Ly.inst, true); }
     Ly.events.forEach(e=>{ if(!e.id) e.id=evId++; evId=Math.max(evId,e.id+1); if(e.chord!=null) chordSeq=Math.max(chordSeq,e.chord+1); });
     applyLayer(Ly);
   });
@@ -1635,9 +1659,13 @@ const ICONS={
   pad:'<path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 11 3.5 3.5 0 0 0 7 18z"/>',
   strings:'<path d="M12 2.5V9"/><path d="M9 9h6a2 2 0 0 1 0 4 3 3 0 0 1 0 6H9a3 3 0 0 1 0-6 2 2 0 0 1 0-4z"/><path d="M12 13v3.5"/>',
   organ:'<path d="M5 19V10M9 19V6M13 19V4M17 19V8M21 19v-6M3 19h20"/>',
-  lead:'<path d="M2.5 15h4.5V8h5v8h5V9h4.5"/>',
+  lead:'<path d="M2.5 16l6-8v8l6-8v8l6-8"/>',
   bass:'<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9.5a3.5 3.5 0 0 1 0 5M19 7a7 7 0 0 1 0 10"/>',
   pluck:'<path d="M12 21c-3-3-7-8-7-12 0-3 3-5 7-5s7 2 7 5c0 4-4 9-7 12z"/>',
+  guitar:'<path d="M12 21c-3-3-7-8-7-12 0-3 3-5 7-5s7 2 7 5c0 4-4 9-7 12z"/>',
+  horns:'<path d="M3 10h7v4H3zM10 12c4 0 7-3 9-6v12c-2-3-5-6-9-6z"/><path d="M5 14v3M8 14v3"/>',
+  square:'<path d="M2.5 15h4V8h5v8h5V8h5"/>',
+  ebass:'<path d="M20 4l-8.5 8.5"/><path d="M18 2.5l3.5 3.5"/><path d="M11 10.5c-2.5-1-5 .5-5 3-2 .5-3 2-2.5 3.5.5 2 3 3.5 5 3 2-.5 3-2 2.5-3.5 1.5-1.5 1.5-4 0-6z"/><circle cx="9" cy="15" r="1"/>',
   bell:'<path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4M12 3V2"/>',
   drums:'<ellipse cx="12" cy="10" rx="8" ry="3"/><path d="M4 10v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M6 3l5 5M18 3l-5 5"/>',
   custom:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
@@ -1697,7 +1725,7 @@ function addLayer(key){
   Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.02));
   Object.assign(Ly, newLayerData(idx), { inst:key, shown:true });
   setInstrument(Ly, key); Ly.q = key==='drums' ? '1/16' : 'off';
-  Ly.rev = key==='pad'||key==='bell'||key==='strings' ? 0.35 : 0.18;
+  Ly.rev = key==='pad'||key==='strings' ? 0.35 : 0.18;
   applyLayer(Ly);
   closeSheets();
   selectLayer(idx); renderLayers(); save();
@@ -2510,7 +2538,8 @@ async function startApp(){
   for(let i=0;i<8;i++){
     const Ly = Object.assign(newLayerData(i), saved && saved.layers && saved.layers[i] ? saved.layers[i] : {});
     Ly.wantCustom = Ly.inst==='custom';   // its audio comes back from the project store
-    if(Ly.inst==='custom' || !LIB[Ly.inst]) Ly.inst=DEFAULT_INST[i];
+    Ly.inst = Ly.inst==='custom' ? DEFAULT_INST[i] : instKey(Ly.inst,i);
+    if(!Ly.wantCustom) newSounds(Ly, saved && saved.layers && saved.layers[i]);
     if(Math.abs(Ly.nudge||0)<5) Ly.nudge=0;   // tiny nudges were accidental slider touches
     Ly.events.forEach(e=>{ if(!e.id) e.id=evId; evId=Math.max(evId,e.id+1); if(e.chord!=null) chordSeq=Math.max(chordSeq,e.chord+1); });
     layers.push(Ly); attachNodes(Ly);
