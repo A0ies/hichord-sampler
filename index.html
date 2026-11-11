@@ -782,7 +782,12 @@ body[data-state="count"] .tbar,body[data-state="recording"] .tbar{background:var
 body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 .main{padding-bottom:calc(150px + var(--sb))}
 /* phone in landscape: the docked pane fills the right side, so undo sits bottom left, over the layer list */
-@media (min-width:780px) and (max-height:560px){ .undofab{right:auto;left:max(14px,calc(var(--sl) + 10px))} }
+@media (min-width:780px) and (max-height:560px){
+  .undofab{right:auto;left:max(14px,calc(var(--sl) + 10px))}
+  /* landscape: the home indicator is thin there, so the bar doesn't need its full safe-area padding */
+  :root{--tbarh:calc(70px + var(--sb) * .3)}
+  .tbar{padding-top:10px;padding-bottom:calc(10px + var(--sb) * .3)}
+}
 </style>
 </head>
 <body>
@@ -985,7 +990,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.30';
+const PAGE_VERSION = '2026-11-11.31';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
