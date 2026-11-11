@@ -847,6 +847,9 @@ body.projopen .pbar{display:none}
 .ownsnd button.icon{width:40px;height:40px;padding:0;flex:none}
 .ownsnd button.icon::before{display:none}
 .ownsnd button.micrec{background:var(--rec);color:#fff}
+/* the note editor opens over the landscape layer settings panel (and returns to it on done); toasts stay on top */
+.editor{z-index:24}
+.toast{z-index:26}
 /* the projects screen fills the screen, like capture mode: "projects" top left, close top right, this project's name,
    then every project ("+ new project" first) — one column in portrait, three in landscape */
 body.projopen .tbar{display:none}
@@ -1157,7 +1160,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.45';
+const PAGE_VERSION = '2026-11-11.46';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
