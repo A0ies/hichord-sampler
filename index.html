@@ -919,7 +919,7 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-11.23';
+const PAGE_VERSION = '2026-11-11.24';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1187,7 +1187,8 @@ function playNote(Ly, note, vel, when, durSec){
   const voice={note, g, src, when, released:false, one, Ly, rate};
   src.onended=()=>{ try{g.disconnect();}catch(e){} Ly.voices.delete(voice); };
   Ly.voices.add(voice);
-  if(durSec!=null && !one) releaseVoice(voice, when+Math.max(durSec, Ly.a));
+  // release just after the attack peak at the earliest: releasing exactly on it cancelled the attack and left the note silent
+  if(durSec!=null && !one) releaseVoice(voice, when+Math.max(durSec, Ly.a+0.005));
   flash(Ly);
   return voice;
 }
