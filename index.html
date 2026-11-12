@@ -1286,6 +1286,8 @@ body.projopen .fabs,body.sheetopen .fabs{display:none}
   .layerpane::-webkit-scrollbar{display:none}
   .layerpane::after{content:"";display:block;height:calc(100% - var(--tailh,60px))}
   .layersheet:not(.full){position:relative;top:auto;bottom:auto;height:auto;max-height:none;align-self:stretch}
+  /* the panel clips what sticks out (sliders' knobs), so leave room for the keys' drop shadow along its bottom edge */
+  .layersheet:not(.full) .lsbody{padding-bottom:3px}
   /* landscape: the home indicator is thin there, so the bar doesn't need its full safe-area padding */
   :root{--tbarh:calc(74px + var(--sb) * .3)}
   .tbar{padding-top:10px;padding-bottom:calc(10px + var(--sb) * .3)}
@@ -1716,7 +1718,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.64';
+const PAGE_VERSION = '2026-11-12.65';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
