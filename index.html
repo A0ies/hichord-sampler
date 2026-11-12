@@ -659,11 +659,19 @@ body.projopen .pbar{display:none}
 .ctile.touch{box-shadow:inset 0 0 0 3px var(--lc)}
 .ctile.touch .cfx{color:var(--ink)}
 .ctile.off{opacity:.45}
+.cgrid.short .ctile{gap:4px;padding:6px 7px}
+.cgrid.short .ctile .capnotes{gap:3px}
+.cgrid.short .ctile .cpad,.cgrid.short .ctile .cfx{display:none}
+.cgrid.short .ctile canvas{flex:1;height:auto;min-height:18px}
+.cgrid.short .ctile.hasnotes canvas{display:none}
+.cgrid.short .ctile .capnotes button{min-height:22px;height:22px}
 .ctile .capnotes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;flex:none;pointer-events:auto;touch-action:manipulation}
 .ctile .capnotes button{min-height:30px;height:30px;padding:0;font-size:11px;justify-content:center}
 .ctile .capnotes button::before{display:none}
 .ctile .capnotes button.on{background:var(--lc);color:#fff}
-@media (min-width:560px){ .ctile .capnotes{grid-template-columns:repeat(6,minmax(0,1fr))} }
+/* the gate's note keys: one row of six when the tile is wide enough, otherwise two rows of three */
+.ctile{container-type:inline-size}
+@container (min-width:300px){ .ctile .capnotes{grid-template-columns:repeat(6,minmax(0,1fr))} }
 .fxpop .gnotes{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
 .fxpop .gnotes button{min-height:38px;padding:0;font-size:12px;justify-content:center}
 .fxpop .gnotes button::before{display:none}
@@ -1866,7 +1874,10 @@ function setBars(n){
 function doubleLoop(){
   if(S.bars>=16){ toast('16 bars is the longest loop'); return; }
   const L=loopLen();
-  layers.forEach(Ly=>{ const keep=Ly.events.filter(e=>e.beat<L); Ly.events=keep.concat(keep.map(e=>({...e, id:evId++, beat:e.beat+L}))); });
+  // every part doubles; the copies are chords of their own (not the same chord as the original)
+  const dbl=evs=>{ const keep=evs.filter(e=>e.beat<L), ids=new Map();
+    return keep.concat(keep.map(e=>{ if(e.chord!=null && !ids.has(e.chord)) ids.set(e.chord,chordSeq++); return {...e, id:evId++, beat:e.beat+L, chord: e.chord!=null ? ids.get(e.chord) : e.chord}; })); };
+  syncPart(); SONG.parts.forEach(p=>{ p.ev=p.ev.map(a=>dbl(a||[])); }); showPart(SONG.cur);
   S.bars*=2; renderBarsSeg(); renderLayers(); save(); toast(`The loop is now ${S.bars} bars`);
 }
 
@@ -2223,6 +2234,7 @@ function showPart(k){   // put part k into the layers (without saving the one yo
 }
 function loadPart(k, quiet){
   if(!SONG.parts[k] || k===SONG.cur) return;
+  if(S.rec) setRec(false);   // a take stays in the part it started in
   syncPart(); showPart(k);
   if(!quiet){ renderParts(); renderLayers(); renderDetail(); if(CAP.open) renderCaptureMode(); save(); }
 }
@@ -2295,7 +2307,9 @@ function storeSound(i){
 }
 function bufferFrom(rec){ const b=ctx.createBuffer(rec.channels.length, rec.channels[0].length, rec.sampleRate); rec.channels.forEach((ch,c)=>b.copyToChannel(ch,c)); return b; }
 const newId = () => 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-function summary(d){ const ls=d.layers.filter(l=>l.shown); return { layers:ls.length, notes:ls.reduce((a,l)=>a+l.events.length,0), bpm:Math.round(d.S.bpm), bars:d.S.bars }; }
+function summary(d){ const ls=d.layers.filter(l=>l.shown), parts=d.song&&d.song.parts||null;
+  const notes = parts ? d.layers.reduce((a,l,i)=>a+(l.shown?parts.reduce((b,p)=>b+((p.ev&&p.ev[i])||[]).length,0):0),0) : ls.reduce((a,l)=>a+l.events.length,0);   // every part counts
+  return { layers:ls.length, notes, parts:parts?parts.length:1, bpm:Math.round(d.S.bpm), bars:d.S.bars }; }
 /* autosave of the open project, shortly after the working copy */
 function projAutosave(d){
   if(!PRJ.current) return;
@@ -2374,6 +2388,7 @@ async function newProject(){
   const d=sessionData();
   d.S={...d.S, bpm:100, bars:4, sel:0};
   d.layers=layers.map((_,i)=>{ const l=newLayerData(i); if(i===0) l.shown=true; return Object.fromEntries(LAYER_KEYS.map(k=>[k,l[k]])); });
+  d.song=null;   // a new project starts with one empty part, not this project's parts
   const p=newProjRec(d);
   await dbDo('projects','readwrite',st=>st.put(p)); PRJ.list.unshift(p);
   applySession(d, {}); setCurrent(p.id); renderProjects();
@@ -2436,7 +2451,7 @@ function renderProjects(){
     return `<div class="proj ${isCur?'cur':''}" data-id="${p.id}">
       <div class="pbg" aria-hidden="true"><span class="pdel">${ic('trash','')}<span class="pword">delete</span></span></div>
       <div class="pface">
-        <div class="pinfo"><b>${esc(p.name)}</b><small>${sm.layers} layer${sm.layers===1?'':'s'} · ${sm.notes} notes · ${sm.bpm} bpm<br>${ago(p.updated)}</small>${isCur?'<span class="curbadge">current project</span>':''}</div>
+        <div class="pinfo"><b>${esc(p.name)}</b><small>${sm.layers} layer${sm.layers===1?'':'s'}${sm.parts>1?` · ${sm.parts} parts`:''} · ${sm.notes} notes · ${sm.bpm} bpm<br>${ago(p.updated)}</small>${isCur?'<span class="curbadge">current project</span>':''}</div>
         ${isCur?'':'<button data-pa="open">open</button>'}
       </div>
     </div>`; }).join('') || '<p class="hint">No projects yet.</p>';
@@ -3284,7 +3299,7 @@ function renderCaptureMode(){
   const cols = wide ? Math.min(4,n) : (n<=1?1:2), rows=Math.ceil(n/cols);
   const grid=$('cgrid'); grid.style.gridTemplateColumns=`repeat(${cols},minmax(0,1fr))`; grid.style.gridTemplateRows=`repeat(${rows},minmax(0,1fr))`;
   grid.innerHTML = vis.map(([Ly,i])=>`
-    <div class="ctile ${audible(Ly)?'':'off'}" data-i="${i}" style="--lc:var(--l${i})">
+    <div class="ctile ${audible(Ly)?'':'off'} ${fxOf(Ly)==='gate'?'hasnotes':''}" data-i="${i}" style="--lc:var(--l${i})">
       <div class="chead"><span class="num">${i+1}</span>${INST_ICON[Ly.inst]||''}<span class="cname">${instName(Ly)}</span><button class="cfxchip" data-fxi="${i}" aria-label="Capture effect: ${FX[fxOf(Ly)].name}. Tap to change">${fxChip(fxOf(Ly))} ▾</button><span class="cstate">${audible(Ly)?'on':'off'}</span></div>
       <canvas id="croll${i}"></canvas>
       <div class="cpad"></div>
@@ -3293,6 +3308,8 @@ function renderCaptureMode(){
       <i class="cdot"></i>
     </div>`).join('');
   renderCapSong();
+  // low tiles (many layers on a small phone): only what you need, so the gate's note keys stay whole
+  grid.classList.remove('short'); const t0=grid.firstElementChild; if(t0 && t0.offsetHeight<190) grid.classList.add('short');
   requestAnimationFrame(drawCaptureRolls);
 }
 function drawCaptureRolls(){ capLayers().forEach(([Ly,i])=>{ const cv=$('croll'+i); if(cv) drawRoll(Ly,i,cv); }); }
@@ -3334,7 +3351,7 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
   const end=e=>{ const t=CAP.touch.get(e.pointerId); if(!t) return; CAP.touch.delete(e.pointerId); clearTimeout(t.timer);
     const Ly=layers[t.i];
     if(t.active){
-      if(![...CAP.touch.values()].some(o=>o.i===t.i && o.active)){ fxReset(Ly); t.el.classList.remove('touch'); t.el.querySelector('.cfx').textContent=FX[fxOf(Ly)].name; }
+      if(![...CAP.touch.values()].some(o=>o.i===t.i && o.active)){ fxReset(Ly); t.el.classList.remove('touch'); t.el.querySelector('.cfx').textContent=FX[fxOf(Ly)].how; }   // back to the hint it showed before
     } else if(e.type==='pointerup'){
       // a tap: layer on or off (with solo active, a tap solos it in or out)
       if(layers.some(x=>x.solo)) Ly.solo=!Ly.solo; else Ly.mute=!Ly.mute;
@@ -3355,7 +3372,7 @@ const padOn={};
 function padDown(k){ if(padOn[k]) return; padOn[k]=1; padNotes(CHORDS[k]).forEach(n=>liveOn(n,100)); $('pads').children[k].classList.add('on'); }
 function padUp(k){ if(!padOn[k]) return; delete padOn[k]; padNotes(CHORDS[k]).forEach(n=>liveOff(n)); $('pads').children[k].classList.remove('on'); }
 $('pads').innerHTML=CHORDS.map((c,k)=>`<button class="pad" data-k="${k}">${c[0]}<small>${k+1} · ${c[3]}</small></button>`).join('');
-$('pads').addEventListener('pointerdown',e=>{ const b=e.target.closest('.pad'); if(b){ b.setPointerCapture(e.pointerId); padDown(+b.dataset.k); } });
+$('pads').addEventListener('pointerdown',e=>{ const b=e.target.closest('.pad'); if(b){ try{ b.setPointerCapture(e.pointerId); }catch(err){} padDown(+b.dataset.k); } });
 ['pointerup','pointercancel'].forEach(t=>$('pads').addEventListener(t,e=>{ const b=e.target.closest('.pad'); if(b) padUp(+b.dataset.k); }));
 
 /* ============ piano roll editor ============ */
@@ -3390,7 +3407,7 @@ function openEditor(i){
   edResize(); edFit(); edCenterPitch(); edRenderTools(); edDraw();
 }
 function closeEditor(){
-  ED.open=false; ED.drag=null; ED.pointers.clear(); $('editor').classList.add('hidden');
+  ED.open=false; ED.drag=null; ED.pointers.clear(); $('editor').classList.add('hidden'); edMenuClose(); $('edVelPop').classList.add('hidden');
   renderLayers(); save();
 }
 function edResize(){
@@ -3812,10 +3829,11 @@ document.querySelector('.edtoolkeys').onclick=e=>{ const b=e.target.closest('[da
 $('edZoomIn').onclick=()=>edZoom(1.5); $('edZoomOut').onclick=()=>edZoom(1/1.5); $('edFit').onclick=()=>{ edFit(); edDraw(); };
 $('edUndo').onclick=edUndo; $('edRedo').onclick=edRedo;
 $('edMore').onclick=e=>{ e.stopPropagation(); const m=$('edMenu'), open=m.classList.toggle('hidden')===false; $('edMore').setAttribute('aria-expanded',open); $('edMore').classList.toggle('on',open); };
-document.addEventListener('pointerdown',e=>{ if(!e.target.closest('#edMenu,#edMore')){ $('edMenu').classList.add('hidden'); $('edMore').classList.remove('on'); $('edMore').setAttribute('aria-expanded','false'); }
+function edMenuClose(){ $('edMenu').classList.add('hidden'); $('edMore').classList.remove('on'); $('edMore').setAttribute('aria-expanded','false'); }
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('#edMenu,#edMore')) edMenuClose();
   if(!e.target.closest('#edVelPop,#edVelBtn')) $('edVelPop').classList.add('hidden'); });
-$('edQuantAll').onclick=()=>{ ED.sel.clear(); edQuantizeSel(); $('edMenu').classList.add('hidden'); };
-$('edSelAll').onclick=()=>{ ED.sel=new Set(edLy().events.map(x=>x.id)); $('edMenu').classList.add('hidden'); edRenderTools(); edDraw(); };
+$('edQuantAll').onclick=()=>{ ED.sel.clear(); edQuantizeSel(); edMenuClose(); };
+$('edSelAll').onclick=()=>{ ED.sel=new Set(edLy().events.map(x=>x.id)); edMenuClose(); edRenderTools(); edDraw(); };
 $('edDup').onclick=edDuplicate; $('edDel').onclick=edDeleteSel; $('edQuant').onclick=edQuantizeSel; $('edSplit').onclick=edSplitSel;
 $('edVelBtn').onclick=()=>$('edVelPop').classList.toggle('hidden');
 $('edBakeBtn').onclick=edBake;
