@@ -1566,7 +1566,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.58';
+const PAGE_VERSION = '2026-11-12.59';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -4408,7 +4408,7 @@ function renderFabs(){
   if(key===fabKey) return; fabKey=key;
   $('undoBtn').classList.toggle('hide',!showUndo); $('redoBtn').classList.toggle('hide',!showRedo);
   $('undoBtn').disabled=undoOff; $('redoBtn').disabled=redoOff;
-  const lb=$('lockBtn'); lb.classList.toggle('hide',lockState==='none'); lb.disabled=lockState==='idle';
+  const lb=$('lockBtn'); lb.classList.toggle('hide',lockState==='none'||lockState==='idle');   // only once an effect has been held long enough, or while one is locked
   lb.classList.toggle('arm',lockState==='arm'); lb.classList.toggle('on',lockState==='on');
   $('lockNum').textContent = tgt!=null ? tgt+1 : ''; if(tgt!=null) lb.style.setProperty('--lc',`var(--l${tgt})`);
   lb.setAttribute('aria-label', lockState==='on' ? `Effect of layer ${tgt+1} locked: press to release it` : 'Lock the effect you hold');
