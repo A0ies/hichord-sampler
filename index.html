@@ -1718,7 +1718,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.66';
+const PAGE_VERSION = '2026-11-12.67';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3051,7 +3051,12 @@ function ntCheck(){
   else { nt.classList.remove('gone'); ntSet(ntE); const h2=nt.offsetHeight + parseFloat(getComputedStyle(nt).marginBottom||0); if(st>0){ if(sc) sc.scrollTop=st+h2; else scrollTo(0,st+h2); } }
 }
 document.addEventListener('scroll',()=>{ if(!ntPull && ntE>0 && ntScrollTop()>8) ntTween(0); ntCheck(); },{capture:true,passive:true});
-addEventListener('resize', ()=>requestAnimationFrame(()=>{ ntSet(ntE); ntCheck(); }));
+// turning the phone: iOS sends resize while the rotation still animates and the layout is half way, so look again
+// once it has settled (otherwise the top key could stay hidden until the next scroll)
+let ntRot=[];
+const ntSettle=()=>{ ntRot.forEach(clearTimeout); ntRot=[0,150,400,800].map(ms=>setTimeout(()=>{ ntSet(ntE); ntCheck(); },ms)); };
+addEventListener('resize', ntSettle); addEventListener('orientationchange', ntSettle);
+if(window.visualViewport) visualViewport.addEventListener('resize', ntSettle);
 $('newTopBtn').onclick=()=>openSheet('newSheet');
 /* landscape: room under the list so its last item can scroll up to the top of the pane, and no further */
 function fitLayerTail(){ const last=$('layers').lastElementChild; if(last) document.querySelector('.layerpane').style.setProperty('--tailh', last.offsetHeight+'px'); }
