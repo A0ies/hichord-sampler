@@ -347,17 +347,15 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .layer .open{border-radius:7px}
 .layer .open svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
 .newlayer{border:1.5px dashed var(--line);box-shadow:none;background:transparent;text-transform:lowercase;border-radius:12px;color:var(--dim)}
-/* "+ new layer" on top: a spacer in the list holds the key's place; the key itself sits in a sticky strip of no height,
-   so it sticks to the top of the list and shrinks (height and border) into a line of text while you scroll down */
-.newtop{position:sticky;top:var(--ntt,0px);height:0;z-index:4}
-.newtop .ntbtn{position:absolute;left:0;right:0;top:0;height:var(--nth,56px);min-height:0;padding:0 14px;background:var(--bg);
-  border-color:color-mix(in srgb,var(--line) calc((1 - var(--ntp,0)) * 100%),transparent);display:flex;align-items:center;justify-content:center;
-  border-radius:calc(12px - var(--ntp,0) * 10px)}
-.newtop .ntbtn span{display:inline-block;transform:translateX(var(--ntx,0px));font-size:calc(14px - var(--ntp,0) * 2px);white-space:nowrap}
+/* "+ new layer" on top: a line of text right above the first layer (sticky while the list scrolls). Pull the list
+   down at its top and the text grows into the key; scroll down again and it shrinks back into text */
+.newtop{position:sticky;top:var(--ntt,0px);z-index:4;height:var(--nth,26px);margin-bottom:calc(4px + var(--nte,0) * 6px);background:var(--bg);flex:none}
+.newtop .ntbtn{width:100%;height:100%;min-height:0;padding:0 14px;background:var(--bg);
+  border-color:color-mix(in srgb,var(--line) calc(var(--nte,0) * 100%),transparent);display:flex;align-items:center;justify-content:center;
+  border-radius:calc(2px + var(--nte,0) * 10px)}
+.newtop .ntbtn span{display:inline-block;transform:translateX(var(--ntx,0px));font-size:calc(12px + var(--nte,0) * 2px);white-space:nowrap}
 .newtop .ntbtn::before{display:none}
-.ntspace{height:56px;margin-bottom:10px;flex:none}
-.newtop.hidden,.ntspace.hidden{display:none}
-body[data-studio=port] .ntspace{margin-bottom:8px}
+.newtop.hidden{display:none}
 /* the new-layer sheet: your own sound from a file or the microphone */
 .inst.own{color:var(--ink)}
 .inst.own.micrec{background:var(--rec);color:#fff}
@@ -365,9 +363,18 @@ body[data-studio=port] .ntspace{margin-bottom:8px}
 .inst.micrec .micmeter{display:block}
 .inst .micmeter i{display:block;height:100%;width:0;background:#fff}
 /* the instrument page: back to default, bottom right */
-.params>.instdef{grid-column:1/-1;justify-content:flex-end;margin:0}
-.instdef button{min-height:36px;padding:0 12px;gap:6px;display:inline-flex;align-items:center;text-transform:lowercase}
-.instdef button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* the instrument picker with "back to default" next to it (icon only when the picker's line is narrow) */
+.instpick{display:flex;gap:8px;align-items:stretch;container-type:inline-size}
+.instpick .instsel{flex:1}
+.instpick .instdef{flex:none;min-height:40px;padding:0 12px;gap:6px;display:inline-flex;align-items:center;text-transform:lowercase;border-radius:9px}
+.instpick .instdef svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ownsnd .instdef{width:40px;height:40px;min-height:40px;padding:0;justify-content:center;flex:none;display:inline-flex;align-items:center;border-radius:9px}
+.ownsnd .instdef svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ownsnd .instdef .lbl{display:none}
+.ownsnd .instdef{margin-left:auto}
+body:not(.studio) .ownsnd .instdef{width:auto;padding:0 12px;gap:6px}
+body:not(.studio) .ownsnd .instdef .lbl{display:inline}
+@container (max-width:330px){ .instpick .instdef{padding:0;width:40px;justify-content:center} .instpick .instdef .lbl{display:none} }
 /* instrument picker */
 .inst{border-radius:12px;text-transform:lowercase;font-size:12px;gap:8px;min-height:88px}
 .inst .ii{width:28px;height:28px}
@@ -836,11 +843,6 @@ body.projopen .pbar{display:none}
   /* instrument page: the instrument and your own sound on the first line, then every slider in one block of four columns */
   .layersheet.full #detail .ownsnd{grid-column:4;grid-row:1;align-self:end;justify-content:flex-end;margin:0;flex-wrap:nowrap;gap:8px}
   .layersheet.full #detail .ownsnd .sub{display:none}
-  /* instrument page: picker, own sound and back to default share the first line */
-  .layersheet.full #detail .instpick{grid-column:1/span 2}
-  .layersheet.full #detail .ownsnd{grid-column:3}
-  .layersheet.full #detail .params>.instdef{grid-column:4;grid-row:1;align-self:end}
-  .layersheet.full .instdef .long{display:none}
   .layersheet.full #detail .params>.p:has(>input[type=range]){margin-top:6px}
   /* every page fills the panel's height: rows spread out evenly, so the hierarchy reads clearly and switching
      between timing, instrument and mix keeps the same block */
@@ -1246,8 +1248,6 @@ body.studio .dpage{display:flex;flex-direction:column;gap:10px;min-width:0;min-h
 body.studio .dpage .params{grid-template-columns:minmax(0,1fr)}
 body.studio .dhead{margin:0;padding:8px 0 7px;border-bottom:2px solid var(--acc);color:var(--ink);font-size:12px;letter-spacing:.08em;flex:none}
 body.studio:not([data-sfull=st]) #detail[data-tab=sound] .ownsnd .sub{display:none}
-/* back to default: in the last column of the sliders' last line (there is room next to resonance) */
-body.studio:not([data-sfull=st]) #detail[data-tab=sound] .params>.instdef{grid-column:-2/-1;align-self:end}
 body.studio:not([data-sfull=st]) #detail[data-tab=mix] .params>.wide,body.studio:not([data-sfull=st]) #detail[data-tab=mix] .params>.cfxp{grid-column:auto}   /* the keys say it: file and microphone */
 /* landscape, settings full screen: the row keeps its height (the editor stays put), so instrument gets the widest
    column with four sliders a row, and mix puts its sliders four in a row with capture fx next to plays on */
@@ -1395,10 +1395,9 @@ body.studio .tbar .pos b{font-size:26px}
     <section class="layerpane">
       <!-- the parts of the song: tap one to work on it; tap the one you are on (or song) for names, copies and the timeline -->
       <div class="partbar" id="partBar"></div>
-      <!-- "+ new layer" on top of the list: scroll down and the key shrinks into a small sticky line of text above the
-           first layer; scroll back up and it grows into the key again (the key at the bottom of the list stays too) -->
+      <!-- "+ new layer" on top of the list: a small sticky line of text above the first layer; pull the list down at its
+           top and it grows into the key (the key at the bottom of the list stays too) -->
       <div class="newtop" id="newTop"><button class="newlayer ntbtn" id="newTopBtn" aria-label="New layer"><span>+ new layer</span></button></div>
-      <div class="ntspace" id="ntSpace"></div>
       <div class="layers" id="layers"></div>
     </section>
 
@@ -1605,7 +1604,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.61';
+const PAGE_VERSION = '2026-11-12.62';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2846,7 +2845,7 @@ function renderLayers(){
   $('detailTitle').textContent = `Layer ${S.sel+1} · ${instName(selLayer())}`;
   renderPrevSolo();
   const nb=$('newLayerBtn'); if(nb) nb.onclick=()=>openSheet('newSheet');
-  const free=layers.some(Ly=>!Ly.shown); $('newTop').classList.toggle('hidden',!free); $('ntSpace').classList.toggle('hidden',!free); ntUpdate();
+  const free=layers.some(Ly=>!Ly.shown); $('newTop').classList.toggle('hidden',!free); ntSet(ntE);
   fitLayerTail();
   renderTransport();
   drawAll();
@@ -2884,19 +2883,35 @@ function renderLayers(){
     setTimeout(()=>{ if(!s.clicked && s.target.isConnected) s.target.click(); if(t===s) t=null; }, 120); };
   document.addEventListener('touchend',end,{passive:true}); document.addEventListener('touchcancel',end,{passive:true});
 })();
-/* the top "+ new layer": how far the list has scrolled past its key sets how far the key has turned into text */
-function ntUpdate(){
-  const nt=$('newTop'), sp=$('ntSpace'); if(!nt || nt.classList.contains('hidden')) return;
-  const pane=document.querySelector('.layerpane'), own=getComputedStyle(pane).overflowY!=='visible';
-  const top = own ? 0 : (document.querySelector('header.top')?.offsetHeight||0);   // the page scrolls under the sticky header
-  if(nt.style.getPropertyValue('--ntt')!==top+'px') nt.style.setProperty('--ntt', top+'px');
-  const H=sp.offsetHeight||56, TH=26, past=Math.max(0, nt.getBoundingClientRect().top - sp.getBoundingClientRect().top);
-  const h=Math.max(TH, H-past), p=(H-h)/(H-TH), b=nt.firstElementChild, sw=b.firstElementChild.offsetWidth;
-  nt.style.setProperty('--nth', h+'px'); nt.style.setProperty('--ntp', p.toFixed(3));
-  nt.style.setProperty('--ntx', (-p*Math.max(0,(b.clientWidth-sw)/2-4)).toFixed(1)+'px');
+/* the top "+ new layer": ntE is how far the text has grown into the key (0 = text, 1 = key) */
+let ntE=0, ntRaf=0, ntPull=null;
+const ntScroller = () => { const pane=document.querySelector('.layerpane'); return getComputedStyle(pane).overflowY!=='visible' ? pane : null; };
+const ntScrollTop = () => { const sc=ntScroller(); return sc ? sc.scrollTop : scrollY; };
+function ntSet(e){
+  ntE=clamp(e,0,1); const nt=$('newTop'); if(!nt || nt.classList.contains('hidden')) return;
+  const top = ntScroller() ? 0 : (document.querySelector('header.top')?.offsetHeight||0);   // the page scrolls under the sticky header
+  nt.style.setProperty('--ntt', top+'px');
+  nt.style.setProperty('--nth', (26+30*ntE).toFixed(1)+'px'); nt.style.setProperty('--nte', ntE.toFixed(3));
+  const b=nt.firstElementChild, sw=b.firstElementChild.offsetWidth;
+  nt.style.setProperty('--ntx', (-(1-ntE)*Math.max(0,(b.clientWidth-sw)/2-10)).toFixed(1)+'px');
 }
-document.addEventListener('scroll', ntUpdate, {capture:true, passive:true});
-addEventListener('resize', ()=>requestAnimationFrame(ntUpdate));
+function ntTween(to){
+  cancelAnimationFrame(ntRaf); const from=ntE, t0=performance.now();
+  const step=now=>{ const k=Math.min(1,(now-t0)/220), ease=1-Math.pow(1-k,3); ntSet(from+(to-from)*ease); if(k<1) ntRaf=requestAnimationFrame(step); };
+  ntRaf=requestAnimationFrame(step);
+}
+document.addEventListener('touchstart',e=>{ ntPull=null; if(e.touches.length!==1 || !e.target.closest('.layerpane') || ntScrollTop()>0) return;
+  cancelAnimationFrame(ntRaf); ntPull={y:e.touches[0].clientY, e0:ntE}; },{passive:true});
+document.addEventListener('touchmove',e=>{ if(!ntPull) return; const dy=e.touches[0].clientY-ntPull.y;
+  if(ntScrollTop()>0 && dy<0){ ntPull=null; return; }
+  ntSet(ntPull.e0 + dy/70); },{passive:true});
+const ntEnd=()=>{ if(!ntPull) return; ntPull=null; ntTween(ntE>0.45?1:0); };
+document.addEventListener('touchend',ntEnd,{passive:true}); document.addEventListener('touchcancel',ntEnd,{passive:true});
+// mouse wheel or trackpad: up at the top shows the key, scrolling down hides it again
+document.addEventListener('wheel',e=>{ if(!e.target.closest || !e.target.closest('.layerpane')) return;
+  if(e.deltaY<0 && ntScrollTop()<=0 && ntE<1) ntTween(1); },{passive:true});
+document.addEventListener('scroll',()=>{ if(!ntPull && ntE>0 && ntScrollTop()>8) ntTween(0); },{capture:true,passive:true});
+addEventListener('resize', ()=>requestAnimationFrame(()=>ntSet(ntE)));
 $('newTopBtn').onclick=()=>openSheet('newSheet');
 /* landscape: room under the list so its last item can scroll up to the top of the pane, and no further */
 function fitLayerTail(){ const last=$('layers').lastElementChild; if(last) document.querySelector('.layerpane').style.setProperty('--tailh', last.offsetHeight+'px'); }
@@ -3347,6 +3362,9 @@ function renderPage(host,tab,Ly){
     const ip=document.createElement('div'); ip.className='p instpick';
     ip.innerHTML=`<div class="instsel">${INST_ICON[Ly.inst]}<span>${instName(Ly)}</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       <select aria-label="Instrument">${opts.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></div>`;
+    const db=document.createElement('button'); db.className='instdef'; db.id='instDefBtn'; db.title='Back to default';
+    db.setAttribute('aria-label',`Back to the default settings of ${instName(Ly)}`); db.innerHTML=`${ic('reset','')}<span class="lbl">default</span>`;
+    db.onclick=()=>instDefaults(Ly); ip.appendChild(db);
     const isel=ip.querySelector('select'); isel.value=Ly.inst;
     isel.onchange=()=>{ const v=isel.value; if(v==='custom') return; Ly.voices.forEach(x=>releaseVoice(x,ctx.currentTime,0.05)); setInstrument(Ly,v); applyLayer(Ly); renderLayers(); renderDetail(); save(); };
     grid.appendChild(ip);
@@ -3362,9 +3380,10 @@ function renderPage(host,tab,Ly){
     row.innerHTML=`<span class="sub">Your own sound</span><button id="fileBtn" class="icon" aria-label="Load your own sound from an audio file" title="Audio file">${ic('upload','')}</button><button id="micBtn" class="icon${mic?' on micrec':''}" aria-label="${mic?'Stop recording':'Record your own sound with the microphone'}" title="${mic?'Stop recording':'Microphone'}">${ic('mic','')}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
     grid.appendChild(row);   // in the grid: under the sliders on a phone, next to the instrument in landscape
     $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=()=>toggleMic();
-    const dr=document.createElement('div'); dr.className='row instdef';
-    dr.innerHTML=`<button id="instDefBtn" aria-label="Back to the default settings of ${instName(Ly)}">${ic('reset','')}<span class="long">back to </span>default</button>`;
-    grid.appendChild(dr); $('instDefBtn').onclick=()=>instDefaults(Ly);
+    // phone and iPad in portrait (docked): the picker's column is narrow, so back to default joins the own-sound keys
+    const st=document.body.dataset.studio;
+    if((st==='port' && sFull()!=='st') || (!st && !isShortWide())) row.appendChild($('instDefBtn'));
+
   } else {
     param(grid,'Volume',()=>Ly.vol,v=>{Ly.vol=v;applyLayer(Ly);},0,1,0.01,pct);
     param(grid,'Pan',()=>Ly.pan,v=>{Ly.pan=v;applyLayer(Ly);},-1,1,0.01,v=>v===0?'centre':(v<0?'L ':'R ')+Math.round(Math.abs(v)*100));
@@ -3379,7 +3398,8 @@ function renderPage(host,tab,Ly){
     host.appendChild(h);
   }
 }
-addEventListener('resize',()=>{ if(studioMode()!==(document.body.dataset.studio||'')) { renderDetail(); drawAll(); } });
+let lastShortWide=null;
+addEventListener('resize',()=>{ const sw=isShortWide(); if(studioMode()!==(document.body.dataset.studio||'') || (lastShortWide!==null && sw!==lastShortWide)) { renderDetail(); drawAll(); } lastShortWide=sw; });
 $('lsFull').onclick=()=>setFull(sFull()==='st'?'':'st');
 $('sPad').addEventListener('click',e=>{ if(e.target.closest('.sfull')) setFull(sFull()==='cp'?'':'cp'); });
 $('tabs').onclick=e=>{ const t=e.target.dataset.t; if(t){ S.tab=t; renderDetail(); save(); } };
@@ -3558,7 +3578,7 @@ function fxPopClose(){ document.querySelectorAll('.fxbg,.fxpop').forEach(x=>x.re
 function capFxParam(host, Ly, i){
   const d=document.createElement('div'); d.className='p wide cfxp'+(capFx(Ly).length>2?' many':'');
   d.style.setProperty('--lc',`var(--l${i})`);   // chips in the layer's colour, like on the layers screen
-  d.innerHTML=`<label><span>capture fx</span></label><div class="fxrow">${capFx(Ly).map(f=>`<button class="fxc" data-ck="${f.k}" aria-label="Capture effect ${FX[f.k].name}, range ${pct(f.v)}: tap to adjust">${FX_SHORT[f.k][0]} <span class="nm">${FX_SHORT[f.k][1]}</span> <em>${pct(f.v)}</em></button>`).join('')}<button class="fxc add" data-ck="+" aria-label="Add a capture effect">+</button></div>`;
+  d.innerHTML=`<label><span>effects</span></label><div class="fxrow">${capFx(Ly).map(f=>`<button class="fxc" data-ck="${f.k}" aria-label="Capture effect ${FX[f.k].name}, range ${pct(f.v)}: tap to adjust">${FX_SHORT[f.k][0]} <span class="nm">${FX_SHORT[f.k][1]}</span> <em>${pct(f.v)}</em></button>`).join('')}<button class="fxc add" data-ck="+" aria-label="Add a capture effect">+</button></div>`;
   d.querySelector('.fxrow').onclick=e=>{ const b=e.target.closest('[data-ck]'); if(b) capFxPop(i, b.dataset.ck==='+'?null:b.dataset.ck); };
   host.appendChild(d); return d;
 }
