@@ -21,15 +21,15 @@
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#161616; --panel:#202020; --key:#2c2c2c; --key-edge:rgba(0,0,0,.6); --ink:#ededea; --dim:#a3a39e; --line:#3a3a3a;
-    --acc:#ff5a14; --acc-soft:rgba(255,90,20,.18); --rec:#ff4628;
-    --dark-key:#3a3a3a; --dark-key-ink:#f4f4f2; --l7:#d6d6d0;
+    --bg:#1d1d1c; --panel:#2b2b29; --key:#3a3a37; --key-edge:rgba(0,0,0,.75); --ink:#f0f0ec; --dim:#b2b2ac; --line:#4b4b47;
+    --acc:#ff5a14; --acc-soft:rgba(255,90,20,.2); --rec:#ff4628;
+    --dark-key:#55554f; --dark-key-ink:#f4f4f2; --l7:#d6d6d0; --screen2:#1a1a1a; --screen-line:#333;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#161616; --panel:#202020; --key:#2c2c2c; --key-edge:rgba(0,0,0,.6); --ink:#ededea; --dim:#a3a39e; --line:#3a3a3a;
-  --acc:#ff5a14; --acc-soft:rgba(255,90,20,.18); --rec:#ff4628;
-  --dark-key:#3a3a3a; --dark-key-ink:#f4f4f2; --l7:#d6d6d0;
+  --bg:#1d1d1c; --panel:#2b2b29; --key:#3a3a37; --key-edge:rgba(0,0,0,.75); --ink:#f0f0ec; --dim:#b2b2ac; --line:#4b4b47;
+  --acc:#ff5a14; --acc-soft:rgba(255,90,20,.2); --rec:#ff4628;
+  --dark-key:#55554f; --dark-key-ink:#f4f4f2; --l7:#d6d6d0; --screen2:#1a1a1a; --screen-line:#333;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-tap-highlight-color:transparent}
@@ -201,7 +201,8 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 .layer .fxrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
 .layer .fxc{min-height:26px;height:26px;padding:0 9px;border-radius:999px;font-size:11px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--lc);color:var(--ink);text-transform:none}
 .layer .fxc::before{display:none}
-.layer .fxc.add{box-shadow:inset 0 0 0 1.5px var(--line);color:var(--dim)}
+.layer .fxc.add{box-shadow:inset 0 0 0 1.5px var(--line);color:var(--dim);width:26px;padding:0;font-size:15px;justify-content:center}
+.layer .fxlbl{align-self:center;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.06em;margin-right:1px}
 @media (min-width:640px){
   .layer{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px}
   .layer .top{grid-column:1/-1}
@@ -233,6 +234,8 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
   max-height:calc(80dvh - var(--tbarh));overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;transform:translateY(105%);transition:transform .25s ease;visibility:hidden;
   padding:4px max(16px,calc(var(--sr) + 10px)) 22px max(16px,calc(var(--sl) + 10px))}
 .sheet.tall{max-height:calc(94dvh - var(--tbarh))}
+/* while a panel is open the screen behind it stays put */
+html:has(body.sheetopen),body.sheetopen{overflow:hidden;overscroll-behavior:none}
 .sheet.open{transform:none;visibility:visible}
 .grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:6px auto 10px}
 .sheethead{margin-bottom:12px}
@@ -556,6 +559,12 @@ body.projopen .pbar{display:none}
 .caphead{display:flex;align-items:center;gap:10px}
 .caphead h2{margin:0}
 .caphead .hint{flex:1;margin:0;font-size:11px;color:var(--dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* portrait: the help text under the title, so it is never cut off */
+@media (max-width:639px){
+  .caphead{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:2px}
+  .caphead h2{grid-column:1;grid-row:1} .caphead .hint{grid-column:1;grid-row:2;white-space:normal}
+  .caphead #capClose{grid-column:2;grid-row:1 / span 2}
+}
 .cgrid{flex:1;min-height:0;display:grid;gap:10px}
 .ctile{position:relative;border-radius:14px;background:var(--panel);box-shadow:inset 0 0 0 2px var(--lc);padding:10px;display:flex;flex-direction:column;gap:8px;
   overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:crosshair;min-height:0;transition:opacity .15s}
@@ -865,7 +874,8 @@ body.projopen .pbar{display:none}
 .edtools>button:first-child{border-radius:10px 0 0 10px} .edtools>button:nth-child(3){border-radius:0 10px 10px 0}
 .edtools>button.on{background:var(--dark-key);color:var(--dark-key-ink)} .edtools>button.on::before{display:none}
 .editor svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.edtools .edmenu{right:0;top:calc(100% + 6px);min-width:220px}
+.edtools .edmenu{left:0;right:auto;top:calc(100% + 6px);min-width:220px}
+.edhead .edclose{width:44px;height:44px;min-height:0;flex:none;border-radius:10px}
 .edroll{flex:1;min-height:0;position:relative;display:flex}
 .edroll #edCanvas{flex:1;min-height:0;min-width:0}
 .edzoom{position:absolute;top:6px;right:6px;display:flex;gap:4px}
@@ -910,7 +920,7 @@ body.projopen .pbar{display:none}
   .edact>button small{font-size:11px}
   /* short screens: everything around the timeline a little lower, so the timeline keeps its height */
   .editor{gap:6px;padding-top:calc(6px + var(--st))}
-  .edhead>button,.edhead .edtools button,.edpick{min-height:38px;height:38px}
+  .edhead>button,.edhead .edtools button,.edpick{min-height:38px;height:38px} .edhead .edclose{width:38px}
   .edmode button{min-height:32px}
   .edact>button{min-height:36px}
   .edbar{padding-top:6px;padding-bottom:calc(6px + var(--sb) * .3)}
@@ -1090,7 +1100,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
     <button class="tool" id="loopBtn" aria-label="Tempo and loop settings"><b id="bpmMini">100</b><small>bpm</small><small><span id="barsMini">4 bars</span></small></button>
     <button class="tool" id="captureBtn" title="Capture mode: play your layers as touch pads (C)"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/><circle cx="17" cy="17" r="1.7" fill="currentColor" stroke="none"/></svg><small>Capture</small></button>
   </footer>
-  <button class="undofab" id="undoBtn" title="Undo (Z) · hold for redo (⇧Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2"/></svg></button>
+  <button class="undofab" id="undoBtn" title="Undo (Z) · hold for redo (⇧Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M8.5 5 4.5 9l4 4M4.5 9h10a5 5 0 0 1 0 10h-3"/></svg></button>
   <footer class="pbar"><button id="projNew" class="primary">+ new project</button></footer>
 </div>
 
@@ -1192,12 +1202,8 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 </section>
 
 <div class="editor hidden" id="editor" role="dialog" aria-label="Note editor">
-  <!-- top: done, the layer (as in the instrument settings), chords/notes, and undo · redo · more as one toolbar -->
+  <!-- top: undo · redo · more as one toolbar, the layer (as in the instrument settings), chords/notes, close -->
   <div class="edhead">
-    <button id="edDone" class="primary">done</button>
-    <div class="instsel edpick"><span id="edLayerIcon"></span><span id="edLayerName"></span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-      <select id="edLayer" aria-label="Layer"></select></div>
-    <div class="edmode" id="edChordMode" role="group" aria-label="Edit chords or single notes"><button data-m="1">chords</button><button data-m="0">notes</button></div>
     <div class="edtools">
       <button id="edUndo" title="Undo (⌘Z)" aria-label="Undo"></button><button id="edRedo" title="Redo (⇧⌘Z)" aria-label="Redo"></button><button id="edMore" aria-label="More editor tools" aria-expanded="false"></button>
       <div class="edmenu hidden" id="edMenu">
@@ -1205,6 +1211,10 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
         <button id="edQuantAll" title="Snap all notes of this layer to the grid">snap everything to the grid</button>
       </div>
     </div>
+    <div class="instsel edpick"><span id="edLayerIcon"></span><span id="edLayerName"></span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      <select id="edLayer" aria-label="Layer"></select></div>
+    <div class="edmode" id="edChordMode" role="group" aria-label="Edit chords or single notes"><button data-m="1">chords</button><button data-m="0">notes</button></div>
+    <button id="edDone" class="icon edclose" aria-label="Close the editor"></button>
   </div>
   <div class="ebanner hidden" id="edBake">
     <span>This layer's timing settings move the notes when they play (outlines).</span>
@@ -1540,7 +1550,7 @@ async function startTransport(withCountIn){
   if(ctx.state!=='running'){ S.starting=true; try{ await ctx.resume(); }catch(e){} await new Promise(r=>setTimeout(r,150)); S.starting=false; if(S.playing) return; }
   console.log(`[diag] start: state ${ctx.state} t ${ctx.currentTime.toFixed(3)} base ${(ctx.baseLatency||0).toFixed(3)} out ${(ctx.outputLatency||0).toFixed(3)}`);
   ctx.resume();
-  t0=ctx.currentTime+0.1; b0 = withCountIn ? -4 : -earlyLead(); schedBeat=b0;
+  t0=ctx.currentTime+0.1; b0 = withCountIn ? -4 : -earlyLead(); schedBeat=b0; S.cin=!!withCountIn;
   S.playing=true; tick(); renderTransport();
 }
 function stopTransport(){
@@ -2037,6 +2047,8 @@ function describeChange(aJ,bJ){
   const a=JSON.parse(aJ), b=JSON.parse(bJ);
   if(a.S.bpm!==b.S.bpm) return 'tempo';
   if(a.S.bars!==b.S.bars) return 'loop length';
+  const na=a.layers.filter(l=>l.shown).length, nb=b.layers.filter(l=>l.shown).length;
+  if(na!==nb) return nb>na ? 'layer added' : 'layer removed';
   for(let i=0;i<a.layers.length;i++){
     const x=a.layers[i], y=b.layers[i]; if(JSON.stringify(x)===JSON.stringify(y)) continue;
     if(x.shown!==y.shown) return `layer ${i+1} ${y.shown?'added':'removed'}`;
@@ -2046,15 +2058,22 @@ function describeChange(aJ,bJ){
   }
   return 'room settings';
 }
+/* your own sounds, by name: removing or renumbering layers moves them, and undo finds them again */
+const SOUNDS_KEPT=new Map();
+function keepSound(Ly){ SOUNDS_KEPT.set(Ly.customName, {buffer:Ly.buffer, mode:Ly.mode}); }
 function applySnapshot(json){
   HIST.applying=true;
   const d=JSON.parse(json);
   Object.assign(S, d.S);
+  layers.forEach(Ly=>{ if(Ly.inst==='custom' && Ly.buffer) keepSound(Ly); });
   d.layers.forEach((nd,i)=>{
-    const Ly=layers[i], before=Ly.inst;
+    const Ly=layers[i], before=Ly.inst, beforeName=Ly.customName;
     Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.03));
     Object.assign(Ly, nd);
-    if(Ly.inst==='custom' && before!=='custom') Ly.inst=DEFAULT_INST[i];
+    if(Ly.inst==='custom' && (before!=='custom' || beforeName!==Ly.customName)){
+      const k=SOUNDS_KEPT.get(Ly.customName);
+      if(k){ Ly.buffer=k.buffer; Ly.mode=k.mode; Ly.slices=null; storeSound(i); } else Ly.inst=DEFAULT_INST[i];
+    }
     if(Ly.inst!=='custom' && (Ly.inst!==before || !Ly.buffer)) setInstrument(Ly, Ly.inst, true);
     applyLayer(Ly);
   });
@@ -2353,7 +2372,7 @@ function renderLayers(){
         <button class="open" data-act="open" aria-label="Settings of layer ${i+1}">${SLIDERS}</button>
       </div>
       <canvas id="roll${i}"></canvas>
-      <div class="fxrow">${(Ly.fxs||[]).map(f=>`<button class="fxc" data-act="fxedit" data-k="${f.k}" aria-label="${FX[f.k].name} ${chipText(Ly,f.k,f.v)}: tap to adjust">${FX_SHORT[f.k][0]} ${chipText(Ly,f.k,f.v)}</button>`).join('')}<button class="fxc add" data-act="fxadd" aria-label="Add an effect to layer ${i+1}">${(Ly.fxs||[]).length?'+':'+ fx'}</button></div>
+      <div class="fxrow"><span class="fxlbl">fx</span>${(Ly.fxs||[]).map(f=>`<button class="fxc" data-act="fxedit" data-k="${f.k}" aria-label="${FX[f.k].name} ${chipText(Ly,f.k,f.v)}: tap to adjust">${FX_SHORT[f.k][0]} ${chipText(Ly,f.k,f.v)}</button>`).join('')}<button class="fxc add" data-act="fxadd" aria-label="Add an effect to layer ${i+1}">+</button></div>
     </div>`).join('') +
     (layers.some(Ly=>!Ly.shown) ? '<button class="newlayer" id="newLayerBtn">+ New layer</button>' : '');
   $('detailTitle').textContent = `Layer ${S.sel+1} · ${instName(selLayer())}`;
@@ -2404,9 +2423,19 @@ function removeLayer(){
   if(layers.filter(l=>l.shown).length<=1){ toast('this is your only layer'); return; }
   flushSave();
   if(S.rec) setRec(false);
-  Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05));
-  Object.assign(Ly, newLayerData(i)); setInstrument(Ly, Ly.inst); applyLayer(Ly);
-  const next=layers.findIndex(l=>l.shown); if(next>=0) S.sel=next;
+  if(Ly.inst==='custom' && Ly.buffer) keepSound(Ly);
+  // the layers after it move up one number: layer 2 becomes layer 1, and so on
+  const rest=layers.slice(i+1).filter(l=>l.shown);
+  const moved=rest.map(src=>({ data:JSON.parse(JSON.stringify(Object.fromEntries(LAYER_KEYS.map(k=>[k,src[k]])))), buffer:src.buffer, customName:src.customName, mode:src.mode }));
+  for(let j=i;j<layers.length;j++){
+    const d=layers[j]; d.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05)); fxReset(d);
+    const m=moved[j-i];
+    if(m){ Object.assign(d, m.data);
+      if(d.inst==='custom'){ d.buffer=m.buffer; d.customName=m.customName; d.mode=m.mode; d.slices=null; storeSound(j); } else setInstrument(d, d.inst, true); }
+    else { Object.assign(d, newLayerData(j)); setInstrument(d, d.inst); }
+    applyFx(d); applyLayer(d);
+  }
+  S.sel = layers[i].shown ? i : Math.max(0, layers.map(l=>l.shown).lastIndexOf(true));
   closeSheets(); renderLayers(); renderDetail(); writeSave(); toast(`layer ${i+1} removed`, 'undo', undo);
 }
 /* duplicate a layer into a free one */
@@ -2518,7 +2547,13 @@ function fitLayerSheet(){
   root.style.setProperty('--lsh',h+'px');
   [S.tab,S.advOpen]=keep; renderDetail();
 }
-addEventListener('resize',()=>{ if($('layerSheet').classList.contains('open')) fitLayerSheet(); });
+/* turning the phone keeps the layer settings open: the portrait panel becomes the landscape one and back */
+addEventListener('resize',()=>{
+  const ls=$('layerSheet');
+  if(ls.classList.contains('open') && isShortWide()){ ls.classList.remove('open'); openLayerFull(); return; }
+  if(ls.classList.contains('full') && !isShortWide()){ closeSheets(); openSheet('layerSheet'); return; }
+  if(ls.classList.contains('open')) fitLayerSheet();
+});
 function openSheet(id){
   if(id==='layerSheet' && isShortWide()){ openLayerFull(); return; }
   if(id==='layerSheet' && isWide()) return;   // docked next to the layers
@@ -2528,6 +2563,17 @@ function openSheet(id){
 }
 function closeSheets(){ document.body.classList.remove('sheetopen'); const ls=$('layerSheet'); ls.classList.remove('full'); if($('lprev').parentNode!==ls) ls.prepend($('lprev')); const pk=ls.querySelector('.lsbody>.pkeys'); if(pk) ls.querySelector('.lprev .pstrip').append(pk); document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open')); $('backdrop').classList.remove('show'); }
 $('backdrop').onclick=closeSheets;
+/* iOS still scrolls the page when a swipe starts on a panel that has nothing to scroll: only a panel area that
+   can scroll itself (or a slider or select) keeps the swipe */
+document.addEventListener('touchmove',e=>{
+  if(!document.body.classList.contains('sheetopen') || e.touches.length>1) return;
+  const t=e.target; if(t.closest && t.closest('input,select,textarea')) return;
+  for(let n=t; n && n!==document.body; n=n.parentElement){
+    const oy=getComputedStyle(n).overflowY;
+    if((oy==='auto'||oy==='scroll') && n.scrollHeight>n.clientHeight+1) return;
+  }
+  e.preventDefault();
+},{passive:false});
 $('setBtn').onclick=openLayerFull; $('setBtn').innerHTML=SLIDERS;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
 $('setTabs').onclick=e=>{ const b=e.target.closest('[data-k]'); if(!b) return;
@@ -2807,6 +2853,7 @@ function drawPos(){
   const vis=[...$('barsVis').children];
   if(!S.playing){ setState('stopped'); $('pos').innerHTML=`<b>1.1</b>stopped`; vis.forEach(c=>c.firstChild.style.width='0'); showCount(null); return; }
   const b=beatAt(ctx.currentTime);
+  if(b<0 && !S.cin){ showCount(null); setState('playing'); $('pos').innerHTML=`<b>1.1</b>playing`; vis.forEach(c=>c.firstChild.style.width='0'); return; }   // play: no countdown, only the short lead-in for early notes
   if(b<0){
     const n=Math.ceil(-b); setState('count');
     $('pos').innerHTML=`<b>${n}</b>count-in`; vis.forEach(c=>c.firstChild.style.width='0');
@@ -2885,13 +2932,13 @@ function fxPopClose(){ document.querySelectorAll('.fxbg,.fxpop').forEach(x=>x.re
    Every layer becomes a touch pad. Tap: layer on/off. Hold and drag: the layer's effect
    (set per layer under Mix), up = more; it springs back when you let go. */
 const FX = {
-  lp:    {name:'Low-pass filter',  how:'up: darker · right: resonance'},
-  hp:    {name:'High-pass filter', how:'up: thinner · right: resonance'},
-  gate:  {name:'Stutter gate',     how:'tap a note · drag up: deeper'},
-  delay: {name:'Delay throw',      how:'up: more echo'},
-  reverb:{name:'Reverb wash',      how:'up: more reverb'},
-  pitch: {name:'Pitch bend',       how:'drag up or down: up to an octave'},
-  drive: {name:'Drive',            how:'up: more distortion'},
+  lp:    {name:'Low-pass filter',  how:'↑ darker · → resonance'},
+  hp:    {name:'High-pass filter', how:'↑ thinner · → resonance'},
+  gate:  {name:'Stutter gate',     how:'tap a note · ↑ deeper'},
+  delay: {name:'Delay throw',      how:'↑ more echo'},
+  reverb:{name:'Reverb wash',      how:'↑ more reverb'},
+  pitch: {name:'Pitch bend',       how:'↑↓ up to an octave'},
+  drive: {name:'Drive',            how:'↑ more distortion'},
   off:   {name:'None',             how:'only on/off'},
 };
 const fxOf = Ly => FX[Ly.fx] ? Ly.fx : (Ly.inst==='drums' ? 'gate' : 'lp');
@@ -3061,9 +3108,12 @@ const fmtPos = b => `${Math.floor(b/4)+1}.${Math.floor(mod(b,4))+1}.${Math.floor
 const fmtLen = d => { const s=d*4; if(Math.abs(s-Math.round(s))>1e-6) return `${d.toFixed(2)} beats`;
   let n=Math.round(s), q=16; while(n%2===0 && q>1){ n/=2; q/=2; } return q===1 ? `${n} bar${n>1?'s':''}` : `${n}/${q}`; };
 
+/* chords for chord instruments; bass and drums play single notes, so they open on notes */
+const edDefaultMode = () => { ED.chordMode = !MONO_INST.has(edLy().inst); };
 function openEditor(i){
   if(i!=null && i!==S.sel) selectLayer(i);
   ED.li=S.sel; ED.open=true; ED.sel.clear(); ED.hist=[]; ED.fut=[];
+  ED.tool='select'; edDefaultMode(); edOrient=innerWidth>innerHeight;
   $('editor').classList.remove('hidden');
   if(matchMedia('(pointer:coarse)').matches) ED.rowH=20;
   edResize(); edFit(); edCenterPitch(); edRenderTools(); edDraw();
@@ -3483,8 +3533,8 @@ function edRenderTools(){
     : 'no notes yet: draw or record';
   $('edBake').classList.toggle('hidden', !timingActive(Ly));
 }
-$('edDone').onclick=closeEditor;
-$('edLayer').onchange=e=>{ selectLayer(+e.target.value); ED.li=S.sel; ED.sel.clear(); ED.hist=[]; ED.fut=[]; edCenterPitch(); edRenderTools(); edDraw(); };
+$('edDone').onclick=closeEditor; $('edDone').innerHTML=ic('close','');
+$('edLayer').onchange=e=>{ selectLayer(+e.target.value); ED.li=S.sel; ED.sel.clear(); ED.hist=[]; ED.fut=[]; edDefaultMode(); edCenterPitch(); edRenderTools(); edDraw(); };
 $('edSnap').onchange=e=>{ ED.snap=e.target.value; edRenderTools(); edDraw(); };
 $('edChordMode').onclick=e=>{ const b=e.target.closest('[data-m]'); if(!b) return; ED.chordMode=b.dataset.m==='1'; if(ED.chordMode) edExpandSel(); edRenderTools(); edDraw(); };
 document.querySelector('.edtoolkeys').onclick=e=>{ const b=e.target.closest('[data-tool]'); if(!b) return; ED.tool=b.dataset.tool; edRenderTools(); };
@@ -3611,7 +3661,8 @@ addEventListener('keydown',e=>{
   else { const k=+e.key-1; if(k>=0&&k<7) padDown(k); }
 });
 addEventListener('keyup',e=>{ const k=+e.key-1; if(k>=0&&k<7) padUp(k); });
-addEventListener('resize',()=>{ if(layers.length) drawAll(); if(ED.open){ edResize(); edClamp(); edDraw(); } });
+let edOrient=null;   // turning the phone shows the whole loop again
+addEventListener('resize',()=>{ if(layers.length) drawAll(); if(ED.open){ edResize(); const o=innerWidth>innerHeight; if(o!==edOrient){ edOrient=o; edFit(); edCenterPitch(); } edClamp(); edDraw(); } });
 
 async function startApp(){
   if(ctx) return;
