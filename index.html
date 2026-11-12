@@ -357,7 +357,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
   border-radius:calc(2px + var(--nte,0) * 10px)}
 .newtop .ntbtn span{display:inline-block;transform:translateX(var(--ntx,0px));font-size:calc(12px + var(--nte,0) * 2px);white-space:nowrap}
 .newtop .ntbtn::before{display:none}
-.newtop.hidden{display:none}
+.newtop.hidden,.newtop.gone{display:none}
 /* the song page (full screen): header, a dark screen with the preview and the tape, the part pads */
 .songpg{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;gap:12px;
   padding:calc(12px + var(--st)) max(16px,calc(var(--sr) + 12px)) calc(16px + var(--sb)) max(16px,calc(var(--sl) + 12px));box-sizing:border-box;overflow:hidden}
@@ -1718,7 +1718,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.65';
+const PAGE_VERSION = '2026-11-12.66';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2960,7 +2960,7 @@ function renderLayers(){
   $('detailTitle').textContent = `Layer ${S.sel+1} · ${instName(selLayer())}`;
   renderPrevSolo();
   const nb=$('newLayerBtn'); if(nb) nb.onclick=()=>openSheet('newSheet');
-  const free=layers.some(Ly=>!Ly.shown); $('newTop').classList.toggle('hidden',!free); ntSet(ntE);
+  const free=layers.some(Ly=>!Ly.shown); $('newTop').classList.toggle('hidden',!free); ntSet(ntE); requestAnimationFrame(ntCheck);
   fitLayerTail();
   renderTransport();
   drawAll();
@@ -3017,7 +3017,7 @@ function ntTween(to){
 }
 // the pull is ours: once a downward drag at the top of the list starts growing the key, the page (or the list) must
 // not rubber-band along with it, or the key and the page move at once (iPhone portrait, where the page scrolls)
-document.addEventListener('touchstart',e=>{ ntPull=null; if(e.touches.length!==1 || !e.target.closest('.layerpane') || ntScrollTop()>0 || $('newTop').classList.contains('hidden')) return;
+document.addEventListener('touchstart',e=>{ ntPull=null; if(e.touches.length!==1 || !e.target.closest('.layerpane') || ntScrollTop()>0 || $('newTop').classList.contains('hidden') || $('newTop').classList.contains('gone')) return;
   cancelAnimationFrame(ntRaf); ntPull={x:e.touches[0].clientX, y:e.touches[0].clientY, e0:ntE, on:false}; },{passive:true});
 document.addEventListener('touchmove',e=>{ const p=ntPull; if(!p) return; const t=e.touches[0], dy=t.clientY-p.y, dx=t.clientX-p.x;
   if(!p.on){
@@ -3035,8 +3035,23 @@ document.addEventListener('touchend',ntEnd,{passive:true}); document.addEventLis
 // mouse wheel or trackpad: up at the top shows the key, scrolling down hides it again
 document.addEventListener('wheel',e=>{ if(!e.target.closest || !e.target.closest('.layerpane')) return;
   if(e.deltaY<0 && ntScrollTop()<=0 && ntE<1) ntTween(1); },{passive:true});
-document.addEventListener('scroll',()=>{ if(!ntPull && ntE>0 && ntScrollTop()>8) ntTween(0); },{capture:true,passive:true});
-addEventListener('resize', ()=>requestAnimationFrame(()=>ntSet(ntE)));
+/* the key at the bottom of the list in view: the one on top steps aside (the list keeps its place on screen) */
+function ntCheck(){
+  const nt=$('newTop'), nb=$('newLayerBtn'); if(!nt) return;
+  let show=true;
+  if(nb && nb.offsetParent){
+    const sc=ntScroller(), r=nb.getBoundingClientRect();
+    const top = sc ? sc.getBoundingClientRect().top : (document.querySelector('header.top')?.getBoundingClientRect().bottom||0);
+    const bottom = sc ? sc.getBoundingClientRect().bottom : innerHeight - (document.querySelector('.tbar')?.offsetHeight||0);
+    show = !(r.top < bottom - 8 && r.bottom > top + 8);
+  }
+  if(show === !nt.classList.contains('gone')) return;
+  const sc=ntScroller(), st=ntScrollTop(), h=nt.offsetHeight + parseFloat(getComputedStyle(nt).marginBottom||0);
+  if(!show){ nt.classList.add('gone'); ntPull=null; cancelAnimationFrame(ntRaf); ntSet(0); if(st>0){ if(sc) sc.scrollTop=Math.max(0,st-h); else scrollTo(0,Math.max(0,st-h)); } }
+  else { nt.classList.remove('gone'); ntSet(ntE); const h2=nt.offsetHeight + parseFloat(getComputedStyle(nt).marginBottom||0); if(st>0){ if(sc) sc.scrollTop=st+h2; else scrollTo(0,st+h2); } }
+}
+document.addEventListener('scroll',()=>{ if(!ntPull && ntE>0 && ntScrollTop()>8) ntTween(0); ntCheck(); },{capture:true,passive:true});
+addEventListener('resize', ()=>requestAnimationFrame(()=>{ ntSet(ntE); ntCheck(); }));
 $('newTopBtn').onclick=()=>openSheet('newSheet');
 /* landscape: room under the list so its last item can scroll up to the top of the pane, and no further */
 function fitLayerTail(){ const last=$('layers').lastElementChild; if(last) document.querySelector('.layerpane').style.setProperty('--tailh', last.offsetHeight+'px'); }
