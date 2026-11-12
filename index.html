@@ -1300,6 +1300,11 @@ body[data-studio=land] .layersheet{grid-column:2;grid-row:3}
 body[data-studio=land] .spad{grid-column:3;grid-row:3}
 body[data-studio=land][data-sfull=st] #editor,body[data-studio=land][data-sfull=cp] #editor,body[data-studio=land][data-sfull=st] #lprev,body[data-studio=land][data-sfull=cp] #lprev,
 body[data-studio=land][data-sfull=st] .layersheet,body[data-studio=land][data-sfull=cp] .spad{grid-column:1/4}
+/* landscape, pad in full screen: the editor and graph strip on the left (wider), the pad beside them at full height */
+body[data-studio=land][data-sfull=cp] .main{grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) var(--strh)}
+body[data-studio=land][data-sfull=cp] #editor{grid-column:1;grid-row:1}
+body[data-studio=land][data-sfull=cp] #lprev{grid-column:1;grid-row:2}
+body[data-studio=land][data-sfull=cp] .spad{grid-column:2;grid-row:1/3}
 /* portrait: layers on top, two per row; the editor and graph strip; settings next to the capture pad */
 body[data-studio=port] .main{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(110px,1fr) var(--edh) var(--strh) var(--loh)}
 body[data-studio=port]{--edh:clamp(240px,30dvh,380px);--loh:350px}
@@ -1566,7 +1571,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.59';
+const PAGE_VERSION = '2026-11-12.60';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3170,7 +3175,7 @@ const sFull = () => document.body.dataset.sfull||'';
 function studioDock(m){
   const main=document.querySelector('.main'), ed=$('editor'), lp=$('lprev'), ls=$('layerSheet');
   if(m){
-    if(ED.dock) return;
+    if(ED.dock || !layers[S.sel]) return;   // no layers yet (start screen): dock once there are
     main.insertBefore(ed, ls); main.insertBefore(lp, ls); ed.classList.add('dock'); ED.dock=true;
     ED.li=S.sel; ED.open=true; ED.sel.clear(); ED.hist=[]; ED.fut=[]; ED.tool='select'; ED.fitted=false; edDefaultMode();
     ed.classList.remove('hidden'); $('edDone').innerHTML=IC_MAX; $('edDone').setAttribute('aria-label','Note editor full screen');
@@ -4404,7 +4409,9 @@ function renderFabs(){
   const lockState = !pads ? 'none' : held ? 'arm' : locked ? 'on' : 'idle';
   const undoOff = full ? !ED.hist.length : (!HIST.undo.length && !saveT), redoOff = full ? !ED.fut.length : !HIST.redo.length;
   const bottom = full ? ($('editor').querySelector('.edbar').offsetHeight+12)+'px' : (pads && fabLift) || '';
-  const key=[showUndo,showRedo,lockState,tgt,undoOff,redoOff,bottom,full||CAP.open].join('|');
+  // iPad landscape, pad in full screen: the pad sits on the right, so the stack moves to its bottom-left corner
+  const left = (studio==='land' && sf==='cp' && !full && !CAP.open) ? Math.round($('sPad').getBoundingClientRect().left+12)+'px' : '';
+  const key=[showUndo,showRedo,lockState,tgt,undoOff,redoOff,bottom,full||CAP.open,left].join('|');
   if(key===fabKey) return; fabKey=key;
   $('undoBtn').classList.toggle('hide',!showUndo); $('redoBtn').classList.toggle('hide',!showRedo);
   $('undoBtn').disabled=undoOff; $('redoBtn').disabled=redoOff;
@@ -4414,6 +4421,7 @@ function renderFabs(){
   lb.setAttribute('aria-label', lockState==='on' ? `Effect of layer ${tgt+1} locked: press to release it` : 'Lock the effect you hold');
   const f=$('fabs'); f.style.setProperty('--fabb', bottom || (CAP.open ? 'calc(var(--tbarh) + 12px)' : 'calc(var(--tbarh) + 12px)'));
   f.classList.toggle('over', !!(full||CAP.open));
+  f.style.left = left;
 }
 
 $('panicBtn').onclick=()=>stopAllVoices(true);
