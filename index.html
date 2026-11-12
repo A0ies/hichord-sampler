@@ -201,6 +201,14 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 .layer .fxrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
 .layer .fxc{min-height:26px;height:26px;padding:0 9px;border-radius:999px;font-size:11px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--lc);color:var(--ink);text-transform:none}
 .layer .fxc::before{display:none}
+.cfxp .fxrow{display:flex;flex-wrap:wrap;gap:6px}
+.cfxp .fxc{min-height:30px;height:30px;padding:0 10px;border-radius:999px;font-size:11px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--lc,var(--acc));color:var(--ink);text-transform:none;gap:5px}
+.cfxp .fxc::before{display:none}
+.cfxp .fxc em{font-style:normal;color:var(--dim)}
+.layersheet.full .cfxp .fxc{min-height:26px;height:26px;padding:0 8px}
+.layersheet.full .cfxp .fxc.add{width:26px;padding:0}
+.layersheet.full .cfxp.many .fxc .nm{display:none}   /* landscape panel, three or more: symbol and range only */
+.cfxp .fxc.add{box-shadow:inset 0 0 0 1.5px var(--line);color:var(--dim);width:30px;padding:0;font-size:15px;justify-content:center}
 .layer .fxc.add{box-shadow:inset 0 0 0 1.5px var(--line);color:var(--dim);width:26px;padding:0;font-size:15px;justify-content:center}
 .layer .fxlbl{align-self:center;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.06em;margin-right:1px}
 @media (min-width:640px){
@@ -830,7 +838,7 @@ body.projopen .pbar{display:none}
   .layersheet.full .lsbody{margin-right:-12px;padding-right:12px}
   .layersheet.full #detail{overflow:visible}   /* a knob at the right end of a slider sticks out a little */
   /* mix page: capture effect and "plays on" share the line under the four sliders, each two columns wide */
-  .layersheet.full #detail .params>.p:has(>select),.layersheet.full #detail .params>.p.wide:has(>.seg){grid-column:span 2}
+  .layersheet.full #detail .params>.p:has(>select),.layersheet.full #detail .params>.p.wide:has(>.seg),.layersheet.full #detail .params>.p.cfxp{grid-column:span 2}
   .layersheet.full #detail .params>.p:has(>select) select{width:100%}
   .layersheet.full #detail .params{row-gap:4px}
   .layersheet.full #detail>.row{margin-top:4px!important}
@@ -1368,7 +1376,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.55';
+const PAGE_VERSION = '2026-11-12.56';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1529,6 +1537,7 @@ function newLayerData(i){
   return { inst, customName:null, root:60, snd:SOUND_VERSION, events:[], takes:0,
     q: inst==='drums'?'1/16':'off', strength:1, swing:0, nudge:0, gate:1, oct:0, semis:0, humanize:0,
     a:L.a, d:0.4, s:1, r:L.r, cutoff:1, reso:0.1, vol:0.8, pan:0, rev: inst==='pad'||inst==='strings'?0.35:0.18, dly:0, mute:false, solo:false,
+    fx:null, cfx:null,   // capture effects: filled in by capFx (a list of {k, v})
     out:'app',   // 'app' = the app's instrument, 'hc' = the HiChord plays it, 'both'
     gateDiv: 4,   // the gate's note: chops per beat (1 = 1/4, 2 = 1/8, 4 = 1/16, 8 = 1/32, 3 = 1/8t, 6 = 1/16t)
     fxs: [],   // effects that stay on: [{k, v}] with v from 0 to 1
@@ -2146,7 +2155,7 @@ function drawCapRec(){
 
 /* ============ the session is kept between visits ============ */
 const SAVE_KEY='hichord-looper-v1';
-const LAYER_KEYS=['inst','customName','root','snd','fx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown','fxs','gateDiv'];
+const LAYER_KEYS=['inst','customName','root','snd','fx','cfx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown','fxs','gateDiv'];
 let saveT;
 function sessionData(){
   return { v:1,
@@ -2358,7 +2367,7 @@ function applySession(d, sounds){
   layers.forEach((Ly,i)=>{
     const nd=d.layers[i]||{};
     Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.02));
-    Object.assign(Ly, newLayerData(i), JSON.parse(JSON.stringify(nd)));
+    Object.assign(Ly, newLayerData(i), JSON.parse(JSON.stringify(nd))); capFx(Ly);   // older projects: one effect becomes a list
     const snd=sounds && sounds[i];
     if(Ly.inst==='custom' && snd){ Ly.buffer=bufferFrom(snd); Ly.customName=snd.name; Ly.mode='melodic'; Ly.slices=null; }
     else { Ly.inst = Ly.inst==='custom' ? DEFAULT_INST[i] : instKey(Ly.inst,i); newSounds(Ly, nd); setInstrument(Ly, Ly.inst, true); }
@@ -3002,7 +3011,7 @@ function renderDetail(){
     param(grid,'Pan',()=>Ly.pan,v=>{Ly.pan=v;applyLayer(Ly);},-1,1,0.01,v=>v===0?'centre':(v<0?'L ':'R ')+Math.round(Math.abs(v)*100));
     param(grid,'Reverb',()=>Ly.rev,v=>{Ly.rev=v;applyLayer(Ly);},0,1,0.01,pct);
     param(grid,'Delay',()=>Ly.dly,v=>{Ly.dly=v;applyLayer(Ly);},0,1,0.01,pct);
-    selectParam(grid,'Capture effect',Object.entries(FX).map(([k,v])=>[k,v.name]),()=>fxOf(Ly),v=>{ Ly.fx=v; });
+    capFxParam(grid, Ly, S.sel);
     segParam(grid,'Plays on',[['app','App'],['hc','HiChord'],['both','Both']],()=>Ly.out,v=>{
       Ly.out=v; if(v!=='app' && !HC.connected) toast('Connect the HiChord first, then this layer plays on it');
       if(v!=='hc') hcAllOff(); renderDetail(); });
@@ -3181,6 +3190,36 @@ function fxPop(i, k){
   document.body.append(bg, pn);
 }
 function fxPopClose(){ document.querySelectorAll('.fxbg,.fxpop').forEach(x=>x.remove()); renderLayers(); }
+/* capture effects in the layer's Mix page: chips like the layer effects; tap one to set its range or remove it */
+function capFxParam(host, Ly, i){
+  const d=document.createElement('div'); d.className='p wide cfxp'+(capFx(Ly).length>2?' many':'');
+  d.style.setProperty('--lc',`var(--l${i})`);   // chips in the layer's colour, like on the layers screen
+  d.innerHTML=`<label><span>capture fx</span></label><div class="fxrow">${capFx(Ly).map(f=>`<button class="fxc" data-ck="${f.k}" aria-label="Capture effect ${FX[f.k].name}, range ${pct(f.v)}: tap to adjust">${FX_SHORT[f.k][0]} <span class="nm">${FX_SHORT[f.k][1]}</span> <em>${pct(f.v)}</em></button>`).join('')}<button class="fxc add" data-ck="+" aria-label="Add a capture effect">+</button></div>`;
+  d.querySelector('.fxrow').onclick=e=>{ const b=e.target.closest('[data-ck]'); if(b) capFxPop(i, b.dataset.ck==='+'?null:b.dataset.ck); };
+  host.appendChild(d); return d;
+}
+function capFxPop(i, k){
+  fxPopClose(); const Ly=layers[i];
+  const close=()=>{ document.querySelectorAll('.fxbg,.fxpop').forEach(x=>x.remove()); renderDetail(); if(CAP.open) renderCaptureMode(); };
+  const bg=document.createElement('div'); bg.className='fxbg'; bg.onclick=close;
+  const pn=document.createElement('div'); pn.className='fxpop'; pn.id='fxPop'; pn.style.setProperty('--lc',`var(--l${i})`);
+  if(!k){
+    const free=Object.keys(FX).filter(x=>x!=='off' && !capHas(Ly,x));
+    pn.innerHTML=`<h2>layer ${i+1} · add capture effect</h2><div class="fxgrid">${free.map(x=>`<button data-add="${x}"><b>${FX_SHORT[x][0]}</b> ${FX_SHORT[x][1]}</button>`).join('') || '<p class="hint">Every effect is on this pad already.</p>'}</div>`;
+    pn.onclick=e=>{ const b=e.target.closest('[data-add]'); if(!b) return; CAP.lock.delete(i); fxReset(Ly); Ly.cfx=[...capFx(Ly), {k:b.dataset.add, v:1}]; save(); renderDetail(); capFxPop(i, b.dataset.add); };
+  } else {
+    const f=capFx(Ly).find(x=>x.k===k); if(!f) return;
+    pn.innerHTML=`<h2>layer ${i+1} · capture <span style="color:var(--lc)">${FX_SHORT[k][0]}</span> ${FX[k].name.toLowerCase()}</h2><div class="params"></div>
+      <p class="hint" style="margin:0">How far it goes when your finger reaches the top of the pad${k==='pitch'?' (up and down)':''}.</p>
+      <div class="fxkeys"><button data-x="remove" class="danger">remove</button><button data-x="done" class="primary">done</button></div>`;
+    const top={lp:v=>hz(18000*Math.pow(120/18000,v)), hp:v=>hz(20*Math.pow(6000/20,v)), pitch:v=>'±'+Math.round(v*12)+' st'};
+    param(pn.querySelector('.params'), 'range', ()=>f.v, v=>{ f.v=v; }, 0.05, 1, 0.01, v=>pct(v)+(top[k]?' · '+top[k](v):'')).classList.add('wide');
+    pn.onclick=e=>{ const b=e.target.closest('[data-x]'); if(!b) return;
+      if(b.dataset.x==='remove'){ CAP.lock.delete(i); fxReset(Ly); Ly.cfx=capFx(Ly).filter(x=>x.k!==k); save(); }
+      close(); };
+  }
+  document.body.append(bg, pn);
+}
 /* ============ song: the parts row, the song panel, and following the timeline in capture mode ============ */
 const escH=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const SONG_IC='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h5M10 7h11M3 12h9M14 12h7M3 17h3M8 17h13"/></svg>';
@@ -3290,6 +3329,13 @@ const FX = {
   off:   {name:'None',             how:'only on/off'},
 };
 const fxOf = Ly => FX[Ly.fx] ? Ly.fx : (Ly.inst==='drums' ? 'gate' : 'lp');
+/* the capture effects of a layer: a list of {k, v}, v = range (how far it goes at the top of the pad). Older
+   projects had one effect in Ly.fx; that becomes a list of one at full range. */
+const capFx = Ly => Array.isArray(Ly.cfx) ? Ly.cfx : (Ly.cfx = (FX[Ly.fx] ? Ly.fx : fxOf(Ly))==='off' ? [] : [{k:fxOf(Ly), v:1}]);
+const capHas = (Ly,k) => capFx(Ly).some(f=>f.k===k);
+const capChip = Ly => { const l=capFx(Ly); return !l.length ? fxChip('off') : l.length===1 ? fxChip(l[0].k) : `<b>${l.map(f=>FX_SHORT[f.k][0]).join('')}</b> ${l.length} fx`; };
+const capName = Ly => { const l=capFx(Ly); return l.length ? l.map(f=>FX[f.k].name).join(', ') : FX.off.name; };
+const capHow = Ly => { const l=capFx(Ly); return !l.length ? FX.off.how : l.length===1 ? FX[l[0].k].how : '↑ '+l.map(f=>FX_SHORT[f.k][1]).join(' + '); };
 const FX_SHORT={ lp:['◢','low-pass'], hp:['◣','high-pass'], gate:['▥','gate'], delay:['⋯','delay'], reverb:['≋','reverb'], pitch:['↕','pitch'], drive:['∿','drive'], off:['∅','none'] };
 const fxChip = k => `<b>${FX_SHORT[k][0]}</b> ${FX_SHORT[k][1]}`;
 const GATE_NOTES=[[1,'1/4'],[2,'1/8'],[4,'1/16'],[8,'1/32'],[3,'1/8t'],[6,'1/16t']];
@@ -3299,7 +3345,15 @@ const hz = f => f>=1000 ? (f/1000).toFixed(1)+' kHz' : Math.round(f)+' Hz';
 function driveCurve(k){ const n=1024, c=new Float32Array(n); for(let i=0;i<n;i++){ const x=i/(n-1)*2-1; c[i]=Math.tanh(k*x)/Math.tanh(k); } return c; }
 // x and y from 0 to 1 (y counts upwards); y0 is where the finger came down. Returns what to show.
 function fxSet(Ly, x, y, y0){
-  const now=ctx.currentTime, T=0.015, fx=fxOf(Ly);
+  const l=capFx(Ly); if(!l.length) return '';
+  const parts=l.map(f=>{ const v=fxSetOne(Ly, f.k, x, y, y0, f.v); return l.length===1 ? `${FX_SHORT[f.k][1]} · ${v}` : (f.k==='delay'||f.k==='reverb'||f.k==='drive' ? v : `${FX_SHORT[f.k][1]} ${v}`); });
+  return parts.join(' · ');
+}
+// one effect, up to its range r (pitch: ±12 st × r; the others: the top of the pad × r)
+function fxSetOne(Ly, fx, x, y, y0, r=1){
+  const now=ctx.currentTime, T=0.015;
+  if(fx==='pitch'){ const st=clamp((y-y0)*24,-12,12)*r; setBend(Ly,st); return `${st>=0?'+':''}${st.toFixed(1)} st`; }
+  y*=r;
   if(fx==='lp'){ const f=18000*Math.pow(120/18000,y); Ly.fxLP.frequency.setTargetAtTime(f,now,T); Ly.fxLP.Q.setTargetAtTime(0.7+x*12,now,T); return hz(f); }
   if(fx==='hp'){ const f=20*Math.pow(6000/20,y); Ly.fxHP.frequency.setTargetAtTime(f,now,T); Ly.fxHP.Q.setTargetAtTime(0.7+x*12,now,T); return hz(f); }
   if(fx==='gate'){ const depth=0.3+0.7*y; gateOn(Ly, Ly.gateDiv||4, depth); return `${gateName(Ly)} · ${pct(depth)}`; }   // the note is picked with the keys on the pad
@@ -3363,12 +3417,12 @@ function renderCaptureMode(){
   const cols = wide ? Math.min(4,n) : (n<=1?1:2), rows=Math.ceil(n/cols);
   const grid=$('cgrid'); grid.style.gridTemplateColumns=`repeat(${cols},minmax(0,1fr))`; grid.style.gridTemplateRows=`repeat(${rows},minmax(0,1fr))`;
   grid.innerHTML = vis.map(([Ly,i])=>`
-    <div class="ctile ${audible(Ly)?'':'off'} ${fxOf(Ly)==='gate'?'hasnotes':''} ${CAP.lock.has(i)?'locked':''}" data-i="${i}" style="--lc:var(--l${i})">
-      <div class="chead"><span class="num">${i+1}</span>${INST_ICON[Ly.inst]||''}<span class="cname">${instName(Ly)}</span><button class="cfxchip" data-fxi="${i}" aria-label="Capture effect: ${FX[fxOf(Ly)].name}. Tap to change">${fxChip(fxOf(Ly))} ▾</button><span class="cstate">${audible(Ly)?'on':'off'}</span></div>
+    <div class="ctile ${audible(Ly)?'':'off'} ${capHas(Ly,'gate')?'hasnotes':''} ${CAP.lock.has(i)?'locked':''}" data-i="${i}" style="--lc:var(--l${i})">
+      <div class="chead"><span class="num">${i+1}</span>${INST_ICON[Ly.inst]||''}<span class="cname">${instName(Ly)}</span><button class="cfxchip" data-fxi="${i}" aria-label="Capture effects: ${capName(Ly)}. Tap to change">${capChip(Ly)} ▾</button><span class="cstate">${audible(Ly)?'on':'off'}</span></div>
       <canvas id="croll${i}"></canvas>
       <div class="cpad"></div>
-      ${fxOf(Ly)==='gate' ? noteKeys(Ly,'capnotes') : ''}
-      <div class="cfx">${CAP.lock.has(i) ? CAP.lock.get(i).label : FX[fxOf(Ly)].how}</div>
+      ${capHas(Ly,'gate') ? noteKeys(Ly,'capnotes') : ''}
+      <div class="cfx">${CAP.lock.has(i) ? CAP.lock.get(i).label : capHow(Ly)}</div>
       <i class="cdot" ${CAP.lock.has(i)?`style="left:${CAP.lock.get(i).fx*100}%;top:${CAP.lock.get(i).fy*100}%"`:''}></i>
       <button class="clock" data-lock="${i}">${lockLabel(CAP.lock.has(i))}</button>
       <svg class="cring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" pathLength="100"/></svg>
@@ -3406,11 +3460,11 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
   const apply=(t,e)=>{ const [x,y,px,py]=where(t,e); const Ly=layers[t.i], r=t.el.getBoundingClientRect();
     const dot=t.el.querySelector('.cdot'), ring=t.el.querySelector('.cring');
     dot.style.left=ring.style.left=px+'px'; dot.style.top=ring.style.top=py+'px';
-    const fx=fxOf(Ly), label = fx==='off' ? FX.off.how : `${FX_SHORT[fx][1]} · ${fxSet(Ly,x,y,t.y0)}`;
+    const none=!capFx(Ly).length, label = none ? FX.off.how : fxSet(Ly,x,y,t.y0);
     t.el.querySelector('.cfx').textContent=label;
     t.at={x, y, y0:t.y0, fx:px/r.width, fy:py/r.height, label};
     if(CAP.lock.has(t.i)) CAP.lock.set(t.i, t.at);   // a locked pad you touch again moves its lock
-    if(!t.ready && fx!=='off'){ if(!t.sx || Math.hypot(e.clientX-t.sx[0], e.clientY-t.sx[1])>12) arm(t,e); } };
+    if(!t.ready && !none){ if(!t.sx || Math.hypot(e.clientX-t.sx[0], e.clientY-t.sx[1])>12) arm(t,e); } };
   // holding still: the ring fills for 2 s, then the lock key appears (it locks only when you press it)
   const arm=(t,e)=>{ t.sx=[e.clientX,e.clientY]; clearTimeout(t.st);
     t.el.classList.remove('arming'); void t.el.offsetWidth; t.el.classList.add('arming');
@@ -3421,7 +3475,7 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
     if(CAP.lock.has(i)){
       CAP.lock.delete(i); el.classList.remove('locked'); setLockKey(el,false);
       const t=[...CAP.touch.values()].find(o=>o.i===i && o.active);
-      if(!t){ el.classList.remove('lockable'); fxReset(Ly); el.querySelector('.cfx').textContent=FX[fxOf(Ly)].how; }
+      if(!t){ el.classList.remove('lockable'); fxReset(Ly); el.querySelector('.cfx').textContent=capHow(Ly); }
       return;
     }
     const t=[...CAP.touch.values()].find(o=>o.i===i && o.active && o.at); if(!t) return;
@@ -3434,15 +3488,20 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
     const lk=e.target.closest('.clock'); if(lk){ if(e.detail===0) lockKey(+lk.dataset.lock); return; }   // a key press; touches lock on pointerdown
     const gk=e.target.closest('.capnotes [data-gdiv]');
     if(gk){ const gi=+gk.closest('.ctile').dataset.i, Ly=layers[gi]; Ly.gateDiv=+gk.dataset.gdiv; gateOff(Ly); applyFx(Ly);
-      const lo=CAP.lock.get(gi); if(lo){ lo.label=`${FX_SHORT.gate[1]} · ${fxSet(Ly,lo.x,lo.y,lo.y0)}`; gk.closest('.ctile').querySelector('.cfx').textContent=lo.label; }
+      const lo=CAP.lock.get(gi); if(lo){ lo.label=fxSet(Ly,lo.x,lo.y,lo.y0); gk.closest('.ctile').querySelector('.cfx').textContent=lo.label; }
       save();
       gk.parentElement.querySelectorAll('[data-gdiv]').forEach(x=>x.classList.toggle('on',x===gk)); return; }
-    if(item){ const Ly=layers[+item.dataset.fxl]; CAP.lock.delete(+item.dataset.fxl); fxReset(Ly); Ly.fx=item.dataset.fxset; item.closest('.cfxmenu').remove(); save(); renderCaptureMode(); return; }
+    if(item){ const li=+item.dataset.fxl, Ly=layers[li], k=item.dataset.fxset, m=item.closest('.cfxmenu');
+      CAP.lock.delete(li); fxReset(Ly);
+      if(k==='off'){ Ly.cfx=[]; m.remove(); }
+      else { Ly.cfx = capHas(Ly,k) ? capFx(Ly).filter(f=>f.k!==k) : [...capFx(Ly), {k, v:1}];   // several effects: tap to switch each on or off
+        m.querySelectorAll('[data-fxset]').forEach(b=>b.classList.toggle('on', b.dataset.fxset==='off' ? !capFx(Ly).length : capHas(Ly,b.dataset.fxset))); }
+      save(); renderCaptureMode(); return; }
     const open=capEl.querySelector('.cfxmenu'); if(open){ const same=chip && open.dataset.fxl===chip.dataset.fxi; open.remove(); if(same || !chip) return; }
     if(!chip) return;
-    const i=+chip.dataset.fxi, cur=fxOf(layers[i]), m=document.createElement('div'); m.className='cfxmenu'; m.dataset.fxl=i;
+    const i=+chip.dataset.fxi, m=document.createElement('div'); m.className='cfxmenu'; m.dataset.fxl=i;
     m.style.setProperty('--lc',`var(--l${i})`);
-    m.innerHTML=`<h2>layer ${i+1} · capture effect</h2>`+Object.keys(FX).map(k=>`<button data-fxset="${k}" data-fxl="${i}" class="${k===cur?'on':''}">${fxChip(k)}</button>`).join('');
+    m.innerHTML=`<h2>layer ${i+1} · capture effects</h2>`+Object.keys(FX).map(k=>`<button data-fxset="${k}" data-fxl="${i}" class="${(k==='off' ? !capFx(layers[i]).length : capHas(layers[i],k))?'on':''}" aria-pressed="${k==='off' ? !capFx(layers[i]).length : capHas(layers[i],k)}">${fxChip(k)}</button>`).join('');
     capEl.appendChild(m);
   });
   grid.addEventListener('pointerdown',e=>{
@@ -3464,7 +3523,7 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
       if(![...CAP.touch.values()].some(o=>o.i===t.i && o.active)){
         t.el.classList.remove('touch','arming','lockable');
         if(CAP.lock.has(t.i)) t.el.querySelector('.cfx').textContent=CAP.lock.get(t.i).label;   // locked: the effect stays where you left it
-        else { fxReset(Ly); t.el.querySelector('.cfx').textContent=FX[fxOf(Ly)].how; }   // back to the hint it showed before
+        else { fxReset(Ly); t.el.querySelector('.cfx').textContent=capHow(Ly); }   // back to the hint it showed before
       }
     } else if(e.type==='pointerup'){
       // a tap: layer on or off (with solo active, a tap solos it in or out)
@@ -4073,7 +4132,7 @@ async function startApp(){
   const saved=load();
   if(saved && saved.S) Object.assign(S, saved.S, {playing:false, rec:false});
   for(let i=0;i<8;i++){
-    const Ly = Object.assign(newLayerData(i), saved && saved.layers && saved.layers[i] ? saved.layers[i] : {});
+    const Ly = Object.assign(newLayerData(i), saved && saved.layers && saved.layers[i] ? saved.layers[i] : {}); capFx(Ly);
     Ly.wantCustom = Ly.inst==='custom';   // its audio comes back from the project store
     Ly.inst = Ly.inst==='custom' ? DEFAULT_INST[i] : instKey(Ly.inst,i);
     if(!Ly.wantCustom) newSounds(Ly, saved && saved.layers && saved.layers[i]);
