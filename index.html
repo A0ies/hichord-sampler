@@ -552,6 +552,81 @@ body.projopen .pbar{display:none}
 .overlay h1 span{color:var(--ink);font-weight:400}
 .overlay h1::after{content:"";display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--acc);margin-left:8px;vertical-align:6px}
 .overlay button{background:var(--dark-key);color:var(--dark-key-ink);font-size:14px;padding:12px 26px;border-radius:12px}
+/* song parts: a row of keys above the layers */
+.partbar{display:flex;gap:6px;align-items:center;margin:0 0 10px;min-width:0}
+.partbar button{flex:0 1 auto;min-width:0;max-width:150px;height:38px;min-height:38px;padding:0 11px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;
+  background:var(--key);color:var(--ink);box-shadow:0 1px 0 var(--key-edge);border:none;font-size:12px;justify-content:center}
+.partbar button::before{display:none}
+.partbar button b{font-family:var(--mono);font-weight:600;font-size:13px;text-transform:none;flex:none}
+.partbar.many{gap:4px} .partbar.many button{padding:0 9px;flex:1 1 0} .partbar.many button:not(.on) span{display:none} .partbar.many button.on{flex:2 1 auto}
+.partbar.many .padd,.partbar.many .psong{flex:none}
+.partbar button span{text-transform:none} .ctl button,.tline button,.prow .pl,.tlkeys button,.capnext span{text-transform:none}
+.partbar button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);min-width:0}
+.partbar button.on{background:var(--dark-key);color:var(--dark-key-ink)} .partbar button.on span{color:inherit;opacity:.8}
+.partbar .padd{color:var(--dim);flex:none}
+.partbar .psong{margin-left:auto;flex:none;gap:5px;color:var(--ink)}
+.partbar .psong svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.songsec{margin-top:6px} .songsec+.songsec{margin-top:18px}
+.songsec h3{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:0 0 8px;font-weight:500}
+.songsec h3 small{letter-spacing:0;text-transform:none;font-size:11px;margin-left:6px}
+.partlist{display:flex;flex-direction:column;gap:6px}
+.prow{display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:12px;padding:6px 6px 6px 8px}
+.prow.on{box-shadow:inset 0 0 0 2px var(--dark-key)}
+.prow .pl{width:30px;height:30px;border-radius:8px;background:var(--dark-key);color:var(--dark-key-ink);font-family:var(--mono);font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+.prow input{flex:1;min-width:0;height:36px;border:none;background:var(--bg);border-radius:8px;padding:0 10px;font:inherit;font-size:16px}
+.pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.prow{padding:4px 4px 4px 4px;gap:6px} .prow input{height:34px;padding:0 8px}
+.pacts{display:flex;gap:6px;margin-top:8px}
+/* small phones: everything in the song panel a little tighter, so eight parts and a long timeline fit */
+@media (max-width:639px) and (max-height:760px){
+  #songSheet .sheethead{margin-bottom:4px} #songSheet .grab{margin-bottom:6px}
+  .songsec+.songsec{margin-top:12px} .pgrid{gap:5px} .prow input{height:30px} .prow .pl{width:28px;height:28px}
+  .pacts{margin-top:6px} .tlkeys{margin-top:6px}
+  .songsec+.songsec{margin-top:8px} .tline{padding:4px} .pacts button,.tlkeys button{min-height:34px;height:34px} #songSheet{padding-bottom:14px}
+}
+.pacts button{flex:1 1 0;min-width:0;min-height:38px;height:38px;padding:0 8px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.pacts button svg{width:16px;height:16px;flex:none}
+.pacts button.armed{background:var(--rec);color:#fff;border-color:var(--rec)}
+/* landscape: the song panel is wider, with the parts (two columns) next to the timeline */
+@media (min-width:640px) and (max-height:560px){
+  #songSheet{bottom:0;max-height:calc(100dvh - 8px - var(--st));padding-bottom:calc(10px + var(--sb));z-index:13}
+  #songSheet .grab{margin:4px auto 4px} #songSheet .songsec h3 small{display:none}
+  #songSheet{width:min(880px,calc(100% - 24px));display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);column-gap:18px;align-content:start}
+  #songSheet .grab,#songSheet .sheethead{grid-column:1 / -1}
+  #songSheet .sheethead{margin-bottom:4px}
+  #songSheet .songsec+.songsec{margin-top:6px}
+  .prow input{height:30px} .prow .pl{width:28px;height:28px}
+}
+.tline{display:flex;flex-wrap:wrap;gap:4px;min-height:42px;background:var(--screen);border-radius:12px;padding:6px}
+.tline button{width:34px;height:30px;min-height:32px;padding:0;border-radius:7px;background:var(--screen2);color:var(--screen-ink);font-family:var(--mono);font-weight:600;border:none;box-shadow:none}
+.tline button::before{display:none}
+.tline button.sel{background:var(--acc);color:#fff}
+.tline .empty{color:var(--screen-dim);font-family:var(--mono);font-size:12px;align-self:center;padding:0 6px}
+.tlkeys{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.tladd{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:5px}
+.tlsel{display:flex;gap:6px} .tlsel button{flex:1}
+.tlkeys button{min-height:36px;height:36px;padding:0 6px;font-size:12px;text-transform:none;font-family:var(--mono)}
+.pacts button{text-transform:none}
+/* capture mode: the song timeline (one block per loop), auto, and the countdown to the next part */
+.capsong{display:flex;gap:8px;align-items:center;min-width:0}
+.capsong.hidden{display:none}
+.ctl{flex:1;min-width:0;display:flex;gap:3px}
+.ctl button{flex:1 1 0;min-width:0;max-width:64px;height:34px;min-height:34px;padding:0;border-radius:8px;background:var(--screen);color:var(--screen-dim);font-family:var(--mono);font-size:12px;font-weight:600;
+  position:relative;overflow:hidden;border:none;box-shadow:none}
+.ctl button::before{display:none}
+.ctl button.same{color:var(--screen-ink)}
+.ctl button.now{color:#fff;box-shadow:inset 0 0 0 2px var(--acc)}
+.ctl button i{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--acc)}
+.ctl button.queued{color:var(--acc);box-shadow:inset 0 0 0 2px var(--acc);animation:qblink 1s steps(2) infinite}
+@keyframes qblink{50%{box-shadow:inset 0 0 0 2px transparent}}
+.cauto{height:34px;min-height:34px;padding:0 12px;border-radius:8px;font-size:12px;flex:none}
+.capnext{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;display:flex;gap:12px;align-items:center;background:var(--screen);color:var(--screen-ink);
+  border-radius:14px;padding:10px 18px 10px 14px;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.35);white-space:nowrap}
+.capnext.hidden{display:none}
+.capnext b{font-family:var(--mono);font-size:34px;font-weight:500;color:var(--acc);min-width:24px;text-align:center;line-height:1}
+.capnext span{font-family:var(--mono);font-size:13px}
+@keyframes partin{from{transform:translateX(40px);opacity:.15}to{transform:none;opacity:1}}
+.cgrid.slide{animation:partin .32s ease-out}
 /* capture mode: the layers as touch pads */
 .capmode{position:fixed;left:0;right:0;top:0;bottom:var(--tbarh);z-index:11;background:var(--bg);display:flex;flex-direction:column;gap:10px;
   padding:calc(10px + var(--st)) max(12px,calc(var(--sr) + 8px)) 10px max(12px,calc(var(--sl) + 8px))}
@@ -564,7 +639,9 @@ body.projopen .pbar{display:none}
   .caphead{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:2px}
   .caphead h2{grid-column:1;grid-row:1} .caphead .hint{grid-column:1;grid-row:2;white-space:normal}
   .caphead #capClose{grid-column:2;grid-row:1 / span 2}
+  .caphead .capsong{grid-column:1 / span 2;grid-row:3;margin-top:6px}
 }
+@media (min-width:640px){ .caphead h2{white-space:nowrap} .caphead .hint{flex:none} .caphead .capsong{flex:1 1 0} }
 .cgrid{flex:1;min-height:0;display:grid;gap:10px}
 .ctile{position:relative;border-radius:14px;background:var(--panel);box-shadow:inset 0 0 0 2px var(--lc);padding:10px;display:flex;flex-direction:column;gap:8px;
   overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:crosshair;min-height:0;transition:opacity .15s}
@@ -1060,6 +1137,8 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
   <div class="alert hidden" id="alert" role="status"><span class="dot live"></span><span id="alertMsg"></span><button id="alertBtn" class="hidden"></button></div>
   <main class="main">
     <section class="layerpane">
+      <!-- the parts of the song: tap one to work on it; tap the one you are on (or song) for names, copies and the timeline -->
+      <div class="partbar" id="partBar"></div>
       <div class="layers" id="layers"></div>
     </section>
 
@@ -1105,7 +1184,10 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 </div>
 
 <section class="capmode hidden" id="capMode" aria-label="Capture mode">
-  <div class="caphead"><h2>capture mode</h2><span class="hint">tap: on/off · hold and drag: effect</span><button class="icon" id="capClose" aria-label="Close capture mode"></button></div>
+  <div class="caphead"><h2>capture mode</h2><span class="hint">tap: on/off · hold and drag: effect</span>
+    <div class="capsong hidden" id="capSong"><div class="ctl" id="capTl" role="group" aria-label="Song timeline: tap a part to go there after this loop"></div><button class="cauto" id="capAuto" aria-pressed="true">auto</button></div>
+    <button class="icon" id="capClose" aria-label="Close capture mode"></button></div>
+  <div class="capnext hidden" id="capNext" aria-live="polite"><b id="capNextN"></b><span id="capNextL"></span></div>
   <div class="cgrid" id="cgrid"></div>
   <div class="caprec" id="capRec">
     <button class="cbtn" id="capPlay" aria-label="Play / stop (space)"><svg viewBox="0 0 24 24" id="capPlayIcon"><path d="M7 4l13 8-13 8z"/></svg></button>
@@ -1161,6 +1243,15 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 </section>
 
 <!-- new layer: pick an instrument -->
+<!-- the song: its parts (name, copy, remove) and the timeline capture mode follows -->
+<section class="sheet tall" id="songSheet" aria-label="Song">
+  <div class="grab"></div>
+  <div class="row sheethead"><h2 style="margin:0">song</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
+  <div class="songsec"><h3>parts <small>each has its own notes and its own layers on or off</small></h3><div class="partlist" id="partList"></div></div>
+  <div class="songsec"><h3>timeline <small>capture mode plays it from left to right</small></h3>
+    <div class="tline" id="tline"></div>
+    <div class="tlkeys" id="tlKeys"></div></div>
+</section>
 <section class="sheet" id="newSheet" aria-label="New layer">
   <div class="grab"></div>
   <div class="row sheethead"><h2 style="margin:0">New layer · pick a sound</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
@@ -1550,7 +1641,7 @@ async function startTransport(withCountIn){
   if(ctx.state!=='running'){ S.starting=true; try{ await ctx.resume(); }catch(e){} await new Promise(r=>setTimeout(r,150)); S.starting=false; if(S.playing) return; }
   console.log(`[diag] start: state ${ctx.state} t ${ctx.currentTime.toFixed(3)} base ${(ctx.baseLatency||0).toFixed(3)} out ${(ctx.outputLatency||0).toFixed(3)}`);
   ctx.resume();
-  t0=ctx.currentTime+0.1; b0 = withCountIn ? -4 : -earlyLead(); schedBeat=b0; S.cin=!!withCountIn;
+  t0=ctx.currentTime+0.1; b0 = withCountIn ? -4 : -earlyLead(); schedBeat=b0; S.cin=!!withCountIn; SONG.doneAt=null;
   S.playing=true; tick(); renderTransport();
 }
 function stopTransport(){
@@ -1595,7 +1686,9 @@ function tick(){
   diagTick();
   const until = beatAt(ctx.currentTime + 0.2);
   if(until<=schedBeat) return;
-  scheduleRange(schedBeat, until);
+  const B=songBoundary(schedBeat, until);   // capture mode moves to the next part on the 1 after the loop
+  if(B!=null){ scheduleRange(schedBeat, B); songAdvance(B); scheduleRange(B, until); }
+  else scheduleRange(schedBeat, until);
   schedBeat = until;
 }
 setInterval(tick, 25);
@@ -2023,10 +2116,14 @@ let saveT;
 function sessionData(){
   return { v:1,
     S:{bpm:S.bpm,bars:S.bars,metro:S.metro,countIn:S.countIn,sel:S.sel,followClock:S.followClock,sendTempo:S.sendTempo,hcTransport:S.hcTransport,input:S.input,recOffset:S.recOffset,revSize:S.revSize,revLevel:S.revLevel,dlyDiv:S.dlyDiv,dlyFb:S.dlyFb,drive:S.drive,volume:S.volume,tab:S.tab},
-    layers: layers.map(Ly=>Object.fromEntries(LAYER_KEYS.map(k=>[k,Ly[k]]))) };
+    layers: layers.map(Ly=>Object.fromEntries(LAYER_KEYS.map(k=>[k,Ly[k]]))), song: songData() };
 }
 /* history: what counts as a change for undo (not which layer or tab you look at) */
-function histData(d){ const S2={...d.S}; delete S2.sel; delete S2.tab; delete S2.metro; delete S2.countIn; return JSON.stringify({S:S2, layers:d.layers}); }
+/* notes and on/off live per part in the song, so switching parts is not a change */
+function histData(d){ const S2={...d.S}; delete S2.sel; delete S2.tab; delete S2.metro; delete S2.countIn;
+  const L=d.layers.map(l=>{ const c={...l}; delete c.events; delete c.mute; return c; });
+  const sg = d.song ? {parts:d.song.parts, order:d.song.order} : null;
+  return JSON.stringify({S:S2, layers:L, song:sg}); }
 const HIST={undo:[],redo:[],last:null,applying:false};
 function commitHistory(d){
   const snap=histData(d);
@@ -2049,10 +2146,17 @@ function describeChange(aJ,bJ){
   if(a.S.bars!==b.S.bars) return 'loop length';
   const na=a.layers.filter(l=>l.shown).length, nb=b.layers.filter(l=>l.shown).length;
   if(na!==nb) return nb>na ? 'layer added' : 'layer removed';
+  const pa=a.song?.parts||[], pb=b.song?.parts||[];
+  if(pa.length!==pb.length) return pb.length>pa.length ? 'part added' : 'part removed';
+  if(JSON.stringify(a.song?.order)!==JSON.stringify(b.song?.order)) return 'song order';
+  if(pa.some((p,k)=>p.name!==pb[k].name)) return 'part name';
   for(let i=0;i<a.layers.length;i++){
-    const x=a.layers[i], y=b.layers[i]; if(JSON.stringify(x)===JSON.stringify(y)) continue;
+    const x=a.layers[i], y=b.layers[i];
+    const ex=JSON.stringify(pa.map(p=>p.ev[i])), ey=JSON.stringify(pb.map(p=>p.ev[i])), mx=JSON.stringify(pa.map(p=>p.mute[i])), my=JSON.stringify(pb.map(p=>p.mute[i]));
+    if(JSON.stringify(x)===JSON.stringify(y) && ex===ey && mx===my) continue;
     if(x.shown!==y.shown) return `layer ${i+1} ${y.shown?'added':'removed'}`;
-    if(JSON.stringify(x.events)!==JSON.stringify(y.events)) return `notes of layer ${i+1}`;
+    if(ex!==ey) return `notes of layer ${i+1}`;
+    if(mx!==my) return `layer ${i+1} on/off`;
     if(x.inst!==y.inst) return `instrument of layer ${i+1}`;
     return `layer ${i+1} settings`;
   }
@@ -2077,7 +2181,9 @@ function applySnapshot(json){
     if(Ly.inst!=='custom' && (Ly.inst!==before || !Ly.buffer)) setInstrument(Ly, Ly.inst, true);
     applyLayer(Ly);
   });
+  if(d.song) setSong({...d.song, cur:Math.min(SONG.cur, d.song.parts.length-1), follow:SONG.follow}, false);
   if(!layers[S.sel].shown){ const n=layers.findIndex(l=>l.shown); if(n>=0) S.sel=n; }
+  renderParts(); renderSongSheet(); if(CAP.open) renderCaptureMode();
   master.gain.setTargetAtTime(S.volume,ctx.currentTime,0.02); revOut.gain.setTargetAtTime(S.revLevel,ctx.currentTime,0.02);
   dlyFb.gain.setTargetAtTime(S.dlyFb,ctx.currentTime,0.02); setDrive(S.drive); buildIR(); updateDelayTime();
   if(S.playing){ const now=ctx.currentTime; b0=beatAt(now); t0=now; }
@@ -2100,6 +2206,67 @@ function redo(){
 }
 function renderUndo(){ const b=$('undoBtn'); if(b) b.disabled=!HIST.undo.length && !saveT; }
 function load(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); }catch(e){ return null; } }
+
+/* ============ song: parts and a timeline ============
+   A part has its own notes per layer and its own set of layers that play (on/off); instruments and mix
+   are shared. The layers always hold the part you are on; SONG keeps the others. The timeline is the
+   order the parts play in, and capture mode follows it, switching on the 1 after the loop ends. */
+var SONG={ parts:[{name:'',ev:[],mute:[]}], cur:0, order:[0], follow:true, pos:-1, jump:null, doneAt:null };
+const PART_L = k => String.fromCharCode(65+k);
+const partName = k => SONG.parts[k].name ? `${PART_L(k)} · ${SONG.parts[k].name}` : `part ${PART_L(k)}`;
+const blankPart = () => ({ name:'', ev:Array.from({length:8},()=>[]), mute:Array(8).fill(false) });
+function syncPart(){ const p=SONG.parts[SONG.cur]; if(!p || !layers.length) return; layers.forEach((Ly,i)=>{ p.ev[i]=Ly.events; p.mute[i]=!!Ly.mute; }); }
+function showPart(k){   // put part k into the layers (without saving the one you leave: see loadPart)
+  SONG.cur=k; const p=SONG.parts[k];
+  layers.forEach((Ly,i)=>{ Ly.events=p.ev[i]||(p.ev[i]=[]); Ly.mute=!!p.mute[i]; ensureChords(Ly); });
+  layers.forEach(applyLayer);
+}
+function loadPart(k, quiet){
+  if(!SONG.parts[k] || k===SONG.cur) return;
+  syncPart(); showPart(k);
+  if(!quiet){ renderParts(); renderLayers(); renderDetail(); if(CAP.open) renderCaptureMode(); save(); }
+}
+function songData(){ syncPart();
+  return { parts:SONG.parts.map(p=>({ name:p.name, ev:Array.from({length:8},(_,i)=>p.ev[i]||[]), mute:Array.from({length:8},(_,i)=>!!p.mute[i]) })), cur:SONG.cur, order:SONG.order.slice(), follow:SONG.follow }; }
+/* from a saved session (layersHoldCur: the layers already carry the current part) or an undo snapshot */
+function setSong(d, layersHoldCur){
+  if(d && d.parts && d.parts.length){
+    SONG.parts=d.parts.map(p=>({ name:p.name||'', ev:Array.from({length:8},(_,i)=>JSON.parse(JSON.stringify((p.ev&&p.ev[i])||[]))), mute:Array.from({length:8},(_,i)=>!!(p.mute&&p.mute[i])) }));
+    SONG.cur=clamp(d.cur|0,0,SONG.parts.length-1);
+    SONG.order=(d.order||[]).filter(k=>k>=0 && k<SONG.parts.length); if(!SONG.order.length) SONG.order=[SONG.cur];
+    SONG.follow=d.follow!==false;
+  } else { SONG.parts=[blankPart()]; SONG.cur=0; SONG.order=[0]; SONG.follow=true; }
+  SONG.parts.forEach(p=>p.ev.forEach(a=>a.forEach(e=>{ if(!e.id) e.id=evId++; evId=Math.max(evId,e.id+1); if(e.chord!=null) chordSeq=Math.max(chordSeq,e.chord+1); })));
+  SONG.pos=SONG.order.indexOf(SONG.cur); SONG.jump=null; SONG.doneAt=null;
+  if(layersHoldCur) syncPart(); else showPart(SONG.cur);
+}
+/* a layer that is new (or a copy) starts empty and on in the other parts */
+function freshInParts(i){ SONG.parts.forEach((p,k)=>{ if(k!==SONG.cur){ p.ev[i]=[]; p.mute[i]=false; } }); }
+function addPart(){
+  if(SONG.parts.length>=8){ toast('8 parts is the maximum'); return; }
+  flushSave(); syncPart(); SONG.parts.push(blankPart()); const k=SONG.parts.length-1; SONG.order.push(k);
+  loadPart(k,true); renderParts(); renderLayers(); renderDetail(); renderSongSheet(); writeSave();
+  toast(`${partName(k)} is new and empty: record into it, or copy a part in the song panel`);
+}
+function dupPart(k){
+  if(SONG.parts.length>=8){ toast('8 parts is the maximum'); return; }
+  flushSave(); syncPart(); const src=SONG.parts[k], ids=new Map();
+  const p={ name: src.name ? src.name+' 2' : '', mute:src.mute.slice(),
+    ev: src.ev.map(a=>(a||[]).map(e=>{ if(e.chord!=null && !ids.has(e.chord)) ids.set(e.chord,chordSeq++); return {...e, id:evId++, chord: e.chord!=null ? ids.get(e.chord) : e.chord}; })) };
+  SONG.parts.push(p); const n=SONG.parts.length-1; SONG.order.push(n);
+  loadPart(n,true); renderParts(); renderLayers(); renderDetail(); renderSongSheet(); writeSave();
+  toast(`${partName(n)} is a copy of ${PART_L(k)}`, 'undo', undo);
+}
+function deletePart(k){
+  if(SONG.parts.length<=1){ toast('a song needs one part'); return; }
+  flushSave(); syncPart();
+  SONG.parts.splice(k,1);
+  SONG.order=SONG.order.filter(x=>x!==k).map(x=>x>k?x-1:x); if(!SONG.order.length) SONG.order=[0];
+  const cur = SONG.cur===k ? Math.max(0,k-1) : SONG.cur>k ? SONG.cur-1 : SONG.cur;
+  showPart(cur); SONG.pos=SONG.order.indexOf(cur); SONG.jump=null;
+  renderParts(); renderLayers(); renderDetail(); renderSongSheet(); writeSave();
+  toast(`part ${PART_L(k)} removed`, 'undo', undo);
+}
 
 /* ============ projects ============
    Every session is a project and saves itself. Projects live in IndexedDB, with the audio of
@@ -2161,6 +2328,7 @@ function applySession(d, sounds){
     applyLayer(Ly);
   });
   layers.forEach(ensureChords);
+  setSong(d.song, true); renderParts();
   if(!layers.some(l=>l.shown)) layers[0].shown=true;
   if(!layers[S.sel] || !layers[S.sel].shown) S.sel=layers.findIndex(l=>l.shown);
   master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime();
@@ -2335,6 +2503,7 @@ const ICONS={
   faders:'<path d="M6 4v16M12 4v16M18 4v16"/><rect x="3.8" y="12.5" width="4.4" height="3.6" rx="1" fill="currentColor" stroke="none"/><rect x="9.8" y="6" width="4.4" height="3.6" rx="1" fill="currentColor" stroke="none"/><rect x="15.8" y="10" width="4.4" height="3.6" rx="1" fill="currentColor" stroke="none"/>',
   theme:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>',
   close:'<path d="M6 6l12 12M18 6 6 18"/>',
+  copy:'<rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/>',
   keys:'<rect x="3" y="6" width="18" height="12" rx="1.5"/><path d="M7 6v7h2V6M11 6v7h2V6M15 6v7h2V6" fill="currentColor" stroke="none"/><path d="M8 13v5M12 13v5M16 13v5"/>',
   piano:'<path d="M4 20V9a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5 3 3 0 0 0 3 3h1v8z"/><path d="M4 16h16"/>',
   pad:'<path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 11 3.5 3.5 0 0 0 7 18z"/>',
@@ -2413,7 +2582,7 @@ function addLayer(key){
   Object.assign(Ly, newLayerData(idx), { inst:key, shown:true });
   setInstrument(Ly, key); Ly.q = key==='drums' ? '1/16' : 'off';
   Ly.rev = key==='pad'||key==='strings' ? 0.35 : 0.18;
-  applyLayer(Ly);
+  applyLayer(Ly); freshInParts(idx);
   closeSheets();
   selectLayer(idx); renderLayers(); save();
   toast(`Layer ${idx+1} · ${instName(Ly)} is ready — tap ● to record into it`);
@@ -2424,7 +2593,10 @@ function removeLayer(){
   flushSave();
   if(S.rec) setRec(false);
   if(Ly.inst==='custom' && Ly.buffer) keepSound(Ly);
-  // the layers after it move up one number: layer 2 becomes layer 1, and so on
+  // the layers after it move up one number: layer 2 becomes layer 1, and so on (in every part)
+  syncPart();
+  const srcIdx=layers.map((l,k)=>k).filter(k=>k>i && layers[k].shown);
+  SONG.parts.forEach(p=>{ const ev=p.ev.slice(), mu=p.mute.slice(); for(let j=i;j<8;j++){ const k=srcIdx[j-i]; p.ev[j]= k!=null ? (ev[k]||[]) : []; p.mute[j]= k!=null ? !!mu[k] : false; } });
   const rest=layers.slice(i+1).filter(l=>l.shown);
   const moved=rest.map(src=>({ data:JSON.parse(JSON.stringify(Object.fromEntries(LAYER_KEYS.map(k=>[k,src[k]])))), buffer:src.buffer, customName:src.customName, mode:src.mode }));
   for(let j=i;j<layers.length;j++){
@@ -2435,6 +2607,7 @@ function removeLayer(){
     else { Object.assign(d, newLayerData(j)); setInstrument(d, d.inst); }
     applyFx(d); applyLayer(d);
   }
+  syncPart();
   S.sel = layers[i].shown ? i : Math.max(0, layers.map(l=>l.shown).lastIndexOf(true));
   closeSheets(); renderLayers(); renderDetail(); writeSave(); toast(`layer ${i+1} removed`, 'undo', undo);
 }
@@ -2447,7 +2620,7 @@ function duplicateLayer(){
   Object.assign(Ly, JSON.parse(JSON.stringify(Object.fromEntries(LAYER_KEYS.map(k=>[k,src[k]])))), { shown:true, mute:false, solo:false });
   Ly.events=Ly.events.map(e=>{ if(!ids.has(e.chord)) ids.set(e.chord,chordSeq++); return {...e, id:evId++, chord:ids.get(e.chord)}; });
   if(src.inst==='custom'){ Ly.buffer=src.buffer; Ly.customName=src.customName; Ly.mode=src.mode; Ly.slices=null; storeSound(idx); } else setInstrument(Ly, Ly.inst, true);
-  applyLayer(Ly); closeSheets(); selectLayer(idx); renderLayers(); writeSave(); toast(`layer ${idx+1} is a copy of layer ${layers.indexOf(src)+1}`, 'undo', undo);
+  applyLayer(Ly); freshInParts(idx); closeSheets(); selectLayer(idx); renderLayers(); writeSave(); toast(`layer ${idx+1} is a copy of layer ${layers.indexOf(src)+1}`, 'undo', undo);
 }
 /* long-press menu */
 function openLayerMenu(i){
@@ -2558,6 +2731,7 @@ function openSheet(id){
   if(id==='layerSheet' && isShortWide()){ openLayerFull(); return; }
   if(id==='layerSheet' && isWide()) return;   // docked next to the layers
   if(id==='layerSheet') fitLayerSheet();
+  if(id==='songSheet'){ tlSel=null; renderSongSheet(); }
   document.querySelectorAll('.sheet.open').forEach(x=>{ if(x.id!==id) x.classList.remove('open'); });
   $(id).classList.add('open'); $('backdrop').classList.add('show'); document.body.classList.add('sheetopen');
 }
@@ -2890,7 +3064,7 @@ function frame(){
   } else if(S.playing){ CAP.open ? drawCaptureRolls() : drawAll(); }
   if(S.playing) drawPos();
   if(PRJ.pend.size) document.querySelectorAll('.pundo').forEach(b=>{ const z=PRJ.pend.get(b.dataset.undo); if(z) b.firstElementChild.style.transform=`scaleX(${Math.max(0,z.until-Date.now())/UNDO_MS})`; });   // restore badges drain
-  if(CAP.open) drawCapRec();
+  if(CAP.open){ drawCapRec(); capSongFrame(); }
   else if(ctx && layerSheetShown()) drawPreview();
   requestAnimationFrame(frame);
 }
@@ -2928,6 +3102,101 @@ function fxPop(i, k){
   document.body.append(bg, pn);
 }
 function fxPopClose(){ document.querySelectorAll('.fxbg,.fxpop').forEach(x=>x.remove()); renderLayers(); }
+/* ============ song: the parts row, the song panel, and following the timeline in capture mode ============ */
+const escH=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const SONG_IC='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h5M10 7h11M3 12h9M14 12h7M3 17h3M8 17h13"/></svg>';
+function renderParts(){
+  const el=$('partBar'); if(!el) return; el.classList.toggle('many', SONG.parts.length>=4);
+  el.innerHTML = SONG.parts.map((p,k)=>`<button class="${k===SONG.cur?'on':''}" data-part="${k}" aria-label="${partName(k)}${k===SONG.cur?' (you are here: tap for the song panel)':''}"><b>${PART_L(k)}</b>${p.name?`<span>${escH(p.name)}</span>`:''}</button>`).join('')
+    + (SONG.parts.length<8 ? `<button class="padd" data-part="add" aria-label="New part">${SONG.parts.length>=4?'+':'+ part'}</button>` : '')
+    + `<button class="psong" data-part="song" aria-label="Song: parts and timeline">${SONG_IC}<span>${SONG.order.length}</span></button>`;
+}
+$('partBar').onclick=e=>{ const b=e.target.closest('[data-part]'); if(!b) return; const v=b.dataset.part;
+  if(v==='add'){ addPart(); return; }
+  if(v==='song' || +v===SONG.cur){ openSheet('songSheet'); return; }
+  loadPart(+v); toast(`${partName(+v)}: its own notes and layers`); };
+let tlSel=null;
+function renderSongSheet(){
+  if(!$('partList')) return;
+  if(tlSel!=null && tlSel>=SONG.order.length) tlSel=null;
+  // two columns of parts (letter: go there, and its name), then what you can do with the part you are on
+  const c=SONG.cur;
+  $('partList').innerHTML = '<div class="pgrid">' + SONG.parts.map((p,k)=>`<div class="prow ${k===c?'on':''}">
+      <button class="pl" data-pgo="${k}" aria-label="Go to part ${PART_L(k)}">${PART_L(k)}</button>
+      <input data-pn="${k}" value="${escH(p.name)}" placeholder="name" maxlength="14" aria-label="Name of part ${PART_L(k)}"></div>`).join('') + '</div>'
+    + `<div class="pacts"><button data-padd ${SONG.parts.length>=8?'disabled':''}>+ new part</button><button data-pdup="${c}" ${SONG.parts.length>=8?'disabled':''}>${ic('copy','')}copy ${PART_L(c)}</button><button class="danger" data-pdel="${c}" ${SONG.parts.length<=1?'disabled':''}>${ic('trash','')}<span>remove ${PART_L(c)}</span></button></div>`;
+  $('tline').innerHTML = SONG.order.length ? SONG.order.map((k,n)=>`<button data-tl="${n}" class="${n===tlSel?'sel':''}" aria-label="${n+1}: ${partName(k)}">${PART_L(k)}</button>`).join('') : '<span class="empty">empty</span>';
+  // one row of keys that add a part (after the selected block), and with a block selected: move or remove it
+  const add = SONG.parts.map((p,k)=>`<button data-tadd="${k}" aria-label="Add part ${PART_L(k)} to the timeline" ${SONG.order.length>=24?'disabled':''}>+${PART_L(k)}</button>`).join('');
+  $('tlKeys').innerHTML = `<div class="tladd" style="--n:${Math.max(4,SONG.parts.length)}">${add}</div>`
+    + (tlSel!=null ? `<div class="tlsel"><button data-tmv="-1" aria-label="Move earlier" ${tlSel===0?'disabled':''}>◀ earlier</button><button data-tmv="1" aria-label="Move later" ${tlSel===SONG.order.length-1?'disabled':''}>later ▶</button><button data-trm class="danger" ${SONG.order.length<=1?'disabled':''}>remove</button></div>` : '');
+}
+$('songSheet').addEventListener('click',e=>{
+  const t=e.target.closest('button'); if(!t || t.disabled) return; const d=t.dataset;
+  if(d.pgo!=null){ loadPart(+d.pgo); renderSongSheet(); return; }
+  if(d.pdup!=null){ dupPart(+d.pdup); return; }
+  if(d.padd!=null){ addPart(); return; }
+  if(d.pdel!=null){
+    const lbl=t.querySelector('span'); if(!t.classList.contains('armed')){ t.classList.add('armed'); lbl.textContent='tap again'; setTimeout(()=>{ if(t.isConnected){ t.classList.remove('armed'); lbl.textContent=`remove ${PART_L(+d.pdel)}`; } },3000); return; }
+    deletePart(+d.pdel); return; }
+  if(d.tl!=null){ tlSel = tlSel===+d.tl ? null : +d.tl; renderSongSheet(); return; }
+  if(d.tadd!=null){ const at = tlSel!=null ? tlSel+1 : SONG.order.length; SONG.order.splice(at,0,+d.tadd); if(tlSel!=null) tlSel=at; songChanged(); return; }
+  if(d.tmv!=null){ const j=tlSel+(+d.tmv); [SONG.order[tlSel],SONG.order[j]]=[SONG.order[j],SONG.order[tlSel]]; tlSel=j; songChanged(); return; }
+  if(d.trm!=null){ SONG.order.splice(tlSel,1); tlSel=null; songChanged(); return; }
+});
+$('songSheet').addEventListener('change',e=>{ const i=e.target.closest('[data-pn]'); if(!i) return;
+  SONG.parts[+i.dataset.pn].name=i.value.trim().slice(0,14); renderParts(); save(); });
+function songChanged(){ SONG.pos=SONG.order.indexOf(SONG.cur); SONG.jump=null; renderSongSheet(); renderParts(); save(); }
+
+/* following the timeline: one block is one pass of the loop */
+const songNext = () => SONG.jump!=null ? SONG.jump : SONG.follow ? (SONG.pos+1)%SONG.order.length : SONG.pos;
+const songActive = () => CAP.open && S.playing && (SONG.jump!=null || (SONG.follow && (SONG.order.length>1 || SONG.order[0]!==SONG.cur)));
+function songBoundary(a, b){
+  if(!songActive()) return null;
+  const L=loopLen(), B=(Math.floor(a/L)+1)*L;
+  return B>0 && B<=b && SONG.doneAt!==B ? B : null;
+}
+function songAdvance(B){
+  SONG.prevCur=SONG.cur;   // what you hear until the 1 (the scheduler runs a little ahead)
+  SONG.doneAt=B; const np=songNext(), k=SONG.order[np], changed=k!==SONG.cur;
+  SONG.jump=null; SONG.pos=np;
+  const at=timeAt(B);
+  if(changed){   // the notes change now (for the scheduler), the layers turn on or off exactly on the 1
+    syncPart(); SONG.cur=k; const p=SONG.parts[k];
+    layers.forEach((Ly,i)=>{ Ly.events=p.ev[i]||(p.ev[i]=[]); Ly.mute=!!p.mute[i]; ensureChords(Ly);
+      Ly.gain.gain.setTargetAtTime(audible(Ly)?Ly.vol*Ly.vol:0, at, 0.01); });
+  }
+  setTimeout(()=>{
+    if(!CAP.open) return;
+    if(changed){ renderCaptureMode(); const g=$('cgrid'); g.classList.remove('slide'); void g.offsetWidth; g.classList.add('slide'); renderParts(); save(); }
+    else renderCapSong();
+  }, Math.max(0,(at-ctx.currentTime)*1000));
+}
+function renderCapSong(){
+  const show = SONG.parts.length>1 || SONG.order.length>1;
+  $('capSong').classList.toggle('hidden',!show); if(!show){ $('capNext').classList.add('hidden'); return; }
+  $('capTl').innerHTML = SONG.order.map((k,n)=>`<button data-tp="${n}" class="${n===SONG.pos?'now':''} ${k===SONG.cur?'same':''} ${SONG.jump===n?'queued':''}" aria-label="${partName(k)}${n===SONG.pos?', playing':''}">${PART_L(k)}<i></i></button>`).join('');
+  $('capAuto').classList.toggle('on',SONG.follow); $('capAuto').setAttribute('aria-pressed',SONG.follow);
+}
+$('capTl').onclick=e=>{ const b=e.target.closest('[data-tp]'); if(!b) return; const n=+b.dataset.tp;
+  if(S.playing){ SONG.jump = SONG.jump===n ? null : n; renderCapSong(); return; }   // playing: go there after this loop
+  SONG.pos=n; const k=SONG.order[n]; if(k!==SONG.cur){ loadPart(k); const g=$('cgrid'); g.classList.remove('slide'); void g.offsetWidth; g.classList.add('slide'); } else renderCapSong(); };
+$('capAuto').onclick=()=>{ SONG.follow=!SONG.follow; renderCapSong(); save(); toast(SONG.follow?'auto: the timeline plays from part to part':'auto off: this part loops; tap a part to go there'); };
+function capSongFrame(){
+  const nx=$('capNext');
+  if(!S.playing || !songActive()){ nx.classList.add('hidden'); const i=$('capTl').querySelector('.now i'); if(i && !S.playing) i.style.width='0'; return; }
+  const L=loopLen(), b=beatAt(ctx.currentTime);
+  const i=$('capTl').querySelector('.now i'); if(i) i.style.width = b<0 ? '0' : (mod(b,L)/L*100)+'%';
+  const ahead = SONG.doneAt!=null && b<SONG.doneAt;   // the switch is scheduled, but not heard yet
+  const k = ahead ? SONG.order[SONG.pos] : SONG.order[songNext()], from = ahead ? SONG.prevCur : SONG.cur;
+  const left=(Math.floor(Math.max(b,0)/L)+1)*L-b;
+  if(b>=0 && k!==from && left<=4){
+    const n=String(Math.ceil(left)); if($('capNextN').textContent!==n) $('capNextN').textContent=n;
+    const l=`next: ${partName(k)}`; if($('capNextL').textContent!==l) $('capNextL').textContent=l;
+    nx.classList.remove('hidden');
+  } else nx.classList.add('hidden');
+}
+
 /* ============ capture mode ============
    Every layer becomes a touch pad. Tap: layer on/off. Hold and drag: the layer's effect
    (set per layer under Mix), up = more; it springs back when you let go. */
@@ -2997,7 +3266,7 @@ function gateOff(Ly){
 var CAP={open:false, touch:new Map()};   // var: applyFx asks it before this line has run
 function openCapture(){
   if(!ctx) return;
-  closeSheets(); if(S.rec) setRec(false); CAP.open=true; document.body.classList.add('cap'); $('capMode').classList.remove('hidden'); $('captureBtn').classList.add('on'); renderTransport();
+  closeSheets(); if(S.rec) setRec(false); SONG.pos=SONG.order.indexOf(SONG.cur); SONG.jump=null; SONG.doneAt=null; CAP.open=true; document.body.classList.add('cap'); $('capMode').classList.remove('hidden'); $('captureBtn').classList.add('on'); renderTransport();
   renderCaptureMode();
 }
 function closeCapture(){
@@ -3005,7 +3274,8 @@ function closeCapture(){
   if(bouncer) bouncer.stop();   // leaving capture mode saves a running output recording
   document.querySelector('.cfxmenu')?.remove();
   CAP.open=false; document.body.classList.remove('cap'); $('capMode').classList.add('hidden'); $('captureBtn').classList.remove('on');
-  renderLayers();
+  $('capNext').classList.add('hidden'); SONG.jump=null;
+  renderParts(); renderLayers(); renderDetail();
 }
 const capLayers = () => layers.map((Ly,i)=>[Ly,i]).filter(([Ly])=>Ly.shown);
 function renderCaptureMode(){
@@ -3022,6 +3292,7 @@ function renderCaptureMode(){
       <div class="cfx">${FX[fxOf(Ly)].how}</div>
       <i class="cdot"></i>
     </div>`).join('');
+  renderCapSong();
   requestAnimationFrame(drawCaptureRolls);
 }
 function drawCaptureRolls(){ capLayers().forEach(([Ly,i])=>{ const cv=$('croll'+i); if(cv) drawRoll(Ly,i,cv); }); }
@@ -3682,6 +3953,7 @@ async function startApp(){
   if(!layers.some(Ly=>Ly.shown)) layers[S.sel].shown=true;
   layers[S.sel].shown=true;
   layers.forEach(applyLayer); layers.forEach(ensureChords);
+  setSong(saved && saved.song, true); renderParts();
   if(saved){ master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime(); }
   $('metroChk').checked=S.metro; $('countChk').checked=S.countIn;
   $('overlay').classList.add('hidden');
