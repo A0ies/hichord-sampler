@@ -244,6 +244,8 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 .sheet.tall{max-height:calc(94dvh - var(--tbarh))}
 /* while a panel is open the screen behind it stays put */
 html:has(body.sheetopen),body.sheetopen{overflow:hidden;overscroll-behavior:none}
+/* no rubber-banding of the whole page: the app pulls out its own "+ new layer" key at the top */
+html,body{overscroll-behavior-y:none}
 .sheet.open{transform:none;visibility:visible}
 .grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:6px auto 10px}
 .sheethead{margin-bottom:12px}
@@ -1714,7 +1716,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.63';
+const PAGE_VERSION = '2026-11-12.64';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3011,11 +3013,21 @@ function ntTween(to){
   const step=now=>{ const k=Math.min(1,(now-t0)/220), ease=1-Math.pow(1-k,3); ntSet(from+(to-from)*ease); if(k<1) ntRaf=requestAnimationFrame(step); };
   ntRaf=requestAnimationFrame(step);
 }
-document.addEventListener('touchstart',e=>{ ntPull=null; if(e.touches.length!==1 || !e.target.closest('.layerpane') || ntScrollTop()>0) return;
-  cancelAnimationFrame(ntRaf); ntPull={y:e.touches[0].clientY, e0:ntE}; },{passive:true});
-document.addEventListener('touchmove',e=>{ if(!ntPull) return; const dy=e.touches[0].clientY-ntPull.y;
-  if(ntScrollTop()>0 && dy<0){ ntPull=null; return; }
-  ntSet(ntPull.e0 + dy/70); },{passive:true});
+// the pull is ours: once a downward drag at the top of the list starts growing the key, the page (or the list) must
+// not rubber-band along with it, or the key and the page move at once (iPhone portrait, where the page scrolls)
+document.addEventListener('touchstart',e=>{ ntPull=null; if(e.touches.length!==1 || !e.target.closest('.layerpane') || ntScrollTop()>0 || $('newTop').classList.contains('hidden')) return;
+  cancelAnimationFrame(ntRaf); ntPull={x:e.touches[0].clientX, y:e.touches[0].clientY, e0:ntE, on:false}; },{passive:true});
+document.addEventListener('touchmove',e=>{ const p=ntPull; if(!p) return; const t=e.touches[0], dy=t.clientY-p.y, dx=t.clientX-p.x;
+  if(!p.on){
+    if(Math.abs(dy)<6 && Math.abs(dx)<6) return;
+    // only a mostly vertical drag downwards (or back up while the key is out) is a pull; anything else scrolls as usual
+    if(Math.abs(dx)>Math.abs(dy) || ntScrollTop()>0 || (dy<0 && p.e0<=0)){ ntPull=null; return; }
+    p.on=true;
+  }
+  e.preventDefault();
+  ntSet(p.e0 + dy/70);
+  if(dy<0 && ntE<=0){ ntPull=null; }   // pushed back into text: from here the list scrolls again
+},{passive:false});
 const ntEnd=()=>{ if(!ntPull) return; ntPull=null; ntTween(ntE>0.45?1:0); };
 document.addEventListener('touchend',ntEnd,{passive:true}); document.addEventListener('touchcancel',ntEnd,{passive:true});
 // mouse wheel or trackpad: up at the top shows the key, scrolling down hides it again
