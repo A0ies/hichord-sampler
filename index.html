@@ -347,6 +347,27 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .layer .open{border-radius:7px}
 .layer .open svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
 .newlayer{border:1.5px dashed var(--line);box-shadow:none;background:transparent;text-transform:lowercase;border-radius:12px;color:var(--dim)}
+/* "+ new layer" on top: a spacer in the list holds the key's place; the key itself sits in a sticky strip of no height,
+   so it sticks to the top of the list and shrinks (height and border) into a line of text while you scroll down */
+.newtop{position:sticky;top:var(--ntt,0px);height:0;z-index:4}
+.newtop .ntbtn{position:absolute;left:0;right:0;top:0;height:var(--nth,56px);min-height:0;padding:0 14px;background:var(--bg);
+  border-color:color-mix(in srgb,var(--line) calc((1 - var(--ntp,0)) * 100%),transparent);display:flex;align-items:center;justify-content:center;
+  border-radius:calc(12px - var(--ntp,0) * 10px)}
+.newtop .ntbtn span{display:inline-block;transform:translateX(var(--ntx,0px));font-size:calc(14px - var(--ntp,0) * 2px);white-space:nowrap}
+.newtop .ntbtn::before{display:none}
+.ntspace{height:56px;margin-bottom:10px;flex:none}
+.newtop.hidden,.ntspace.hidden{display:none}
+body[data-studio=port] .ntspace{margin-bottom:8px}
+/* the new-layer sheet: your own sound from a file or the microphone */
+.inst.own{color:var(--ink)}
+.inst.own.micrec{background:var(--rec);color:#fff}
+.inst .micmeter{width:60%;height:4px;border-radius:2px;background:rgba(255,255,255,.35);overflow:hidden;display:none}
+.inst.micrec .micmeter{display:block}
+.inst .micmeter i{display:block;height:100%;width:0;background:#fff}
+/* the instrument page: back to default, bottom right */
+.params>.instdef{grid-column:1/-1;justify-content:flex-end;margin:0}
+.instdef button{min-height:36px;padding:0 12px;gap:6px;display:inline-flex;align-items:center;text-transform:lowercase}
+.instdef button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 /* instrument picker */
 .inst{border-radius:12px;text-transform:lowercase;font-size:12px;gap:8px;min-height:88px}
 .inst .ii{width:28px;height:28px}
@@ -815,6 +836,11 @@ body.projopen .pbar{display:none}
   /* instrument page: the instrument and your own sound on the first line, then every slider in one block of four columns */
   .layersheet.full #detail .ownsnd{grid-column:4;grid-row:1;align-self:end;justify-content:flex-end;margin:0;flex-wrap:nowrap;gap:8px}
   .layersheet.full #detail .ownsnd .sub{display:none}
+  /* instrument page: picker, own sound and back to default share the first line */
+  .layersheet.full #detail .instpick{grid-column:1/span 2}
+  .layersheet.full #detail .ownsnd{grid-column:3}
+  .layersheet.full #detail .params>.instdef{grid-column:4;grid-row:1;align-self:end}
+  .layersheet.full .instdef .long{display:none}
   .layersheet.full #detail .params>.p:has(>input[type=range]){margin-top:6px}
   /* every page fills the panel's height: rows spread out evenly, so the hierarchy reads clearly and switching
      between timing, instrument and mix keeps the same block */
@@ -864,7 +890,7 @@ body.projopen .pbar{display:none}
   #menuSheet .grab,#loopSheet .grab,#newSheet .grab{margin:6px auto 4px}
   #menuSheet .sheethead,#loopSheet .sheethead,#newSheet .sheethead{margin-bottom:8px}
   .menulist{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-  #newSheet .instgrid{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+  #newSheet .instgrid{grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
   #loopSheet{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;row-gap:12px;align-items:center}
   #loopSheet>.grab,#loopSheet>.sheethead{grid-column:1/-1}
   #loopSheet>.row:not(.sheethead){margin-top:0!important}
@@ -1220,6 +1246,8 @@ body.studio .dpage{display:flex;flex-direction:column;gap:10px;min-width:0;min-h
 body.studio .dpage .params{grid-template-columns:minmax(0,1fr)}
 body.studio .dhead{margin:0;padding:8px 0 7px;border-bottom:2px solid var(--acc);color:var(--ink);font-size:12px;letter-spacing:.08em;flex:none}
 body.studio:not([data-sfull=st]) #detail[data-tab=sound] .ownsnd .sub{display:none}
+/* back to default: in the last column of the sliders' last line (there is room next to resonance) */
+body.studio:not([data-sfull=st]) #detail[data-tab=sound] .params>.instdef{grid-column:-2/-1;align-self:end}
 body.studio:not([data-sfull=st]) #detail[data-tab=mix] .params>.wide,body.studio:not([data-sfull=st]) #detail[data-tab=mix] .params>.cfxp{grid-column:auto}   /* the keys say it: file and microphone */
 /* landscape, settings full screen: the row keeps its height (the editor stays put), so instrument gets the widest
    column with four sliders a row, and mix puts its sliders four in a row with capture fx next to plays on */
@@ -1367,6 +1395,10 @@ body.studio .tbar .pos b{font-size:26px}
     <section class="layerpane">
       <!-- the parts of the song: tap one to work on it; tap the one you are on (or song) for names, copies and the timeline -->
       <div class="partbar" id="partBar"></div>
+      <!-- "+ new layer" on top of the list: scroll down and the key shrinks into a small sticky line of text above the
+           first layer; scroll back up and it grows into the key again (the key at the bottom of the list stays too) -->
+      <div class="newtop" id="newTop"><button class="newlayer ntbtn" id="newTopBtn" aria-label="New layer"><span>+ new layer</span></button></div>
+      <div class="ntspace" id="ntSpace"></div>
       <div class="layers" id="layers"></div>
     </section>
 
@@ -1567,11 +1599,13 @@ body.studio .tbar .pos b{font-size:26px}
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<input type="file" id="fileIn" accept="audio/*" class="hidden">
+<!-- own sounds come from the Files app only: a list of audio file types (no audio/*, no camera or library) -->
+<input type="file" id="fileIn" accept=".wav,.mp3,.m4a,.aac,.aif,.aiff,.caf,.flac,.ogg,.opus" class="hidden">
+<input type="file" id="newFileIn" accept=".wav,.mp3,.m4a,.aac,.aif,.aiff,.caf,.flac,.ogg,.opus" class="hidden">
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.60';
+const PAGE_VERSION = '2026-11-12.61';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2270,27 +2304,38 @@ function testSound(){
 
 /* ============ own sounds: microphone or audio file as a layer's instrument ============ */
 let mic=null;
-async function toggleMic(){
+async function toggleMic(onBuf){
   if(mic){ mic.rec.stop(); return; }
   setAudioSessionType('play-and-record');
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
     const srcN=ctx.createMediaStreamSource(stream), an=ctx.createAnalyser(); an.fftSize=1024; srcN.connect(an);
     const rec=new MediaRecorder(stream), chunks=[]; rec.ondataavailable=e=>chunks.push(e.data);
-    mic={rec,Ly:selLayer(),started:performance.now()}; renderDetail();
+    mic={rec,Ly:selLayer(),started:performance.now(),onBuf}; renderDetail(); renderNewMic();
     rec.onstop=async()=>{
-      stream.getTracks().forEach(x=>x.stop()); srcN.disconnect(); const target=mic.Ly; mic=null; setAudioSessionType(playbackSession());
+      stream.getTracks().forEach(x=>x.stop()); srcN.disconnect(); const target=mic.Ly, done=mic.onBuf, cancel=mic.cancel; mic=null; renderNewMic(); setAudioSessionType(playbackSession());
       try{ const b=await ctx.decodeAudioData(await new Blob(chunks).arrayBuffer()); const tr=trimSilence(b);
-        if(!tr) toast('No sound was recorded'); else setCustom(target, tr, 'Mic '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})); }
+        if(cancel) {} else if(!tr) toast('No sound was recorded'); else if(done) done(tr); else setCustom(target, tr, sampleName()); }
       catch(e){ toast('Could not read the recording'); }
       renderDetail();
     };
     rec.start();
     const meter=()=>{ if(!mic) return; const a=new Float32Array(an.fftSize); an.getFloatTimeDomainData(a); let p=0; for(const x of a) p=Math.max(p,Math.abs(x));
-      const m=document.querySelector('#micMeter i'); if(m) m.style.width=Math.min(100,p*140)+'%';
+      document.querySelectorAll('#micMeter i,.micmeter i').forEach(m=>m.style.width=Math.min(100,p*140)+'%');
       if(performance.now()-mic.started>8000) mic.rec.stop(); else requestAnimationFrame(meter); };
     meter();
   }catch(e){ setAudioSessionType(playbackSession()); toast('No access to the microphone'); }
+}
+// a recording is called sample 1, sample 2, … (the next number free among the layers)
+function sampleName(){
+  const n=layers.map(Ly=>Ly.inst==='custom' ? +(((Ly.customName||'').match(/^sample (\d+)$/)||[])[1]||0) : 0);
+  return 'sample '+(Math.max(0,...n)+1);
+}
+const fileSoundName = f => f.name.replace(/\.[^.]+$/,'').slice(0,40);
+async function decodeFile(file){
+  let b=await ctx.decodeAudioData(await file.arrayBuffer()); const max=20*b.sampleRate;
+  if(b.length>max){ const c=ctx.createBuffer(b.numberOfChannels,max,b.sampleRate); for(let i=0;i<b.numberOfChannels;i++) c.copyToChannel(b.getChannelData(i).subarray(0,max),i); b=c; }
+  return b;
 }
 function trimSilence(b){
   const m=mono(b); let peak=0; for(const x of m) peak=Math.max(peak,Math.abs(x)); if(peak<0.003) return null;
@@ -2300,16 +2345,25 @@ function trimSilence(b){
 }
 async function loadFile(file){
   const Ly=selLayer();
-  try{ let b=await ctx.decodeAudioData(await file.arrayBuffer()); const max=20*b.sampleRate;
-    if(b.length>max){ const c=ctx.createBuffer(b.numberOfChannels,max,b.sampleRate); for(let i=0;i<b.numberOfChannels;i++) c.copyToChannel(b.getChannelData(i).subarray(0,max),i); b=c; }
-    setCustom(Ly, b, file.name.replace(/\.[^.]+$/,'')); }
+  try{ setCustom(Ly, await decodeFile(file), fileSoundName(file)); }
   catch(e){ toast('The browser cannot read this file'); }
 }
-function setCustom(Ly, buf, name){
+function setCustomSound(Ly, buf, name){
   Ly.inst='custom'; Ly.customName=name; Ly.buffer=normalize(buf); Ly.mode='melodic'; Ly.slices=null;
   const f=detectPitch(Ly.buffer); Ly.root = f ? Math.round(69+12*Math.log2(f/440)) : 60;
+}
+function setCustom(Ly, buf, name){
+  setCustomSound(Ly, buf, name);
   toast(`${name} now plays layer ${layers.indexOf(Ly)+1} (root ${noteName(Ly.root)})`);
   renderLayers(); renderDetail(); save(); storeSound(layers.indexOf(Ly));
+}
+// back to default: the selected instrument's own starting settings (not what the layer was before)
+const CUSTOM_ENV={a:0.005, r:0.3};
+function instDefaults(Ly){
+  const L=LIB[Ly.inst]||CUSTOM_ENV;
+  Object.assign(Ly,{semis:0, a:L.a, d:0.4, s:1, r:L.r, cutoff:1, reso:0.1});
+  applyLayer(Ly); renderLayers(); renderDetail(); save();
+  toast(`${instName(Ly)} is back to its default settings`);
 }
 function detectPitch(buf){
   const m=mono(buf), sr=buf.sampleRate, W=2048, s1=Math.min(m.length, Math.floor(sr*1.5));
@@ -2764,6 +2818,7 @@ const ICONS={
   drums:'<ellipse cx="12" cy="10" rx="8" ry="3"/><path d="M4 10v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M6 3l5 5M18 3l-5 5"/>',
   custom:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
   upload:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9.5 14.5 12 12l2.5 2.5"/>',
+  reset:'<path d="M4 4v5h5"/><path d="M5.6 15.5A7 7 0 1 0 6.7 7.3L4 9"/>',
   mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
   folder:'<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.2h7.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>',
 };
@@ -2791,6 +2846,7 @@ function renderLayers(){
   $('detailTitle').textContent = `Layer ${S.sel+1} · ${instName(selLayer())}`;
   renderPrevSolo();
   const nb=$('newLayerBtn'); if(nb) nb.onclick=()=>openSheet('newSheet');
+  const free=layers.some(Ly=>!Ly.shown); $('newTop').classList.toggle('hidden',!free); $('ntSpace').classList.toggle('hidden',!free); ntUpdate();
   fitLayerTail();
   renderTransport();
   drawAll();
@@ -2828,6 +2884,20 @@ function renderLayers(){
     setTimeout(()=>{ if(!s.clicked && s.target.isConnected) s.target.click(); if(t===s) t=null; }, 120); };
   document.addEventListener('touchend',end,{passive:true}); document.addEventListener('touchcancel',end,{passive:true});
 })();
+/* the top "+ new layer": how far the list has scrolled past its key sets how far the key has turned into text */
+function ntUpdate(){
+  const nt=$('newTop'), sp=$('ntSpace'); if(!nt || nt.classList.contains('hidden')) return;
+  const pane=document.querySelector('.layerpane'), own=getComputedStyle(pane).overflowY!=='visible';
+  const top = own ? 0 : (document.querySelector('header.top')?.offsetHeight||0);   // the page scrolls under the sticky header
+  if(nt.style.getPropertyValue('--ntt')!==top+'px') nt.style.setProperty('--ntt', top+'px');
+  const H=sp.offsetHeight||56, TH=26, past=Math.max(0, nt.getBoundingClientRect().top - sp.getBoundingClientRect().top);
+  const h=Math.max(TH, H-past), p=(H-h)/(H-TH), b=nt.firstElementChild, sw=b.firstElementChild.offsetWidth;
+  nt.style.setProperty('--nth', h+'px'); nt.style.setProperty('--ntp', p.toFixed(3));
+  nt.style.setProperty('--ntx', (-p*Math.max(0,(b.clientWidth-sw)/2-4)).toFixed(1)+'px');
+}
+document.addEventListener('scroll', ntUpdate, {capture:true, passive:true});
+addEventListener('resize', ()=>requestAnimationFrame(ntUpdate));
+$('newTopBtn').onclick=()=>openSheet('newSheet');
 /* landscape: room under the list so its last item can scroll up to the top of the pane, and no further */
 function fitLayerTail(){ const last=$('layers').lastElementChild; if(last) document.querySelector('.layerpane').style.setProperty('--tailh', last.offsetHeight+'px'); }
 addEventListener('resize',()=>{ if(layers.length) fitLayerTail(); });
@@ -2855,7 +2925,7 @@ $('layers').addEventListener('click',e=>{
 $('layers').addEventListener('dblclick',e=>{ const el=e.target.closest('canvas'); if(el){ openEditor(+el.closest('.layer').dataset.i); } });
 
 /* adding and removing layers */
-function addLayer(key){
+function addLayer(key, own){
   const idx=layers.findIndex(Ly=>!Ly.shown);
   if(idx<0){ toast('8 layers is the maximum'); return; }
   const Ly=layers[idx];
@@ -2863,9 +2933,11 @@ function addLayer(key){
   Object.assign(Ly, newLayerData(idx), { inst:key, shown:true });
   setInstrument(Ly, key); Ly.q = key==='drums' ? '1/16' : 'off';
   Ly.rev = key==='pad'||key==='strings' ? 0.35 : 0.18;
+  if(own) setCustomSound(Ly, own.buf, own.name);   // a file or a recording: the layer is named after it
   applyLayer(Ly); freshInParts(idx);
   closeSheets();
   selectLayer(idx); renderLayers(); save();
+  if(own) storeSound(idx);
   toast(`Layer ${idx+1} · ${instName(Ly)} is ready — tap ● to record into it`);
 }
 function removeLayer(){
@@ -2920,7 +2992,9 @@ $('menuList').onclick=e=>{
   else if(k==='clear') clearLayer();
   else if(k==='remove') removeLayer();
 };
-$('instGrid').innerHTML = Object.entries(LIB).map(([k,v])=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${v.name}</button>`).join('');
+$('instGrid').innerHTML = Object.entries(LIB).map(([k,v])=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${v.name}</button>`).join('')
+  + `<button class="inst own" data-own="file" aria-label="New layer from an audio file in Files">${ic('upload')}audio file</button>`
+  + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New layer from the microphone">${ic('mic')}<span class="ml">microphone</span><span class="micmeter"><i></i></span></button>`;
 $('settingsBtn').innerHTML=ic('cog',''); $('themeBtn').innerHTML=ic('theme',''); $('projIcon').innerHTML=ic('folder','');
 $('projBtn').onclick=openProjects;
 $('projCopy').onclick=saveAsCopy;
@@ -2965,7 +3039,17 @@ $('projList').onclick=e=>{
 })();
 setInterval(()=>{ if($('projSheet').classList.contains('open')) renderProjStatus(); },5000);
 document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close',''));
-$('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(b) addLayer(b.dataset.k); };
+$('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(!b) return;
+  if(b.dataset.own==='file'){ $('newFileIn').click(); return; }
+  if(b.dataset.own==='mic'){ if(mic && !mic.onBuf) return; toggleMic(buf=>addLayer('keys',{buf,name:sampleName()})); return; }
+  addLayer(b.dataset.k); };
+$('newFileIn').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  try{ addLayer('keys',{buf:await decodeFile(f), name:fileSoundName(f)}); }catch(err){ toast('This file cannot be read as audio'); } };
+function renderNewMic(){ const t=$('newMicTile'); if(!t) return; const on=!!(mic && mic.onBuf);
+  t.classList.toggle('micrec',on); t.querySelector('.ml').textContent = on ? 'stop' : 'microphone';
+  t.setAttribute('aria-label', on ? 'Stop recording' : 'New layer from the microphone'); }
+// closing the sheet while it records drops the recording
+{ const cs=closeSheets; closeSheets=function(...a){ if(mic && mic.onBuf){ mic.cancel=true; mic.rec.stop(); } return cs.apply(this,a); }; }
 /* clear and remove need two taps: the first arms the key for 3 seconds */
 function twoTap(btn, lab, fn){
   let armT=null; const label=()=>typeof lab==='function'?lab():lab;   // a label can be a key's icon (iPad portrait)
@@ -3277,7 +3361,10 @@ function renderPage(host,tab,Ly){
     const row=document.createElement('div'); row.className='row ownsnd';
     row.innerHTML=`<span class="sub">Your own sound</span><button id="fileBtn" class="icon" aria-label="Load your own sound from an audio file" title="Audio file">${ic('upload','')}</button><button id="micBtn" class="icon${mic?' on micrec':''}" aria-label="${mic?'Stop recording':'Record your own sound with the microphone'}" title="${mic?'Stop recording':'Microphone'}">${ic('mic','')}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
     grid.appendChild(row);   // in the grid: under the sliders on a phone, next to the instrument in landscape
-    $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=toggleMic;
+    $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=()=>toggleMic();
+    const dr=document.createElement('div'); dr.className='row instdef';
+    dr.innerHTML=`<button id="instDefBtn" aria-label="Back to the default settings of ${instName(Ly)}">${ic('reset','')}<span class="long">back to </span>default</button>`;
+    grid.appendChild(dr); $('instDefBtn').onclick=()=>instDefaults(Ly);
   } else {
     param(grid,'Volume',()=>Ly.vol,v=>{Ly.vol=v;applyLayer(Ly);},0,1,0.01,pct);
     param(grid,'Pan',()=>Ly.pan,v=>{Ly.pan=v;applyLayer(Ly);},-1,1,0.01,v=>v===0?'centre':(v<0?'L ':'R ')+Math.round(Math.abs(v)*100));
