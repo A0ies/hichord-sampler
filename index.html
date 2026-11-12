@@ -563,7 +563,7 @@ body.projopen .pbar{display:none}
 .partbar button span{text-transform:none} .ctl button,.tline button,.prow .pl,.tlkeys button,.capnext span{text-transform:none}
 .partbar button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);min-width:0}
 .partbar button.on{background:var(--dark-key);color:var(--dark-key-ink)} .partbar button.on span{color:inherit;opacity:.8}
-.partbar .padd{color:var(--dim);flex:none}
+.partbar .padd{color:var(--dim);flex:none;background:transparent;box-shadow:inset 0 0 0 2px var(--line)}   /* outlined: an action, not a part */
 .partbar .psong{margin-left:auto;flex:none;gap:5px;color:var(--ink)}
 .partbar .psong svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
 .songsec{margin-top:6px} .songsec+.songsec{margin-top:18px}
@@ -1107,7 +1107,7 @@ body[data-state="count"] .tbar,body[data-state="recording"] .tbar{background:var
 .tbar #captureBtn{background:var(--acc);color:#fff;border-radius:12px;padding:6px 14px;min-height:50px}
 .tbar #captureBtn small{color:#fff}
 .tbar #captureBtn::before{display:none}
-.undofab{position:fixed;right:max(14px,calc(var(--sr) + 10px));bottom:calc(var(--tbarh) + 12px);z-index:12;width:52px;height:52px;min-height:0;border-radius:50%;padding:0;
+.undofab{position:fixed;left:max(14px,calc(var(--sl) + 10px));bottom:calc(var(--tbarh) + 12px);z-index:12;width:52px;height:52px;min-height:0;border-radius:50%;padding:0;
   display:flex;align-items:center;justify-content:center;background:var(--key);box-shadow:0 6px 18px rgba(0,0,0,.25),0 1px 0 var(--key-edge)}
 .undofab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .undofab:disabled{opacity:.45}
@@ -1116,7 +1116,6 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 .main{padding-bottom:calc(150px + var(--sb))}
 /* phone in landscape: the docked pane fills the right side, so undo sits bottom left, over the layer list */
 @media (min-width:640px) and (max-height:560px){
-  .undofab{right:auto;left:max(14px,calc(var(--sl) + 10px))}
   /* the page itself never scrolls: the preview pane stays put and only the layer list scrolls, until its last
      item ("+ new layer") lines up with the top of the preview */
   html,body{height:100%;overflow:hidden}
@@ -2575,6 +2574,22 @@ function renderLayers(){
   renderTransport();
   drawAll();
 }
+/* landscape: a vertical swipe (or wheel) anywhere on the screen scrolls the layer list, except on the
+   transport bar and in panels, capture mode and the editor */
+(()=>{
+  let y0=null, last=0, lt=0, v=0, raf=0, on=false;
+  const pane = () => document.querySelector('.layerpane');
+  const ok = e => isShortWide() && !document.body.classList.contains('sheetopen') && !document.body.classList.contains('projopen') && !CAP.open && !ED.open
+    && !e.target.closest('.layerpane,.tbar,.overlay,.toast,.fxpop,.fxbg,.sheet.open,input,select,textarea');
+  document.addEventListener('touchstart',e=>{ cancelAnimationFrame(raf); y0=null; if(e.touches.length!==1 || !ok(e)) return;
+    y0=last=e.touches[0].clientY; lt=performance.now(); v=0; on=false; },{passive:true});
+  document.addEventListener('touchmove',e=>{ if(y0==null) return; const y=e.touches[0].clientY;
+    if(!on){ if(Math.abs(y-y0)<6) return; on=true; }   // a tap stays a tap
+    const dy=last-y, now=performance.now(); pane().scrollTop+=dy; v=dy/Math.max(1,now-lt); last=y; lt=now; e.preventDefault(); },{passive:false});
+  document.addEventListener('touchend',()=>{ if(y0==null) return; y0=null; if(!on) return;
+    const step=()=>{ v*=0.95; if(Math.abs(v)<0.02) return; pane().scrollTop+=v*16; raf=requestAnimationFrame(step); }; raf=requestAnimationFrame(step); });
+  document.addEventListener('wheel',e=>{ if(!ok(e)) return; pane().scrollTop+=e.deltaY; e.preventDefault(); },{passive:false});
+})();
 /* landscape: room under the list so its last item can scroll up to the top of the pane, and no further */
 function fitLayerTail(){ const last=$('layers').lastElementChild; if(last) document.querySelector('.layerpane').style.setProperty('--tailh', last.offsetHeight+'px'); }
 addEventListener('resize',()=>{ if(layers.length) fitLayerTail(); });
