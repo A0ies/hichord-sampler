@@ -1132,12 +1132,29 @@ body[data-state="count"] .tbar,body[data-state="recording"] .tbar{background:var
 .tbar #captureBtn{background:var(--acc);color:#fff;border-radius:12px;padding:6px 16px;min-height:56px}
 .tbar #captureBtn small{color:#fff}
 .tbar #captureBtn::before{display:none}
-.undofab{position:fixed;left:max(14px,calc(var(--sl) + 10px));bottom:calc(var(--tbarh) + 12px);z-index:12;width:52px;height:52px;min-height:0;border-radius:50%;padding:0;
+.fabs{position:fixed;left:max(14px,calc(var(--sl) + 10px));bottom:var(--fabb,calc(var(--tbarh) + 12px));z-index:12;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.fabs.over{z-index:25}   /* over the full-screen note editor and capture mode */
+.fabs .undofab{pointer-events:auto;position:relative}
+.fabs .undofab.hide{display:none}
+.undofab{width:52px;height:52px;min-height:0;border-radius:50%;padding:0;
   display:flex;align-items:center;justify-content:center;background:var(--key);box-shadow:0 6px 18px rgba(0,0,0,.25),0 1px 0 var(--key-edge)}
 .undofab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .undofab:disabled{opacity:.45}
 .undofab::before{display:none}
-body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
+body.projopen .fabs,body.sheetopen .fabs{display:none}
+/* the lock key: a red lock on a white key; it pulses while the effect you hold can be locked, a closed lock with the
+   layer's number while one is locked */
+.lockfab{color:var(--rec)}
+.lockfab:not(.on) .shackle{transform:translateX(4px) translateY(-1px)}
+.lockfab.arm{animation:lockpulse 1s ease-in-out infinite}
+@keyframes lockpulse{0%,100%{box-shadow:0 6px 18px rgba(0,0,0,.25),0 0 0 0 var(--rec)}50%{box-shadow:0 6px 18px rgba(0,0,0,.25),0 0 0 5px var(--rec)}}
+.lockfab .lnum{position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;border-radius:6px;background:var(--lc,var(--acc));color:#fff;font-family:var(--mono);font-size:11px;font-weight:600;
+  display:none;align-items:center;justify-content:center;padding:0 4px}
+.lockfab.on .lnum{display:inline-flex}
+.ctile .clock{display:none!important}   /* the pads' own lock key moved to the bottom-left stack */
+/* the note editor's undo and redo moved to the stack too */
+#edUndo,#edRedo{display:none}
+.edtools>#edMore{border-radius:10px}
 .main{padding-bottom:calc(150px + var(--sb))}
 /* phone in landscape: the docked pane fills the right side, so undo sits bottom left, over the layer list */
 @media (min-width:640px) and (max-height:560px){
@@ -1296,7 +1313,7 @@ body[data-studio=port] #editor{grid-column:1/3;grid-row:2}
 body[data-studio=port] #lprev{grid-column:1/3;grid-row:3}
 body[data-studio=port] .layersheet{grid-column:1;grid-row:4}
 body[data-studio=port] .spad{grid-column:2;grid-row:4}
-body[data-studio=port][data-sfull=st] .layersheet,body[data-studio=port][data-sfull=cp] .spad{grid-column:1/3}
+
 /* full screen: the layers and the other window step aside */
 body.studio[data-sfull=st] .layerpane,body.studio[data-sfull=cp] .layerpane,body.studio[data-sfull=st] .spad,body.studio[data-sfull=cp] .layersheet{display:none}
 body[data-studio=port][data-sfull=st] .main,body[data-studio=port][data-sfull=cp] .main{grid-template-rows:var(--edh) var(--strh) minmax(0,1fr)}
@@ -1304,8 +1321,11 @@ body[data-studio=port][data-sfull=st] #editor,body[data-studio=port][data-sfull=
 body[data-studio=port][data-sfull=st] #lprev,body[data-studio=port][data-sfull=cp] #lprev{grid-row:2}
 body[data-studio=port][data-sfull=st] .layersheet,body[data-studio=port][data-sfull=cp] .spad{grid-row:3}
 /* undo: bottom left in landscape (over the layers); in portrait in the top bar, next to the theme key */
-body[data-studio=port] .undofab{left:auto;bottom:auto;top:calc(8px + var(--st));right:calc(max(14px,calc(var(--sr) + 10px)) + 106px);width:44px;height:44px;box-shadow:0 1px 0 var(--key-edge)}
-body.studio[data-sfull=st] .undofab,body.studio[data-sfull=cp] .undofab,body.studio[data-sfull=ed] .undofab{display:none}
+body.studio[data-sfull=st] .fabs{display:none}   /* never over the settings */
+body[data-studio=port][data-sfull=st] .layersheet,body[data-studio=port][data-sfull=cp] .spad{grid-column:1/3}
+/* portrait: the capture pad on the left and the settings on the right, so the stack sits over the pad */
+body[data-studio=port] .layersheet{grid-column:2}
+body[data-studio=port] .spad{grid-column:1}
 /* iPad: the play bar a size up */
 body.studio{--tbarh:calc(92px + var(--sb))}
 body.studio .tbar{gap:14px;padding-top:14px;padding-bottom:calc(14px + var(--sb))}
@@ -1385,7 +1405,12 @@ body.studio .tbar .pos b{font-size:26px}
     <button class="tool" id="loopBtn" aria-label="Tempo and loop settings"><b id="bpmMini">100</b><small>bpm</small><small><span id="barsMini">4 bars</span></small></button>
     <button class="tool" id="captureBtn" title="Capture mode: play your layers as touch pads (C)"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/><circle cx="17" cy="17" r="1.7" fill="currentColor" stroke="none"/></svg><small>Capture</small></button>
   </footer>
-  <button class="undofab" id="undoBtn" title="Undo (Z) · hold for redo (⇧Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M8.5 5 4.5 9l4 4M4.5 9h10a5 5 0 0 1 0 10h-3"/></svg></button>
+  <!-- bottom left, over everything: the lock key (pads), redo (note editor) and undo, stacked -->
+  <div class="fabs" id="fabs">
+    <button class="undofab lockfab" id="lockBtn" title="Lock the effect you hold; press again to release it" aria-label="Lock effect"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path class="shackle" d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="lnum" id="lockNum"></span></button>
+    <button class="undofab" id="redoBtn" title="Redo (⇧Z)" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="M15.5 5l4 4-4 4M19.5 9h-10a5 5 0 0 0 0 10h3"/></svg></button>
+    <button class="undofab" id="undoBtn" title="Undo (Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M8.5 5 4.5 9l4 4M4.5 9h10a5 5 0 0 1 0 10h-3"/></svg></button>
+  </div>
   <footer class="pbar"><button id="projNew" class="primary">+ new project</button></footer>
 </div>
 
@@ -1541,7 +1566,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.57';
+const PAGE_VERSION = '2026-11-12.58';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2413,7 +2438,7 @@ function redo(){
   const cur=HIST.last, next=HIST.redo.pop(); HIST.undo.push(cur);
   applySnapshot(next); toast(`redone: ${describeChange(cur,next)}`, 'undo', undo);
 }
-function renderUndo(){ const b=$('undoBtn'); if(b) b.disabled=!HIST.undo.length && !saveT; }
+function renderUndo(){ fabKey=''; }   // the stack (renderFabs) picks it up on the next frame
 function load(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); }catch(e){ return null; } }
 
 /* ============ song: parts and a timeline ============
@@ -3187,7 +3212,7 @@ function sPadRender(){
   sPadLast=i;
   const full=sFull()==='cp';
   box.innerHTML=capTile(Ly,i,false,`<button class="icon sfull" data-full="cp" aria-label="${full?'Back from full screen':'Capture pad full screen'}">${full?IC_MIN:IC_MAX}</button>`);
-  const el=box.firstElementChild; setLockKey(el, CAP.lock.has(i));
+  const el=box.firstElementChild; setLockKey(el, CAP.lock.has(i)); requestAnimationFrame(fabLiftCheck);
   CAP.touch.forEach(t=>{ if(t.i===i && !t.el.isConnected && box.contains(el)){ t.el=el; if(t.active) el.classList.add('touch'); } });
 }
 function renderDetail(){
@@ -3397,6 +3422,7 @@ function frame(){
   }
   if((!ED.open || ED.dock) && S.playing){ CAP.open ? drawCaptureRolls() : drawAll(); }
   if(S.playing) drawPos();
+  renderFabs();
   if(PRJ.pend.size) document.querySelectorAll('.pundo').forEach(b=>{ const z=PRJ.pend.get(b.dataset.undo); if(z) b.firstElementChild.style.transform=`scaleX(${Math.max(0,z.until-Date.now())/UNDO_MS})`; });   // restore badges drain
   if(CAP.open){ drawCapRec(); capSongFrame(); }
   else if(ctx && layerSheetShown()) drawPreview();
@@ -3652,7 +3678,7 @@ function closeCapture(){
   CAP.touch.forEach(t=>{ clearTimeout(t.timer); clearTimeout(t.st); }); CAP.touch.clear(); CAP.lock.clear(); layers.forEach(fxReset);
   if(bouncer) bouncer.stop();   // leaving capture mode saves a running output recording
   document.querySelector('.cfxmenu')?.remove();
-  CAP.open=false; document.body.classList.remove('cap'); $('capMode').classList.add('hidden'); $('captureBtn').classList.remove('on');
+  CAP.open=false; requestAnimationFrame(fabLiftCheck); document.body.classList.remove('cap'); $('capMode').classList.add('hidden'); $('captureBtn').classList.remove('on');
   $('capNext').classList.add('hidden'); SONG.jump=null;
   renderParts(); renderLayers(); renderDetail();
 }
@@ -3683,7 +3709,7 @@ function renderCaptureMode(){
     const cr=el.querySelector('.cfxchip').getBoundingClientRect(), nr=el.querySelector('.num').getBoundingClientRect();
     const top = cr.top>=nr.bottom ? Math.min(cr.top+cr.height/2-keyH/2, nt-keyH-2)-tr.top : 6;
     k.style.top=Math.round(top)+'px'; k.style.bottom='auto'; });
-  requestAnimationFrame(drawCaptureRolls);
+  requestAnimationFrame(drawCaptureRolls); requestAnimationFrame(fabLiftCheck);
 }
 function capTile(Ly,i,roll,extra=''){ return `
     <div class="ctile ${audible(Ly)?'':'off'} ${capHas(Ly,'gate')?'hasnotes':''} ${CAP.lock.has(i)?'locked':''}" data-i="${i}" style="--lc:var(--l${i})">
@@ -3728,6 +3754,7 @@ function capWire(grid, capEl, rerender){
     const t=[...CAP.touch.values()].find(o=>o.i===i && o.active && o.at); if(!t) return;
     CAP.lock.set(i, t.at); el.classList.add('locked'); setLockKey(el,true); if(navigator.vibrate) navigator.vibrate(20);
   };
+  grid._lockKey=lockKey;   // the lock key in the bottom-left stack
   // the effect chip and its menu are keys, not part of the pad
   capEl.addEventListener('click',e=>{
     const chip=e.target.closest('.cfxchip'), item=e.target.closest('[data-fxset]');
@@ -4335,11 +4362,59 @@ edCv.addEventListener('contextmenu',e=>e.preventDefault());
 // iOS can pause the audio engine (route change, call, other app): any tap wakes it again
 addEventListener('pointerdown',()=>{ if(ctx && ctx.state!=='running') ctx.resume().then(renderAudioStatus); }, true);
 $('recBtn').onclick=()=>{ if(!ctx) return; setRec(!S.rec); };
-$('undoBtn').onclick=undo;
-(()=>{ let t=null; const b=$('undoBtn');   // hold undo for redo
-  b.addEventListener('pointerdown',()=>{ t=setTimeout(()=>{ t='fired'; redo(); },550); });
-  ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>{ if(t!=='fired') clearTimeout(t); }));
-  b.addEventListener('click',e=>{ if(t==='fired'){ e.stopImmediatePropagation(); t=null; } }, true); })();
+/* the bottom-left stack: in the full-screen note editor undo and redo step through its own edits */
+const edFullOpen = () => ED.open && (!ED.dock || sFull()==='ed');
+$('undoBtn').onclick=()=>edFullOpen() ? edUndo() : undo();
+$('redoBtn').onclick=()=>edFullOpen() ? edRedo() : redo();
+// the lock key: locks the effect you hold (once the ring has filled); with nothing held it releases the last locked pad
+function lockTarget(){
+  const held=[...CAP.touch.values()].filter(t=>t.active && t.ready && t.at);
+  if(held.length) return held[held.length-1].i;
+  if(CAP.lastLock!=null && CAP.lock.has(CAP.lastLock)) return CAP.lastLock;
+  const ks=[...CAP.lock.keys()]; return ks.length ? ks[ks.length-1] : null;
+}
+function lockPress(){
+  const i=lockTarget(); if(i==null) return;
+  const grid = CAP.open ? $('cgrid') : $('sPad'); if(!grid._lockKey) return;
+  grid._lockKey(i); if(CAP.lock.has(i)) CAP.lastLock=i;
+}
+$('lockBtn').addEventListener('pointerdown',e=>{ e.preventDefault(); lockPress(); });   // with another finger, while one holds the pad
+$('lockBtn').addEventListener('click',e=>{ if(e.detail===0) lockPress(); });          // keyboard
+// which keys show, and where: called every frame, it only touches the page when something changed
+var fabKey='', fabLift='';   // var: renderUndo can run before this line
+// a gate pad under the stack keeps its note keys free: the stack moves up above them
+function fabLiftCheck(){
+  fabLift=''; fabKey='';
+  let tile=null;
+  if(CAP.open){ const tiles=[...$('cgrid').querySelectorAll('.ctile')];
+    tile=tiles.reduce((a,b)=>{ if(!a) return b; const ra=a.getBoundingClientRect(), rb=b.getBoundingClientRect();
+      return rb.bottom>ra.bottom+1 || (Math.abs(rb.bottom-ra.bottom)<=1 && rb.left<ra.left) ? b : a; }, null); }
+  else if(document.body.dataset.studio) tile=$('sPad').querySelector('.ctile');
+  const nk=tile && tile.querySelector('.capnotes'); if(!nk) return;
+  const f=$('fabs').getBoundingClientRect(), k=nk.getBoundingClientRect();
+  if(k.left < f.right+4) fabLift=Math.round(innerHeight-k.top+10)+'px';
+}
+addEventListener('resize',()=>requestAnimationFrame(fabLiftCheck));
+function renderFabs(){
+  const full=edFullOpen(), studio=document.body.dataset.studio, sf=sFull();
+  const pads = CAP.open || (studio && sf!=='st' && sf!=='ed');
+  const showUndo = !CAP.open, showRedo = !CAP.open && (full || (studio && sf!=='st'));
+  const held=[...CAP.touch.values()].some(t=>t.active && t.ready && t.at && !CAP.lock.has(t.i));
+  const tgt=lockTarget(), locked = tgt!=null && CAP.lock.has(tgt) && !held;
+  const lockState = !pads ? 'none' : held ? 'arm' : locked ? 'on' : 'idle';
+  const undoOff = full ? !ED.hist.length : (!HIST.undo.length && !saveT), redoOff = full ? !ED.fut.length : !HIST.redo.length;
+  const bottom = full ? ($('editor').querySelector('.edbar').offsetHeight+12)+'px' : (pads && fabLift) || '';
+  const key=[showUndo,showRedo,lockState,tgt,undoOff,redoOff,bottom,full||CAP.open].join('|');
+  if(key===fabKey) return; fabKey=key;
+  $('undoBtn').classList.toggle('hide',!showUndo); $('redoBtn').classList.toggle('hide',!showRedo);
+  $('undoBtn').disabled=undoOff; $('redoBtn').disabled=redoOff;
+  const lb=$('lockBtn'); lb.classList.toggle('hide',lockState==='none'); lb.disabled=lockState==='idle';
+  lb.classList.toggle('arm',lockState==='arm'); lb.classList.toggle('on',lockState==='on');
+  $('lockNum').textContent = tgt!=null ? tgt+1 : ''; if(tgt!=null) lb.style.setProperty('--lc',`var(--l${tgt})`);
+  lb.setAttribute('aria-label', lockState==='on' ? `Effect of layer ${tgt+1} locked: press to release it` : 'Lock the effect you hold');
+  const f=$('fabs'); f.style.setProperty('--fabb', bottom || (CAP.open ? 'calc(var(--tbarh) + 12px)' : 'calc(var(--tbarh) + 12px)'));
+  f.classList.toggle('over', !!(full||CAP.open));
+}
 
 $('panicBtn').onclick=()=>stopAllVoices(true);
 $('bpmDown').onclick=()=>setTempo(S.bpm-1);
