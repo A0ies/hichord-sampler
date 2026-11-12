@@ -1351,7 +1351,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.52';
+const PAGE_VERSION = '2026-11-12.53';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3032,7 +3032,9 @@ function renderHC(){
 function drawRoll(Ly,i,cv){
   cv=cv||$('roll'+i); if(!cv) return;
   const dpr=devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight; if(!W) return;
-  if(cv.width!==Math.round(W*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+  // resize the bitmap whenever either side changes: a bitmap taller than the box would squash the drawing into
+  // a strip at the top and leave an older layer's picture underneath
+  if(cv.width!==Math.round(W*dpr) || cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
   const L=loopLen(), col=cssVar('--l'+i);
   g.fillStyle=cssVar('--screen-line'); for(let b=1;b<S.bars;b++) g.fillRect(Math.round(b*4/L*W),0,1,H);
