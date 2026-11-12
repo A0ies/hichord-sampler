@@ -356,6 +356,95 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .newtop .ntbtn span{display:inline-block;transform:translateX(var(--ntx,0px));font-size:calc(12px + var(--nte,0) * 2px);white-space:nowrap}
 .newtop .ntbtn::before{display:none}
 .newtop.hidden{display:none}
+/* the song page (full screen): header, a dark screen with the preview and the tape, the part pads */
+.songpg{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;gap:12px;
+  padding:calc(12px + var(--st)) max(16px,calc(var(--sr) + 12px)) calc(16px + var(--sb)) max(16px,calc(var(--sl) + 12px));box-sizing:border-box;overflow:hidden}
+.songpg.hidden{display:none}
+body.songopen .fabs,body.songopen .tbar{display:none}
+.sphead{display:flex;align-items:center;gap:10px;flex:none}
+.sphead h2{flex:1;margin:0;font-family:var(--sans);font-size:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sphead h2 small{color:var(--dim);font-size:14px;font-weight:500;margin-left:4px}
+.sptip{font-family:var(--mono);font-size:11px;color:var(--dim);display:none}
+@media (max-width:699px){ .sphead .spx{display:none} }
+.spkey{min-width:44px;min-height:44px;height:44px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;text-transform:lowercase}
+.spkey::before{display:none}
+.spkey svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.songpg .spplay{background:var(--dark-key);color:var(--dark-key-ink)} .spplay svg{fill:currentColor;stroke:none;width:16px;height:16px}
+.songpg .spplay.on{background:var(--dark-key);color:var(--enc2)}
+.songpg .spauto{color:var(--dim);background:var(--key)} .songpg .spauto.on{color:var(--ink);background:var(--key);box-shadow:inset 0 0 0 2px var(--acc)}
+.spbody{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
+.spscreen{background:var(--screen);color:var(--screen-ink);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0;flex:0 0 auto;height:min(46%,420px);box-sizing:border-box}
+.spnow{display:flex;align-items:baseline;gap:8px;font-family:var(--mono);flex:none}
+.spnow b{background:var(--pc,var(--acc));color:#0b0b0b;border-radius:6px;padding:1px 7px;font-weight:600}
+.spnow span{flex:1;font-family:var(--sans);font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spnow em{font-style:normal;color:var(--screen-dim);font-size:12px;white-space:nowrap}
+#spRoll{flex:1;min-height:0;width:100%;background:var(--screen2);border-radius:8px}
+.sphint{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--screen-dim);flex:none}
+.sptape{position:relative;height:86px;flex:none;border-radius:8px;background:var(--screen2);overflow:hidden;touch-action:none;cursor:grab}
+.sptape::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background-image:linear-gradient(90deg,var(--screen-line) 1px,transparent 1px);background-size:10px 100%;z-index:1}
+.sptrack{position:absolute;left:0;top:12px;bottom:10px;will-change:transform}
+.spblk{position:absolute;top:0;bottom:0;border-radius:6px;background:var(--pc);color:#0b0b0b;opacity:.55;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;
+  padding:4px 7px;box-sizing:border-box;font-family:var(--mono);font-weight:600;font-size:13px;min-height:0;box-shadow:none;text-transform:none;overflow:hidden}
+.spblk::before{display:none}
+.spblk span{font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.spblk.now{opacity:1}
+.spblk.queued{opacity:1;box-shadow:inset 0 0 0 2px var(--screen-ink)}
+.spblk.lifted{opacity:.15}
+.spph{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--acc);z-index:2;pointer-events:none}
+.spins{position:absolute;top:8px;bottom:8px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--screen-ink);z-index:3;pointer-events:none}
+.spins.hidden{display:none}
+.spghost{position:fixed;z-index:40;pointer-events:none;border-radius:8px;background:var(--pc);color:#0b0b0b;font-family:var(--mono);font-weight:600;font-size:15px;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:6px 8px;box-sizing:border-box;box-shadow:0 14px 30px rgba(0,0,0,.45);transform:translate(-50%,-60%) rotate(-4deg)}
+.spghost span{font-size:10px;font-weight:500}
+.sppads{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--pcols,3),minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:8px}
+.sppad{position:relative;border-radius:14px;background:var(--panel);padding:10px;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;
+  min-height:0;min-width:0;box-shadow:none;touch-action:none;text-transform:none;overflow:hidden;container-type:size}
+.sppad::before{display:none}
+.songpg .sppad.on{background:var(--panel);color:var(--ink);box-shadow:inset 0 0 0 2px var(--acc)}
+.sppad .pk{display:flex;justify-content:space-between;align-items:flex-start;gap:4px}
+.sppad .pk b{font-family:var(--sans);font-weight:700;font-size:26px;line-height:1;color:var(--pc)}
+.sppad .pk small{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.sppad .ps{display:flex;flex-direction:column;gap:3px}
+.sppad .ps i{height:4px;border-radius:2px;background:var(--line)}
+.sppad .pn{font-family:var(--sans);font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@container (max-height:96px){ .sppad .ps{display:none} .sppad .pk b{font-size:20px} }
+.sppad.add{background:transparent;box-shadow:inset 0 0 0 2px var(--line);color:var(--dim);align-items:center;justify-content:center;font-size:14px}
+.sppad.rm{background:transparent;box-shadow:inset 0 0 0 2px var(--rec);color:var(--rec);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:11px;font-weight:500}
+.sppad.rm.over{background:var(--rec);color:#fff}
+.spedit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:min(340px,calc(100% - 32px));background:var(--panel);border-radius:16px;padding:14px;
+  box-shadow:0 20px 50px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px}
+.spedit.hidden{display:none}
+.spedit h3{margin:0;font-family:var(--mono);font-size:13px;font-weight:600}
+.spedit input{height:44px;border:none;border-radius:9px;background:var(--key);padding:0 12px;font-family:var(--sans);font-weight:600;font-size:16px}
+.spedit .row{display:flex;gap:8px} .spedit .row button{flex:1;min-height:44px}
+.spedit .danger.armed{background:var(--rec);color:#fff}
+/* phones in landscape: the screen on the left, the pads in a column on the right */
+@media (min-width:640px) and (max-height:560px){
+  .songpg{gap:8px;padding-top:calc(8px + var(--st));padding-bottom:calc(10px + var(--sb) * .3)}
+  .sptip{display:inline} .sphead .spx{display:none}
+  .spbody{flex-direction:row}
+  .spscreen{flex:1;height:auto;min-width:0;padding:10px;gap:6px}
+  .sptape{height:70px}
+  .sphint{display:none}
+  .sppads{flex:0 0 230px;--pcols:2}
+  .sppad{padding:8px;border-radius:12px}
+}
+/* iPad (and wide windows): more room, bigger type */
+@media (min-width:700px) and (min-height:700px){
+  .songpg{gap:16px;padding:calc(20px + var(--st)) max(24px,calc(var(--sr) + 16px)) calc(24px + var(--sb)) max(24px,calc(var(--sl) + 16px))}
+  .sphead h2{font-size:24px} .sphead h2 small{font-size:16px}
+  .sptip{display:inline}
+  .spkey{min-height:48px;height:48px;min-width:48px}
+  .spscreen{padding:16px;gap:12px;border-radius:18px}
+  .spnow span{font-size:20px}
+  .sptape{height:118px}
+  .spblk{font-size:15px;padding:6px 9px} .spblk span{font-size:11px}
+  .sppads{gap:12px}
+  .sppad{padding:14px;border-radius:16px}
+  .sppad .pk b{font-size:38px} .sppad .pn{font-size:17px} .sppad .ps i{height:5px}
+}
+@media (min-width:700px) and (min-height:700px) and (orientation:portrait){ .spscreen{height:min(50%,560px)} .sptip{display:none} }
+@media (min-width:1000px) and (min-height:700px) and (orientation:landscape){ .spscreen{height:auto;flex:1} .sppads{flex:0 0 auto;height:clamp(140px,22vh,190px)} }
 /* the new-layer sheet: your own sound from a file or the microphone */
 .inst.own{color:var(--ink)}
 .inst.own.micrec{background:var(--rec);color:#fff}
@@ -1450,6 +1539,27 @@ body.studio .tbar .pos b{font-size:26px}
   <footer class="pbar"><button id="projNew" class="primary">+ new project</button></footer>
 </div>
 
+<!-- the song page: what plays (preview), the whole song as one tape under a fixed playhead, and the parts as pads.
+     Drag a pad onto the tape to add it; hold a block on the tape and drag it to move it, or onto "remove" -->
+<section class="songpg hidden" id="songPg" aria-label="Song">
+  <div class="sphead">
+    <button class="spkey" id="spBack" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <h2>song <small id="spStats"></small></h2>
+    <span class="sptip" id="spTip">drag a pad onto the tape · tap to go there · hold to name, copy or remove</span>
+    <button class="spkey spauto" id="spAuto" aria-pressed="true" title="auto: the song plays the tape from part to part. Off: the part you are on loops">auto</button>
+    <button class="spkey spplay" id="spPlay" aria-label="Play the song"><svg viewBox="0 0 24 24" id="spPlayIcon" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></button>
+  </div>
+  <div class="spbody">
+    <div class="spscreen">
+      <div class="spnow"><b id="spBadge">A</b><span id="spName"></span><em id="spPos"></em></div>
+      <canvas id="spRoll"></canvas>
+      <div class="sphint"><span>◂ swipe the tape</span><span id="spHint">tap a block to go there</span></div>
+      <div class="sptape" id="spTape"><div class="sptrack" id="spTrack"></div><i class="spph"></i><i class="spins hidden" id="spIns"></i></div>
+    </div>
+    <div class="sppads" id="spPads"></div>
+  </div>
+  <div class="spedit hidden" id="spEdit" role="dialog" aria-label="Part"></div>
+</section>
 <section class="capmode hidden" id="capMode" aria-label="Capture mode">
   <div class="caphead"><h2>capture mode</h2><span class="hint">tap: on/off · hold and drag: effect · hold still: lock</span>
     <div class="capsong hidden" id="capSong"><div class="ctl" id="capTl" role="group" aria-label="Song timeline: tap a part to go there after this loop"></div><button class="cauto" id="capAuto" aria-pressed="true">auto</button></div>
@@ -1604,7 +1714,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.62';
+const PAGE_VERSION = '2026-11-12.63';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2773,6 +2883,7 @@ function renderTransport(){
   $('playBtn').classList.toggle('on',S.playing);
   $('playIcon').innerHTML = $('capPlayIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1"/>' : '<path d="M7 4l13 8-13 8z"/>';
   $('capPlay').classList.toggle('on',S.playing);
+  if($('spPlayIcon')){ $('spPlayIcon').innerHTML=$('playIcon').innerHTML; $('spPlay').classList.toggle('on',S.playing); }
   $('recBtn').classList.toggle('on',S.rec);
   $('recNum').textContent=S.sel+1; $('recBtn').style.setProperty('--lc',`var(--l${S.sel})`);
   $('recBtn').setAttribute('aria-label',`Record into layer ${S.sel+1} (R)`);
@@ -2855,7 +2966,7 @@ function renderLayers(){
 (()=>{
   let y0=null, last=0, lt=0, v=0, raf=0, on=false;
   const pane = () => document.querySelector('.layerpane');
-  const ok = e => isShortWide() && !document.body.classList.contains('sheetopen') && !document.body.classList.contains('projopen') && !CAP.open && !ED.open
+  const ok = e => isShortWide() && !document.body.classList.contains('sheetopen') && !document.body.classList.contains('songopen') && !document.body.classList.contains('projopen') && !CAP.open && !ED.open
     && !e.target.closest('.layerpane,.tbar,.overlay,.toast,.fxpop,.fxbg,.sheet.open,input,select,textarea');
   document.addEventListener('touchstart',e=>{ cancelAnimationFrame(raf); y0=null; if(e.touches.length!==1 || !ok(e)) return;
     y0=last=e.touches[0].clientY; lt=performance.now(); v=0; on=false; },{passive:true});
@@ -3311,7 +3422,7 @@ function edSync(){
 let sPadLast=-1;
 function sPadRender(){
   const box=$('sPad'); if(!document.body.dataset.studio){ box.innerHTML=''; return; }
-  const i=S.sel, Ly=layers[i];
+  const i=S.sel, Ly=layers[i]; if(!Ly) return;   // the start screen: no layers yet
   if(sPadLast!==i && sPadLast>=0 && CAP.lock.has(sPadLast) && !CAP.open){ CAP.lock.delete(sPadLast); fxReset(layers[sPadLast]); }
   sPadLast=i;
   const full=sFull()==='cp';
@@ -3536,6 +3647,7 @@ function frame(){
   if(S.playing) drawPos();
   renderFabs();
   if(PRJ.pend.size) document.querySelectorAll('.pundo').forEach(b=>{ const z=PRJ.pend.get(b.dataset.undo); if(z) b.firstElementChild.style.transform=`scaleX(${Math.max(0,z.until-Date.now())/UNDO_MS})`; });   // restore badges drain
+  if(SPG.open) spFrame();
   if(CAP.open){ drawCapRec(); capSongFrame(); }
   else if(ctx && layerSheetShown()) drawPreview();
   requestAnimationFrame(frame);
@@ -3615,10 +3727,11 @@ function renderParts(){
 }
 $('partBar').onclick=e=>{ const b=e.target.closest('[data-part]'); if(!b) return; const v=b.dataset.part;
   if(v==='add'){ addPart(); return; }
-  if(v==='song' || +v===SONG.cur){ openSheet('songSheet'); return; }
+  if(v==='song' || +v===SONG.cur){ openSongPage(); return; }
   loadPart(+v); toast(`${partName(+v)}: its own notes and layers`); };
 let tlSel=null;
 function renderSongSheet(){
+  if(SPG.open) renderSongPage();
   if(!$('partList')) return;
   if(tlSel!=null && tlSel>=SONG.order.length) tlSel=null;
   // two columns of parts (letter: go there, and its name), then what you can do with the part you are on
@@ -3650,9 +3763,211 @@ $('songSheet').addEventListener('change',e=>{ const i=e.target.closest('[data-pn
   SONG.parts[+i.dataset.pn].name=i.value.trim().slice(0,14); renderParts(); save(); });
 function songChanged(){ SONG.pos=SONG.order.indexOf(SONG.cur); SONG.jump=null; renderSongSheet(); renderParts(); save(); }
 
+/* ============ the song page ============
+   The whole song is one tape: a block per pass of the loop, under a playhead that stays in the middle. While it
+   plays, the tape moves; stopped, swipe it to go to another pass. The parts are pads: tap one to go there (playing:
+   after this loop), hold for its name, copy and remove, drag it onto the tape to add a pass. Hold a block on the
+   tape and drag it to move it, or onto "remove". */
+var SPG={ open:false, view:0, drag:null, press:null, noClick:false };
+function openSongPage(){
+  closeSheets(); if(ED.open && !ED.dock) closeEditor();
+  SPG.open=true; SONG.pos=SONG.order.indexOf(SONG.cur); SONG.jump=null; SPG.view=Math.max(0,SONG.pos);
+  document.body.classList.add('songopen'); $('songPg').classList.remove('hidden'); renderSongPage(); renderTransport();
+}
+function closeSongPage(){
+  spDragEnd(true); spEditClose(); SPG.open=false; SONG.jump=null;
+  document.body.classList.remove('songopen'); $('songPg').classList.add('hidden');
+  renderParts(); renderLayers(); renderDetail(); drawAll();
+}
+const spW = () => { const t=$('spTape'); return clamp(Math.round((t.clientWidth||360)/4.6), 64, 170); };
+const loopSecs = () => loopLen()*60/S.bpm;
+const mmss = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+function renderSongPage(){
+  if(!SPG.open) return;
+  const n=SONG.order.length, W=spW();
+  $('spStats').innerHTML = `· ${n} pass${n===1?'':'es'}<span class="spx"> · ${n*S.bars} bars · ${mmss(n*loopSecs())}</span>`;
+  $('spAuto').classList.toggle('on',SONG.follow); $('spAuto').setAttribute('aria-pressed',SONG.follow);
+  $('spTrack').style.width=(n*W)+'px';
+  $('spTrack').innerHTML = SONG.order.map((k,i)=>`<button class="spblk" data-n="${i}" style="--pc:var(--l${k});left:${i*W+2}px;width:${W-4}px" aria-label="Pass ${i+1}: ${escH(partName(k))}">${PART_L(k)}<span>${escH(SONG.parts[k].name||'')}</span></button>`).join('');
+  const P=SONG.parts.length, tiles=P+(P<8?1:0)+1, wide=matchMedia('(min-width:1000px) and (min-height:700px) and (orientation:landscape)').matches;
+  if(wide) $('spPads').style.setProperty('--pcols', tiles<=6 ? 6 : Math.ceil(tiles/2)); else $('spPads').style.removeProperty('--pcols');
+  $('spPads').innerHTML = SONG.parts.map((p,k)=>{
+    const uses=SONG.order.filter(x=>x===k).length;
+    const stripes=layers.map((Ly,i)=>Ly.shown ? `<i style="${!p.mute[i] && (p.ev[i]||[]).length ? `background:var(--l${i})` : ''}"></i>` : '').join('');
+    return `<button class="sppad ${k===SONG.cur?'on':''}" data-k="${k}" style="--pc:var(--l${k})" aria-label="${escH(partName(k))}: tap to go there, hold for name, copy and remove, drag onto the tape">
+      <span class="pk"><b>${PART_L(k)}</b><small>${uses}×</small></span><span class="ps">${stripes}</span><span class="pn">${escH(p.name||'part '+PART_L(k))}</span></button>`; }).join('')
+    + (P<8 ? '<button class="sppad add" data-add aria-label="New part">+ part</button>' : '')
+    + '<div class="sppad rm" id="spRm">drop a block here to take it off the tape</div>';
+  spNow(); spFrame(true);
+}
+function spNow(){
+  const k=SONG.cur;
+  $('spBadge').textContent=PART_L(k); $('spBadge').style.setProperty('--pc',`var(--l${k})`); $('spBadge').parentElement.style.setProperty('--pc',`var(--l${k})`);
+  $('spName').textContent = SONG.parts[k].name || `part ${PART_L(k)}`;
+  $('spHint').textContent = S.playing ? 'tap a block to play it next' : 'tap a block to go there';
+  document.querySelectorAll('#spTrack .spblk').forEach(b=>{ const i=+b.dataset.n; b.classList.toggle('now',i===SONG.pos); b.classList.toggle('queued',i===SONG.jump); });
+  document.querySelectorAll('#spPads .sppad[data-k]').forEach(b=>b.classList.toggle('on',+b.dataset.k===SONG.cur));
+}
+// where the tape is: playing, the pass and how far into it; stopped, the pass you are on (or where you swiped to)
+let spLastKey='';
+function spFrame(force){
+  if(!SPG.open) return;
+  const W=spW(), tape=$('spTape'), n=SONG.order.length; let v;
+  let frac=0;
+  if(S.playing && ctx){ const L=loopLen(), b=beatAt(ctx.currentTime); frac = b<0 ? 0 : mod(b,L)/L; }
+  if(SPG.drag || (SPG.press && SPG.press.scrub)) v=SPG.view;
+  else { v = (SONG.pos<0 ? SPG.view : SONG.pos) + (S.playing ? frac : 0); SPG.view = SONG.pos<0 ? SPG.view : SONG.pos; }
+  if(SPG.drag && SPG.drag.edge){ SPG.view=clamp(SPG.view+SPG.drag.edge*0.06,0,Math.max(0,n-1)); v=SPG.view; spDragMove(SPG.drag.x, SPG.drag.y); }
+  $('spTrack').style.transform=`translateX(${(tape.clientWidth/2 - v*W).toFixed(1)}px)`;
+  // the clock and the pass
+  const passes=n, at = (Math.max(0,SONG.pos) + frac)*loopSecs();
+  const key=`${SONG.pos}|${SONG.jump}|${SONG.cur}|${S.playing}|${Math.floor(at)}`;
+  if(key!==spLastKey || force){ spLastKey=key;
+    $('spPos').textContent = `${SONG.pos<0 ? 'not on the tape' : `pass ${SONG.pos+1} / ${passes}`} · ${mmss(at)} / ${mmss(passes*loopSecs())}`; spNow(); }
+  spDrawRoll(frac);
+}
+// the preview: every layer of the part that plays, a lane each, with the playhead
+function spDrawRoll(frac){
+  const cv=$('spRoll'), dpr=devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight; if(!W||!H) return;
+  if(cv.width!==Math.round(W*dpr) || cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const L=loopLen(); g.fillStyle=cssVar('--screen-line'); for(let b=1;b<S.bars;b++) g.fillRect(Math.round(b*4/L*W),0,1,H);
+  const lanes=layers.map((Ly,i)=>[Ly,i]).filter(([Ly])=>Ly.shown); const lh=H/Math.max(1,lanes.length);
+  lanes.forEach(([Ly,i],li)=>{
+    const evs=effEvents(Ly); if(!evs.length) return;
+    let lo=Infinity, hi=-Infinity; evs.forEach(e=>{ lo=Math.min(lo,e.note); hi=Math.max(hi,e.note); });
+    const span=Math.max(6,hi-lo+1), y0=li*lh+3, hh=lh-6, rh=Math.max(2,hh/span-1);
+    g.globalAlpha = audible(Ly) ? 1 : 0.25; g.fillStyle=cssVar('--l'+i);
+    evs.forEach(e=>{ const x=e.pos/L*W, w=Math.max(2,e.dur/L*W-1), y=y0+hh-((e.note-lo+1)/span)*hh; g.fillRect(x,y,Math.min(w,W-x),rh); });
+  });
+  g.globalAlpha=1;
+  if(S.playing){ g.fillStyle=cssVar('--acc'); g.fillRect(frac*W-1,0,2,H); }
+}
+// go to pass n: stopped, now; playing, after this loop
+function spGoPass(n){
+  if(n<0 || n>=SONG.order.length) return;
+  if(S.playing){ SONG.jump = SONG.jump===n ? null : n; spNow(); return; }
+  SONG.pos=n; SPG.view=n; const k=SONG.order[n]; if(k!==SONG.cur) loadPart(k,true);
+  renderParts(); spFrame(true); renderSongPage();
+}
+function spGoPart(k){
+  const o=SONG.order, n=o.length;
+  if(S.playing){
+    for(let d=1; d<=n; d++){ const i=(Math.max(0,SONG.pos)+d)%n; if(o[i]===k){ SONG.jump=i; spNow(); return; } }
+    toast(`${partName(k)} isn't on the tape yet: drag its pad onto it`); return;
+  }
+  if(k!==SONG.cur) loadPart(k,true);
+  SONG.pos=o.indexOf(k); if(SONG.pos>=0) SPG.view=SONG.pos;
+  renderParts(); renderSongPage(); save();
+}
+/* pointer handling: a press on a block or a pad can become a tap (click), a hold, a drag; a press on the tape a swipe */
+function spInsAt(x){   // where a drop at screen x lands on the tape: a gap index, or null off the tape
+  const t=$('spTape').getBoundingClientRect(), W=spW(), n=SONG.order.length;
+  const off=t.width/2 - SPG.view*W, rel=(x - t.left - off)/W;
+  return clamp(Math.round(rel),0,n);
+}
+function spDragStart(kind, k, n, x, y){
+  const W=spW(), gh=document.createElement('div'); gh.className='spghost';
+  gh.style.cssText=`--pc:var(--l${k});width:${W-4}px;height:${$('spTape').clientHeight-22}px;left:${x}px;top:${y}px`;
+  gh.innerHTML=`${PART_L(k)}<span>${escH(SONG.parts[k].name||'')}</span>`; document.body.appendChild(gh);
+  SPG.drag={kind,k,n,ghost:gh,x,y,edge:0};
+  if(kind==='blk') $('spTrack').querySelector(`[data-n="${n}"]`)?.classList.add('lifted');
+  SPG.view = SONG.pos<0 ? SPG.view : SPG.view;   // the tape stops following the playhead while you drag
+  if(navigator.vibrate) navigator.vibrate(10);
+}
+function spDragMove(x,y){
+  const d=SPG.drag; if(!d) return; d.x=x; d.y=y; d.ghost.style.left=x+'px'; d.ghost.style.top=y+'px';
+  const t=$('spTape').getBoundingClientRect(), onTape = y>=t.top-30 && y<=t.bottom+30 && x>=t.left && x<=t.right;
+  const rm=$('spRm'), r=rm.getBoundingClientRect(), onRm = d.kind==='blk' && x>=r.left && x<=r.right && y>=r.top && y<=r.bottom;
+  rm.classList.toggle('over',onRm); d.target = onRm ? 'rm' : onTape ? 'tape' : null;
+  d.edge = onTape ? (x<t.left+44 ? -1 : x>t.right-44 ? 1 : 0) : 0;
+  const ins=$('spIns');
+  if(onTape){ const at=spInsAt(x), W=spW(); d.at=at; ins.classList.remove('hidden'); ins.style.left=(t.width/2 - SPG.view*W + at*W)+'px'; }
+  else ins.classList.add('hidden');
+}
+function spDragEnd(cancel){
+  const d=SPG.drag; if(!d) return; SPG.drag=null; d.ghost.remove(); $('spIns').classList.add('hidden'); $('spRm')?.classList.remove('over');
+  document.querySelectorAll('#spTrack .lifted').forEach(b=>b.classList.remove('lifted'));
+  if(cancel || !d.target) { spFrame(true); return; }
+  const o=SONG.order, playing=SONG.pos>=0 ? SONG.pos : null;
+  if(d.target==='rm'){
+    if(o.length<=1){ toast('the tape needs one block'); return; }
+    o.splice(d.n,1); toast(`${partName(d.k)} taken off the tape`, 'undo', undo);
+  } else if(d.kind==='pad'){
+    if(o.length>=24){ toast('24 passes is the maximum'); return; }
+    o.splice(d.at,0,d.k);
+  } else {
+    let at=d.at; if(at>d.n) at--; if(at===d.n){ spFrame(true); return; }
+    o.splice(d.n,1); o.splice(at,0,d.k);
+  }
+  // stay on the pass you were on (or the moved one, if that was it)
+  if(playing!=null){
+    const same = d.kind==='blk' && d.n===playing;
+    if(same && d.target==='rm'){ SONG.pos=Math.min(d.n, o.length-1); if(!S.playing && o[SONG.pos]!==SONG.cur) loadPart(o[SONG.pos],true); if(S.playing) SONG.pos=Math.max(0,SONG.pos-1); }   // playing: the next loop goes on from the block after it
+    else if(same) SONG.pos = d.at>d.n ? d.at-1 : d.at;
+    else if(d.kind==='blk' || d.kind==='pad'){ const shift = d.kind==='pad' ? (d.at<=playing ? 1 : 0) : d.target==='rm' ? (d.n<playing ? -1 : 0) : ((d.n<playing && d.at>playing) ? -1 : (d.n>playing && d.at<=playing) ? 1 : 0); SONG.pos=playing+shift; }
+  }
+  SONG.jump=null; if(SONG.pos>=0) SPG.view=SONG.pos;
+  renderSongPage(); renderParts(); save();
+}
+$('spTape').addEventListener('pointerdown',e=>{
+  if(SPG.press || SPG.drag) return;
+  const b=e.target.closest('.spblk'), p={x:e.clientX,y:e.clientY,view:SPG.view,id:e.pointerId,blk:b?+b.dataset.n:null,moved:false,scrub:false};
+  if(b) p.hold=setTimeout(()=>{ if(!p.moved){ p.held=true; SPG.noClick=true; const n=p.blk; spDragStart('blk',SONG.order[n],n,p.x,p.y); spDragMove(p.x,p.y); } },280);
+  SPG.press=p;
+});
+$('spPads').addEventListener('pointerdown',e=>{
+  if(SPG.press || SPG.drag) return;
+  const b=e.target.closest('.sppad[data-k]'); if(!b) return;
+  const p={x:e.clientX,y:e.clientY,id:e.pointerId,pad:+b.dataset.k,moved:false};
+  p.hold=setTimeout(()=>{ if(!p.moved && !SPG.drag){ p.held=true; SPG.noClick=true; spEditOpen(p.pad); } },520);
+  SPG.press=p;
+});
+addEventListener('pointermove',e=>{
+  const p=SPG.press; if(!p || e.pointerId!==p.id) return;
+  const dx=e.clientX-p.x, dy=e.clientY-p.y;
+  if(SPG.drag){ spDragMove(e.clientX,e.clientY); return; }
+  if(!p.moved && Math.hypot(dx,dy)>8){ p.moved=true; clearTimeout(p.hold);
+    if(p.pad!=null){ SPG.noClick=true; spDragStart('pad',p.pad,null,e.clientX,e.clientY); spDragMove(e.clientX,e.clientY); return; }
+    if(!S.playing){ p.scrub=true; SPG.noClick=true; }   // stopped: swipe the tape
+  }
+  if(p.scrub){ SPG.view=clamp(p.view - dx/spW(), 0, Math.max(0,SONG.order.length-1)); spFrame(); }
+});
+const spUp=e=>{
+  const p=SPG.press; if(!p || e.pointerId!==p.id) return; SPG.press=null; clearTimeout(p.hold);
+  setTimeout(()=>{ SPG.noClick=false; }, 60);   // the click that follows a drag, a hold or a swipe is not a tap
+  if(SPG.drag){ spDragEnd(e.type==='pointercancel'); return; }
+  if(p.scrub){ spGoPass(Math.round(SPG.view)); }
+};
+addEventListener('pointerup',spUp); addEventListener('pointercancel',spUp);
+$('spTape').addEventListener('click',e=>{ if(SPG.noClick) return; const b=e.target.closest('.spblk'); if(b) spGoPass(+b.dataset.n); });
+$('spPads').addEventListener('click',e=>{ if(SPG.noClick) return;
+  if(e.target.closest('[data-add]')){ addPart(); return; }
+  const b=e.target.closest('.sppad[data-k]'); if(b) spGoPart(+b.dataset.k);
+  else if(e.target.closest('#spRm')) toast('hold a block on the tape and drag it here to take it off');
+});
+$('spPads').addEventListener('contextmenu',e=>e.preventDefault()); $('spTape').addEventListener('contextmenu',e=>e.preventDefault());
+$('spBack').onclick=closeSongPage;
+$('spPlay').onclick=()=>{ if(!ctx) return; if(S.playing){ stopTransport(); SONG.jump=null; } else { SONG.pos=SONG.pos<0 ? SONG.order.indexOf(SONG.cur) : SONG.pos; startTransport(false); } spFrame(true); };
+$('spAuto').onclick=()=>{ SONG.follow=!SONG.follow; renderSongPage(); save(); toast(SONG.follow?'auto: the song plays the tape from part to part':'auto off: the part you are on loops; tap a pad or a block to go somewhere else'); };
+// hold a pad: name, copy, remove
+function spEditOpen(k){
+  const ed=$('spEdit'), p=SONG.parts[k];
+  ed.innerHTML=`<h3 style="color:var(--l${k})">part ${PART_L(k)}</h3><input id="spEName" maxlength="14" placeholder="name" value="${escH(p.name)}" aria-label="Name of part ${PART_L(k)}">
+    <div class="row"><button id="spECopy" ${SONG.parts.length>=8?'disabled':''}>copy</button><button id="spERm" class="danger" ${SONG.parts.length<=1?'disabled':''}>remove</button><button id="spEDone" class="primary">done</button></div>`;
+  ed.classList.remove('hidden'); ed.dataset.k=k;
+  const nm=$('spEName'); nm.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') spEditClose(); });
+  nm.addEventListener('input',()=>{ SONG.parts[k].name=nm.value.trim().slice(0,14); renderParts(); save(); });
+  $('spECopy').onclick=()=>{ spEditClose(); dupPart(k); };
+  $('spERm').onclick=e=>{ const t=e.currentTarget; if(!t.classList.contains('armed')){ t.classList.add('armed'); t.textContent='tap again'; return; } spEditClose(); deletePart(k); };
+  $('spEDone').onclick=spEditClose;
+}
+function spEditClose(){ const ed=$('spEdit'); if(ed.classList.contains('hidden')) return; ed.classList.add('hidden'); if(SPG.open) renderSongPage(); }
+addEventListener('resize',()=>{ if(SPG.open) requestAnimationFrame(renderSongPage); });
+
 /* following the timeline: one block is one pass of the loop */
 const songNext = () => SONG.jump!=null ? SONG.jump : SONG.follow ? (SONG.pos+1)%SONG.order.length : SONG.pos;
-const songActive = () => CAP.open && S.playing && (SONG.jump!=null || (SONG.follow && (SONG.order.length>1 || SONG.order[0]!==SONG.cur)));
+const songActive = () => (CAP.open || SPG.open) && S.playing && (SONG.jump!=null || (SONG.follow && (SONG.order.length>1 || SONG.order[0]!==SONG.cur)));
 function songBoundary(a, b){
   if(!songActive()) return null;
   const L=loopLen(), B=(Math.floor(a/L)+1)*L;
@@ -3669,6 +3984,7 @@ function songAdvance(B){
       Ly.gain.gain.setTargetAtTime(audible(Ly)?Ly.vol*Ly.vol:0, at, 0.01); });
   }
   setTimeout(()=>{
+    if(SPG.open){ if(changed){ renderParts(); save(); } renderSongPage(); return; }
     if(!CAP.open) return;
     if(changed){ renderCaptureMode(); const g=$('cgrid'); g.classList.remove('slide'); void g.offsetWidth; g.classList.add('slide'); renderParts(); save(); }
     else renderCapSong();
@@ -4555,6 +4871,7 @@ addEventListener('keydown',e=>{
   if((e.metaKey||e.ctrlKey) && (e.key==='s'||e.key==='S')){ e.preventDefault(); projSaveNow(); return; }
   if(e.key==='Escape' && document.querySelector('.fxpop')){ fxPopClose(); return; }
   if(e.key==='Escape' && document.querySelector('.sheet.open')){ closeSheets(); return; }
+  if(e.key==='Escape' && SPG.open){ if(!$('spEdit').classList.contains('hidden')) spEditClose(); else closeSongPage(); return; }
   if(e.key==='Escape' && CAP.open){ closeCapture(); return; }
   if(e.repeat) return;
   if(e.code==='Space'){ e.preventDefault(); S.playing?stopTransport():startTransport(false); }
