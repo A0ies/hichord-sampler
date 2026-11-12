@@ -1115,12 +1115,12 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 .caprec .cmeter i{display:block;height:100%;width:0;background:var(--enc2);transition:width .05s linear}
 /* the play bar: a black strip along the bottom, like the record strip in capture mode; capture is its orange key.
    Undo floats as a round key just above it. --tbarh is the room the bar takes, so sheets and panels stay above it */
-:root{--tbarh:calc(74px + var(--sb))}
+:root{--tbarh:calc(82px + var(--sb))}
 .tbar{left:0;right:0;bottom:0;border-radius:0;border-top:none;background:var(--screen);box-shadow:none;color:var(--screen-ink);gap:10px;
-  padding:10px max(12px,calc(var(--sr) + 8px)) calc(10px + var(--sb)) max(12px,calc(var(--sl) + 8px))}
+  padding:12px max(12px,calc(var(--sr) + 8px)) calc(12px + var(--sb)) max(12px,calc(var(--sl) + 8px))}
 body[data-state="playing"] .tbar{background:var(--screen);box-shadow:inset 0 2px 0 var(--enc2)}
 body[data-state="count"] .tbar,body[data-state="recording"] .tbar{background:var(--screen);box-shadow:inset 0 2px 0 var(--rec)}
-.tbar .big{background:var(--screen2);color:var(--screen-ink);box-shadow:none;border-radius:12px;width:50px;height:50px}
+.tbar .big{background:var(--screen2);color:var(--screen-ink);box-shadow:none;border-radius:12px;width:56px;height:56px}
 .tbar .big::before{display:none}
 .tbar #playBtn.on{color:var(--enc2)}
 .tbar #recBtn svg circle{fill:var(--rec)}
@@ -1129,7 +1129,7 @@ body[data-state="count"] .tbar,body[data-state="recording"] .tbar{background:var
 .tbar .recnum{border-color:var(--screen)}
 .tbar .tool{color:var(--screen-ink)}
 .tbar .tool small{color:var(--screen-dim)}
-.tbar #captureBtn{background:var(--acc);color:#fff;border-radius:12px;padding:6px 14px;min-height:50px}
+.tbar #captureBtn{background:var(--acc);color:#fff;border-radius:12px;padding:6px 16px;min-height:56px}
 .tbar #captureBtn small{color:#fff}
 .tbar #captureBtn::before{display:none}
 .undofab{position:fixed;left:max(14px,calc(var(--sl) + 10px));bottom:calc(var(--tbarh) + 12px);z-index:12;width:52px;height:52px;min-height:0;border-radius:50%;padding:0;
@@ -1151,9 +1151,171 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
   .layerpane::after{content:"";display:block;height:calc(100% - var(--tailh,60px))}
   .layersheet:not(.full){position:relative;top:auto;bottom:auto;height:auto;max-height:none;align-self:stretch}
   /* landscape: the home indicator is thin there, so the bar doesn't need its full safe-area padding */
-  :root{--tbarh:calc(70px + var(--sb) * .3)}
+  :root{--tbarh:calc(74px + var(--sb) * .3)}
   .tbar{padding-top:10px;padding-bottom:calc(10px + var(--sb) * .3)}
+  .tbar .big{width:54px;height:54px} .tbar #captureBtn{min-height:54px}
 }
+
+/* iPad ("studio", body.studio + body[data-studio=land|port], set by renderDetail): the page never scrolls. A grid of
+   windows: layers, the docked note editor, the graph strip, settings and the capture pad. body[data-sfull] is the
+   window in full screen: settings or pad take the whole width under the editor and graph strip, which stay where
+   they are; the editor in full screen is the phone's full editor */
+body.studio{height:100%;overflow:hidden}
+body.studio .shell{height:100dvh;min-height:0}
+body.studio .main{flex:1 1 auto;min-height:0;max-width:none;padding-bottom:calc(var(--tbarh) + 12px);display:grid;gap:10px 12px;align-items:stretch}
+body.studio .layerpane{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:none}
+body.studio .layerpane::-webkit-scrollbar{display:none}
+body.studio .layersheet{position:relative;top:auto;bottom:auto;height:auto;max-height:none;min-height:0;min-width:0;align-self:stretch;padding:12px 14px;margin:0}
+body.studio #editBtn,body.studio #detail .hint{display:none}
+/* settings: title and keys on top, the tabs, then the page */
+body.studio .layersheet .lsbody{overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr);column-gap:8px;row-gap:10px}
+body.studio .sheethead{grid-column:1;grid-row:1;margin:0;flex-wrap:nowrap;min-width:0}
+body.studio #detailTitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+body.studio .dangerkeys{grid-column:2;grid-row:1;border:0;padding:0;margin:0 44px 0 0;align-items:center;gap:6px}
+body.studio .dangerkeys button{flex:none;min-height:36px;padding:0 12px}
+body.studio #tabs{grid-column:1;grid-row:1;margin:0;align-self:center}
+body.studio #tabs button{flex:1 0 auto;padding:8px 8px 6px;letter-spacing:.04em}
+body.studio #detail{grid-column:1/-1;grid-row:2;min-height:0;gap:10px}
+/* docked: the tabs take the title's place (the sidebar and the pad name the layer); full screen shows the title */
+body.studio:not([data-sfull=st]) .sheethead{display:none}
+body.studio .layersheet .lsbody{grid-template-rows:auto minmax(0,1fr)}
+/* docked instrument page: three sliders a row, own sound next to the instrument */
+body.studio:not([data-sfull=st]) #detail[data-tab=sound] .params{grid-template-columns:repeat(3,minmax(0,1fr))}
+body.studio:not([data-sfull=st]) #detail[data-tab=sound] .params>.instpick{grid-column:span 2}
+body.studio:not([data-sfull=st]) #detail[data-tab=sound] .params>.p:nth-child(2){grid-column:auto}
+body.studio:not([data-sfull=st]) #detail[data-tab=sound] .params>.ownsnd{grid-column:3;grid-row:1;align-self:center;justify-content:flex-end;flex-wrap:nowrap}
+body.studio .sfull{width:36px;height:36px;min-height:0;padding:0;flex:none;display:inline-flex;align-items:center;justify-content:center;border-radius:10px}
+body.studio .sfull svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+body.studio .sfull::before{display:none}
+body.studio #lsFull{position:absolute;top:12px;right:14px}
+/* one page at a time: sliders two by two; the instrument picker, own sound, capture fx and plays on keep the full width */
+body.studio #detail .params{gap:8px}
+body.studio #detail[data-tab=sound] .params,body.studio #detail[data-tab=mix] .params,body.studio .dpage[data-tab=sound] .params,body.studio .dpage[data-tab=mix] .params{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px}
+body.studio .params>.instpick,body.studio #detail[data-tab=sound] .params>.p:nth-child(2),body.studio .dpage[data-tab=sound] .params>.p:nth-child(2),body.studio .params>.ownsnd,body.studio .params>.wide,body.studio .params>.cfxp{grid-column:1/-1}
+body.studio .params .ownsnd{margin-top:0}
+body.studio .feels{grid-template-columns:repeat(3,minmax(0,1fr))}
+body.studio .advt{flex:1;min-height:0;margin-top:0}
+body.studio .advt .xy{flex:1;min-height:80px;height:auto}
+/* settings full screen: timing, instrument and mix side by side, no tabs */
+body.studio[data-sfull=st] #tabs{display:none}
+body.studio[data-sfull=st] #detail{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:stretch}
+body.studio .dpage{display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0}
+body.studio .dpage .params{grid-template-columns:minmax(0,1fr)}
+body.studio .dhead{margin:0;padding:8px 0 7px;border-bottom:2px solid var(--acc);color:var(--ink);font-size:12px;letter-spacing:.08em;flex:none}
+body.studio:not([data-sfull=st]) #detail[data-tab=sound] .ownsnd .sub{display:none}
+body.studio:not([data-sfull=st]) #detail[data-tab=mix] .params>.wide,body.studio:not([data-sfull=st]) #detail[data-tab=mix] .params>.cfxp{grid-column:auto}   /* the keys say it: file and microphone */
+/* landscape, settings full screen: the row keeps its height (the editor stays put), so instrument gets the widest
+   column with four sliders a row, and mix puts its sliders four in a row with capture fx next to plays on */
+body[data-studio=land][data-sfull=st] #detail{grid-template-columns:minmax(0,1fr) minmax(0,1.7fr) minmax(0,1.5fr);gap:20px}
+body[data-studio=land][data-sfull=st] .dpage{gap:6px}
+body[data-studio=land][data-sfull=st] .layersheet{padding:10px 14px}
+body[data-studio=land][data-sfull=st] .layersheet .lsbody{row-gap:3px}
+body[data-studio=land][data-sfull=st] #lsFull{top:10px;width:32px;height:32px}
+body[data-studio=land][data-sfull=st] .dangerkeys button{min-height:32px;height:32px}
+body[data-studio=land][data-sfull=st] .dangerkeys{margin-right:40px}
+body[data-studio=land][data-sfull=st] #detailTitle{font-size:13px}
+body[data-studio=land][data-sfull=st] .dhead{padding:2px 0 4px}
+body[data-studio=land][data-sfull=st] .dpage .params{gap:6px 12px}
+body[data-studio=land][data-sfull=st] .dpage[data-tab=sound] .params,body[data-studio=land][data-sfull=st] .dpage[data-tab=mix] .params{grid-template-columns:repeat(4,minmax(0,1fr))}
+body[data-studio=land][data-sfull=st] .dpage[data-tab=sound] .params>.instpick{grid-column:span 2}
+body[data-studio=land][data-sfull=st] .dpage[data-tab=sound] .params>.p:nth-child(2){grid-column:auto}
+body[data-studio=land][data-sfull=st] .dpage[data-tab=sound] .params>.ownsnd{grid-column:4;grid-row:1;align-self:center;justify-content:flex-end;flex-wrap:nowrap}
+body[data-studio=land][data-sfull=st] .dpage[data-tab=sound] .ownsnd .sub{display:none}
+body[data-studio=land][data-sfull=st] .dpage[data-tab=mix] .params>.wide,body[data-studio=land][data-sfull=st] .dpage[data-tab=mix] .params>.cfxp{grid-column:span 2}
+/* the graph strip: the preview without its timeline (the editor above shows the notes) */
+body.studio #lprev{margin:0;height:auto;min-height:0;min-width:0;padding:5px 6px}
+body.studio #lprev #prevRoll{display:none}
+body.studio #lprev .pstrip{flex:1;height:auto;min-height:0}
+/* the capture pad */
+.spad{display:none}
+#lsFull{display:none}
+body.studio #lsFull{display:inline-flex;z-index:2}
+body.studio .spad{display:flex;position:relative;min-height:0;min-width:0}
+body.studio .spad .ctile{flex:1}
+body.studio .spad .sfull{pointer-events:auto;background:var(--key);color:var(--ink)}
+body.studio[data-sfull=cp] .spad .capnotes{grid-template-columns:repeat(6,minmax(0,1fr))}
+/* the docked note editor: a dark screen like the preview, tool keys and grid left, undo, chords/notes and full screen right */
+.editor.dock:not(.full){position:relative;inset:auto;z-index:auto;min-height:0;min-width:0;padding:8px;border-radius:14px;background:var(--screen);color:var(--screen-ink);
+  display:grid;grid-template-columns:auto auto minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);gap:6px 10px}
+.editor.dock:not(.full) .edbar{grid-column:1;grid-row:1;margin:0;padding:0;background:none;gap:6px}
+.editor.dock:not(.full) .edhead{grid-column:3;grid-row:1;flex-wrap:nowrap;gap:6px;min-width:0}
+.editor.dock:not(.full) #edPlay,.editor.dock:not(.full) #edRec,.editor.dock:not(.full) .edpos,.editor.dock:not(.full) .edpick{display:none}
+.editor.dock:not(.full) .ebanner{grid-column:1/-1;grid-row:2;margin:0;background:var(--screen2);color:var(--screen-dim)}
+.editor.dock:not(.full) .edroll{grid-column:1/-1;grid-row:3;min-height:0}
+.editor.dock:not(.full) #edCanvas{border-radius:8px}
+.editor.dock:not(.full) .edact{grid-column:2;grid-row:1;padding:0;gap:4px}
+.editor.dock:not(.full) .edact .info,.editor.dock:not(.full) .edact>button small{display:none}
+body[data-studio=port] .editor.dock:not(.full){column-gap:6px}
+body[data-studio=port] .editor.dock:not(.full) .edtoolkeys button,body[data-studio=port] .editor.dock:not(.full) .edtools>button{width:36px}
+body[data-studio=port] .editor.dock:not(.full) .edact>button{width:32px}
+body[data-studio=port] .editor.dock:not(.full) .edmode button{padding:0 10px}
+body[data-studio=port] .editor.dock:not(.full) .edgrid{padding:0 8px}
+body[data-studio=port]:not([data-sfull=st]) .dangerkeys button{width:36px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+body[data-studio=port]:not([data-sfull=st]) .dangerkeys button.armed{width:auto;padding:0 10px}
+body.studio .dangerkeys svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+body[data-studio=port] #tabs button{padding:8px 6px 6px;letter-spacing:.02em}
+.editor.dock:not(.full) .edact>button{width:36px;padding:0;justify-content:center}
+.editor.dock:not(.full) .edvelpop{top:calc(100% + 8px);bottom:auto;right:auto;left:0}
+.editor.dock:not(.full) .edtoolkeys{margin:0}
+.editor.dock:not(.full) .edtoolkeys button,.editor.dock:not(.full) .edgrid{height:36px;border-radius:9px}
+.editor.dock:not(.full) .edtoolkeys button{width:40px}
+.editor.dock:not(.full) .edgrid{flex-direction:row;gap:6px;min-width:0;padding:0 10px} .editor.dock:not(.full) .edgrid b{font-size:13px}
+.editor.dock:not(.full) .edtools{background:var(--screen2);box-shadow:none}
+.editor.dock:not(.full) .edtools>button{color:var(--screen-ink);min-height:36px;height:36px;width:40px}
+.editor.dock:not(.full) .edtools>button+button{border-left-color:var(--screen-line)}
+.editor.dock:not(.full) .edmode{background:var(--screen2);padding:2px}
+.editor.dock:not(.full) .edmode button{min-height:32px;color:var(--screen-dim)}
+.editor.dock:not(.full) .edmode button.on{background:var(--screen-ink);color:var(--screen)}
+.editor.dock:not(.full) .edhead .edclose{width:36px;height:36px;background:var(--screen2);color:var(--screen-ink);box-shadow:none}
+.editor.dock:not(.full) .edhead .edclose svg{width:18px;height:18px;stroke-width:2}
+.editor.dock:not(.full) .edact .info{color:var(--screen-dim)} .editor.dock:not(.full) .edact .info b{color:var(--screen-ink)}
+.editor.dock:not(.full) .edact>button{flex-direction:row;gap:6px;min-height:36px;height:36px;background:var(--screen2);color:var(--screen-ink);box-shadow:none}
+.editor.dock:not(.full) .edact>button::before{display:none}
+.editor.dock:not(.full) .edact>button svg{width:16px;height:16px}
+/* landscape: layers on the left; the editor and graph strip over the rest; settings and capture pad under them */
+body[data-studio=land] .main{grid-template-columns:minmax(250px,24%) minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) var(--strh) var(--loh)}
+body.studio{--strh:50px}
+body[data-studio=land]{--loh:clamp(290px,calc(100dvh - var(--tbarh) - 440px),400px)}
+body[data-studio=land] .layerpane{grid-column:1;grid-row:1/4}
+body[data-studio=land] #editor{grid-column:2/4;grid-row:1}
+body[data-studio=land] #lprev{grid-column:2/4;grid-row:2}
+body[data-studio=land] .layersheet{grid-column:2;grid-row:3}
+body[data-studio=land] .spad{grid-column:3;grid-row:3}
+body[data-studio=land][data-sfull=st] #editor,body[data-studio=land][data-sfull=cp] #editor,body[data-studio=land][data-sfull=st] #lprev,body[data-studio=land][data-sfull=cp] #lprev,
+body[data-studio=land][data-sfull=st] .layersheet,body[data-studio=land][data-sfull=cp] .spad{grid-column:1/4}
+/* portrait: layers on top, two per row; the editor and graph strip; settings next to the capture pad */
+body[data-studio=port] .main{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(110px,1fr) var(--edh) var(--strh) var(--loh)}
+body[data-studio=port]{--edh:clamp(240px,30dvh,380px);--loh:350px}
+/* portrait columns are narrower: the instrument page two sliders a row, own sound next to the picker */
+body[data-studio=port]:not([data-sfull=st]) #detail[data-tab=sound] .params{grid-template-columns:repeat(2,minmax(0,1fr))}
+body[data-studio=port]:not([data-sfull=st]) #detail[data-tab=sound] .params>.instpick{grid-column:1}
+body[data-studio=port]:not([data-sfull=st]) #detail[data-tab=sound] .params>.ownsnd{grid-column:2}
+body[data-studio=port] .layers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+body[data-studio=port] .layerpane{grid-column:1/3;grid-row:1}
+body[data-studio=port] #editor{grid-column:1/3;grid-row:2}
+body[data-studio=port] #lprev{grid-column:1/3;grid-row:3}
+body[data-studio=port] .layersheet{grid-column:1;grid-row:4}
+body[data-studio=port] .spad{grid-column:2;grid-row:4}
+body[data-studio=port][data-sfull=st] .layersheet,body[data-studio=port][data-sfull=cp] .spad{grid-column:1/3}
+/* full screen: the layers and the other window step aside */
+body.studio[data-sfull=st] .layerpane,body.studio[data-sfull=cp] .layerpane,body.studio[data-sfull=st] .spad,body.studio[data-sfull=cp] .layersheet{display:none}
+body[data-studio=port][data-sfull=st] .main,body[data-studio=port][data-sfull=cp] .main{grid-template-rows:var(--edh) var(--strh) minmax(0,1fr)}
+body[data-studio=port][data-sfull=st] #editor,body[data-studio=port][data-sfull=cp] #editor{grid-row:1}
+body[data-studio=port][data-sfull=st] #lprev,body[data-studio=port][data-sfull=cp] #lprev{grid-row:2}
+body[data-studio=port][data-sfull=st] .layersheet,body[data-studio=port][data-sfull=cp] .spad{grid-row:3}
+/* undo: bottom left in landscape (over the layers); in portrait in the top bar, next to the theme key */
+body[data-studio=port] .undofab{left:auto;bottom:auto;top:calc(8px + var(--st));right:calc(max(14px,calc(var(--sr) + 10px)) + 106px);width:44px;height:44px;box-shadow:0 1px 0 var(--key-edge)}
+body.studio[data-sfull=st] .undofab,body.studio[data-sfull=cp] .undofab,body.studio[data-sfull=ed] .undofab{display:none}
+/* iPad: the play bar a size up */
+body.studio{--tbarh:calc(92px + var(--sb))}
+body.studio .tbar{gap:14px;padding-top:14px;padding-bottom:calc(14px + var(--sb))}
+body.studio .tbar .big{width:64px;height:64px;border-radius:14px}
+body.studio .tbar .big svg{width:26px;height:26px}
+body.studio .tbar #captureBtn{min-height:64px;padding:6px 20px;border-radius:14px}
+body.studio .tbar .pos b{font-size:26px}
+@media (max-height:800px){ body.studio{--strh:42px;--tbarh:calc(84px + var(--sb))} body.studio .tbar{padding-top:11px;padding-bottom:calc(11px + var(--sb))} body.studio .tbar .big{width:60px;height:60px} body.studio .tbar #captureBtn{min-height:60px} }
+/* the docked side panel (wide window, iPad split view) is too narrow for five feel keys in a row */
+@media (min-width:640px) and (min-height:561px){ .layersheet:not(.full) .feels{grid-template-columns:repeat(3,minmax(0,1fr))} }
 </style>
 </head>
 <body>
@@ -1190,6 +1352,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
         <div class="pstrip"><canvas id="prevCv" aria-hidden="true"></canvas>
           <div class="pkeys"><button id="prevPlay" aria-label="Play a preview of this layer's sound">▶</button><button id="prevSolo" aria-label="Hear only this layer">solo</button></div></div>
       </div>
+      <button class="icon sfull" id="lsFull" aria-label="Settings full screen"></button>
       <div class="lsbody">
       <div class="grab"></div>
       <div class="row sheethead">
@@ -1203,10 +1366,12 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
       <div id="detail"></div>
       <div class="dangerkeys" id="dangerKeys">
         <button id="clearBtn" class="danger" aria-label="Clear notes">clear</button>
-        <button id="removeBtn" class="danger">remove layer</button>
+        <button id="removeBtn" class="danger" aria-label="Remove layer">remove layer</button>
       </div>
       </div>
     </section>
+    <!-- iPad: the selected layer's capture pad, next to its settings -->
+    <section class="spad" id="sPad" aria-label="Capture pad"></section>
   </main>
 
   <!-- transport: always visible -->
@@ -2381,7 +2546,7 @@ function applySession(d, sounds){
   master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime();
   $('metroChk').checked=S.metro; $('countChk').checked=S.countIn;
   renderBarsSeg(); renderTempo(); renderTransport(); renderLayers(); renderDetail(); renderGlobal(); renderSync();
-  if(ED.open) closeEditor();
+  if(ED.open){ if(ED.dock) setFull(''); else closeEditor(); }
   HIST.undo=[]; HIST.redo=[]; HIST.last=histData(sessionData()); renderUndo();
   try{ localStorage.setItem(SAVE_KEY, JSON.stringify(sessionData())); }catch(e){}
 }
@@ -2772,16 +2937,20 @@ setInterval(()=>{ if($('projSheet').classList.contains('open')) renderProjStatus
 document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close',''));
 $('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(b) addLayer(b.dataset.k); };
 /* clear and remove need two taps: the first arms the key for 3 seconds */
-function twoTap(btn, label, fn){
-  let armT=null;
+function twoTap(btn, lab, fn){
+  let armT=null; const label=()=>typeof lab==='function'?lab():lab;   // a label can be a key's icon (iPad portrait)
   btn.onclick=()=>{
-    if(btn.classList.contains('armed')){ clearTimeout(armT); btn.classList.remove('armed'); btn.textContent=label; fn(); return; }
+    if(btn.classList.contains('armed')){ clearTimeout(armT); btn.classList.remove('armed'); btn.innerHTML=label(); fn(); return; }
     btn.classList.add('armed'); btn.textContent='tap again';
-    armT=setTimeout(()=>{ btn.classList.remove('armed'); btn.textContent=label; },3000);
+    armT=setTimeout(()=>{ btn.classList.remove('armed'); btn.innerHTML=label(); },3000);
   };
 }
-twoTap($('removeBtn'),'remove layer',removeLayer);
-twoTap($('clearBtn'),'clear',clearLayer);
+const dangerLabel = (word, short, icon) => { const m=document.body.dataset.studio, f=sFull()==='st';
+  return m==='port'&&!f ? icon : m&&!f ? short : word; };
+const IC_ERASE='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 20h11M4.6 14.4l8.5-8.5a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L10 19H7.4z"/></svg>';
+const removeLabel = () => dangerLabel('remove layer','remove',ic('trash','')), clearLabel = () => dangerLabel('clear','clear',IC_ERASE);
+twoTap($('removeBtn'),removeLabel,removeLayer);
+twoTap($('clearBtn'),clearLabel,clearLayer);
 
 
 /* sheets */
@@ -2821,7 +2990,7 @@ function openSheet(id){
   document.querySelectorAll('.sheet.open').forEach(x=>{ if(x.id!==id) x.classList.remove('open'); });
   $(id).classList.add('open'); $('backdrop').classList.add('show'); document.body.classList.add('sheetopen');
 }
-function closeSheets(){ document.body.classList.remove('sheetopen'); const ls=$('layerSheet'); ls.classList.remove('full'); if($('lprev').parentNode!==ls) ls.prepend($('lprev')); const pk=ls.querySelector('.lsbody>.pkeys'); if(pk) ls.querySelector('.lprev .pstrip').append(pk); document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open')); $('backdrop').classList.remove('show'); }
+function closeSheets(){ document.body.classList.remove('sheetopen'); const ls=$('layerSheet'); ls.classList.remove('full'); if($('lprev').parentNode!==ls && !ED.dock) ls.prepend($('lprev')); const pk=ls.querySelector('.lsbody>.pkeys'); if(pk) ls.querySelector('.lprev .pstrip').append(pk); document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open')); $('backdrop').classList.remove('show'); }
 $('backdrop').onclick=closeSheets;
 /* iOS still scrolls the page when a swipe starts on a panel that has nothing to scroll: only a panel area that
    can scroll itself (or a slider or select) keeps the swipe */
@@ -2963,11 +3132,84 @@ function stepper(host,label,get,set,min,max,step,fmt){
     set(b.dataset.z!=null ? 0 : clamp(get()+(+b.dataset.d)*step, min, max)); show(); save(); };
   show(); host.appendChild(d); return d;
 }
+/* iPad ("studio"): the layers as a sidebar (on top in portrait), the note editor docked over the full width with the
+   graph strip under it, then the settings (timing, instrument, mix behind tabs) next to the selected layer's capture
+   pad. Each window goes full screen with its own key; the editor and graph strip stay where they are */
+const studioMode = () => matchMedia('(min-width:1000px) and (min-height:700px)').matches ? 'land'
+  : matchMedia('(min-width:700px) and (min-height:900px)').matches ? 'port' : '';
+function applyStudio(){ const m=studioMode(); if(document.body.dataset.studio===m) return false;
+  document.body.dataset.studio=m; document.body.classList.toggle('studio',!!m); studioDock(m); return true; }
+const IC_MAX='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-6 6M4 20l6-6"/></svg>',
+      IC_MIN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M4 20l6-6M20 4l-6 6"/></svg>';
+const sFull = () => document.body.dataset.sfull||'';
+function studioDock(m){
+  const main=document.querySelector('.main'), ed=$('editor'), lp=$('lprev'), ls=$('layerSheet');
+  if(m){
+    if(ED.dock) return;
+    main.insertBefore(ed, ls); main.insertBefore(lp, ls); ed.classList.add('dock'); ED.dock=true;
+    ED.li=S.sel; ED.open=true; ED.sel.clear(); ED.hist=[]; ED.fut=[]; ED.tool='select'; ED.fitted=false; edDefaultMode();
+    ed.classList.remove('hidden'); $('edDone').innerHTML=IC_MAX; $('edDone').setAttribute('aria-label','Note editor full screen');
+    requestAnimationFrame(()=>{ edResize(); edFit(); edFitPitch(); edRenderTools(); edDraw(); });
+  } else if(ED.dock){
+    document.body.dataset.sfull=''; ED.dock=false; ED.open=false; ED.drag=null; ED.pointers.clear();
+    ed.classList.remove('dock','full'); ed.classList.add('hidden'); document.body.insertBefore(ed,$('toast')); ls.prepend(lp);
+    $('edDone').innerHTML=ic('close',''); $('edDone').setAttribute('aria-label','Close the editor');
+    $('sPad').innerHTML='';
+  }
+}
+function setFull(w){
+  if(!document.body.dataset.studio) w='';
+  if(sFull()===w) return;
+  document.body.dataset.sfull=w; $('editor').classList.toggle('full', w==='ed');
+  $('edDone').innerHTML = w==='ed' ? IC_MIN : IC_MAX;
+  $('edMenu').classList.add('hidden'); $('edVelPop').classList.add('hidden');
+  renderDetail();
+  requestAnimationFrame(()=>{ if(ED.open){ edResize(); edFit(); edFitPitch(); edDraw(); } drawAll(); });
+}
+// the docked timeline shows every note of the layer, so rows are as high as fit
+function edFitPitch(){
+  const evs=edLy().events, {rollH}=edDims(); if(rollH<40) return;
+  let lo=60, hi=60; if(evs.length){ lo=127; hi=0; evs.forEach(e=>{ lo=Math.min(lo,e.note); hi=Math.max(hi,e.note); }); }
+  ED.rowH=clamp(Math.floor(rollH/(hi-lo+3)), 9, matchMedia('(pointer:coarse)').matches?20:16); edCenterPitch(); ED.fitted=true;
+}
+// the docked editor follows the selected layer
+function edSync(){
+  if(!ED.dock) return;
+  if(ED.li!==S.sel){ ED.li=S.sel; ED.sel.clear(); ED.hist=[]; ED.fut=[]; edDefaultMode(); edFit(); edFitPitch(); }
+  edRenderTools(); edDraw();
+}
+// the selected layer's capture pad (a layer you leave lets go of its locked effect)
+let sPadLast=-1;
+function sPadRender(){
+  const box=$('sPad'); if(!document.body.dataset.studio){ box.innerHTML=''; return; }
+  const i=S.sel, Ly=layers[i];
+  if(sPadLast!==i && sPadLast>=0 && CAP.lock.has(sPadLast) && !CAP.open){ CAP.lock.delete(sPadLast); fxReset(layers[sPadLast]); }
+  sPadLast=i;
+  const full=sFull()==='cp';
+  box.innerHTML=capTile(Ly,i,false,`<button class="icon sfull" data-full="cp" aria-label="${full?'Back from full screen':'Capture pad full screen'}">${full?IC_MIN:IC_MAX}</button>`);
+  const el=box.firstElementChild; setLockKey(el, CAP.lock.has(i));
+  CAP.touch.forEach(t=>{ if(t.i===i && !t.el.isConnected && box.contains(el)){ t.el=el; if(t.active) el.classList.add('touch'); } });
+}
 function renderDetail(){
+  applyStudio(); const mode=document.body.dataset.studio, full=sFull();
   $('tabs').innerHTML = TABS.map(([k,l])=>`<button data-t="${k}" class="${S.tab===k?'on':''}">${l}</button>`).join('');
-  const host=$('detail'); host.innerHTML=''; const Ly=selLayer(); host.dataset.tab=S.tab+(S.tab==='timing'&&S.advOpen?'-adv':'');
+  const host=$('detail'); host.innerHTML=''; const Ly=selLayer();
+  if(!$('removeBtn').classList.contains('armed')) $('removeBtn').innerHTML=removeLabel();
+  if(!$('clearBtn').classList.contains('armed')) $('clearBtn').innerHTML=clearLabel();
+  if(mode){ sPadRender(); edSync(); $('lsFull').innerHTML = full==='st' ? IC_MIN : IC_MAX;
+    $('lsFull').setAttribute('aria-label', full==='st' ? 'Back from full screen' : 'Settings full screen'); }
+  if(!mode || full!=='st'){ host.dataset.tab=S.tab+(S.tab==='timing'&&S.advOpen?'-adv':''); renderPage(host,S.tab,Ly); return; }
+  // settings full screen: timing, instrument and mix side by side
+  host.dataset.tab='studio';
+  ['timing','sound','mix'].forEach(t=>{
+    const pg=document.createElement('div'); pg.className='dpage'; pg.dataset.tab=t+(t==='timing'&&S.advOpen?'-adv':'');
+    pg.innerHTML=`<h2 class="dhead">${TABS.find(x=>x[0]===t)[1]}</h2>`;
+    host.appendChild(pg); renderPage(pg,t,Ly);
+  });
+}
+function renderPage(host,tab,Ly){
   const grid=document.createElement('div'); grid.className='params'; host.appendChild(grid);
-  if(S.tab==='timing'){
+  if(tab==='timing'){
     // feel presets or the advanced XY screen, never both: the panel keeps one height
     grid.remove();
     const cur=feelOf(Ly);
@@ -2985,7 +3227,7 @@ function renderDetail(){
     param(grid,'Octave',()=>Ly.oct,v=>{Ly.oct=v;},-2,2,1,v=>(v>0?'+':'')+v);
     if(!S.advOpen){ const h=document.createElement('p'); h.className='hint';
       h.textContent='Every change is live and never touches what you played. "Original" brings back your own timing.'; host.appendChild(h); }
-  } else if(S.tab==='sound'){
+  } else if(tab==='sound'){
     const opts=Object.entries(LIB).map(([k,v])=>[k,v.name]); if(Ly.inst==='custom') opts.unshift(['custom',Ly.customName]);
     // the instrument picker: no label, the instrument's icon inside; a native list underneath so the phone's own picker opens
     const ip=document.createElement('div'); ip.className='p instpick';
@@ -3020,6 +3262,9 @@ function renderDetail(){
     host.appendChild(h);
   }
 }
+addEventListener('resize',()=>{ if(studioMode()!==(document.body.dataset.studio||'')) { renderDetail(); drawAll(); } });
+$('lsFull').onclick=()=>setFull(sFull()==='st'?'':'st');
+$('sPad').addEventListener('click',e=>{ if(e.target.closest('.sfull')) setFull(sFull()==='cp'?'':'cp'); });
 $('tabs').onclick=e=>{ const t=e.target.dataset.t; if(t){ S.tab=t; renderDetail(); save(); } };
 
 const DIVS=[[0.25,'1/16'],[0.5,'1/8'],[0.75,'3/16'],[1,'1/4'],[1.5,'3/8'],[2,'1/2']];
@@ -3149,7 +3394,8 @@ function frame(){
     // redraw while the loop plays (playhead) or when recording adds notes
     const n=edLy().events.length;
     if(S.playing || n!==edLastNotes){ edLastNotes=n; if(!ED.drag) edDraw(); }
-  } else if(S.playing){ CAP.open ? drawCaptureRolls() : drawAll(); }
+  }
+  if((!ED.open || ED.dock) && S.playing){ CAP.open ? drawCaptureRolls() : drawAll(); }
   if(S.playing) drawPos();
   if(PRJ.pend.size) document.querySelectorAll('.pundo').forEach(b=>{ const z=PRJ.pend.get(b.dataset.undo); if(z) b.firstElementChild.style.transform=`scaleX(${Math.max(0,z.until-Date.now())/UNDO_MS})`; });   // restore badges drain
   if(CAP.open){ drawCapRec(); capSongFrame(); }
@@ -3416,17 +3662,7 @@ function renderCaptureMode(){
   const vis=capLayers(), n=vis.length, wide=innerWidth>innerHeight;
   const cols = wide ? Math.min(4,n) : (n<=1?1:2), rows=Math.ceil(n/cols);
   const grid=$('cgrid'); grid.style.gridTemplateColumns=`repeat(${cols},minmax(0,1fr))`; grid.style.gridTemplateRows=`repeat(${rows},minmax(0,1fr))`;
-  grid.innerHTML = vis.map(([Ly,i])=>`
-    <div class="ctile ${audible(Ly)?'':'off'} ${capHas(Ly,'gate')?'hasnotes':''} ${CAP.lock.has(i)?'locked':''}" data-i="${i}" style="--lc:var(--l${i})">
-      <div class="chead"><span class="num">${i+1}</span>${INST_ICON[Ly.inst]||''}<span class="cname">${instName(Ly)}</span><button class="cfxchip" data-fxi="${i}" aria-label="Capture effects: ${capName(Ly)}. Tap to change">${capChip(Ly)} ▾</button><span class="cstate">${audible(Ly)?'on':'off'}</span></div>
-      <canvas id="croll${i}"></canvas>
-      <div class="cpad"></div>
-      ${capHas(Ly,'gate') ? noteKeys(Ly,'capnotes') : ''}
-      <div class="cfx">${CAP.lock.has(i) ? CAP.lock.get(i).label : capHow(Ly)}</div>
-      <i class="cdot" ${CAP.lock.has(i)?`style="left:${CAP.lock.get(i).fx*100}%;top:${CAP.lock.get(i).fy*100}%"`:''}></i>
-      <button class="clock" data-lock="${i}">${lockLabel(CAP.lock.has(i))}</button>
-      <svg class="cring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" pathLength="100"/></svg>
-    </div>`).join('');
+  grid.innerHTML = vis.map(([Ly,i])=>capTile(Ly,i,true)).join('');
   grid.querySelectorAll('.ctile').forEach(el=>{ setLockKey(el, CAP.lock.has(+el.dataset.i));
 });
   // a finger still down on a pad that was re-drawn (a new part on the beat) keeps its lock key or ring
@@ -3449,13 +3685,24 @@ function renderCaptureMode(){
     k.style.top=Math.round(top)+'px'; k.style.bottom='auto'; });
   requestAnimationFrame(drawCaptureRolls);
 }
+function capTile(Ly,i,roll,extra=''){ return `
+    <div class="ctile ${audible(Ly)?'':'off'} ${capHas(Ly,'gate')?'hasnotes':''} ${CAP.lock.has(i)?'locked':''}" data-i="${i}" style="--lc:var(--l${i})">
+      <div class="chead"><span class="num">${i+1}</span>${INST_ICON[Ly.inst]||''}<span class="cname">${instName(Ly)}</span><button class="cfxchip" data-fxi="${i}" aria-label="Capture effects: ${capName(Ly)}. Tap to change">${capChip(Ly)} ▾</button><span class="cstate">${audible(Ly)?'on':'off'}</span>${extra}</div>
+      ${roll?`<canvas id="croll${i}"></canvas>`:''}
+      <div class="cpad"></div>
+      ${capHas(Ly,'gate') ? noteKeys(Ly,'capnotes') : ''}
+      <div class="cfx">${CAP.lock.has(i) ? CAP.lock.get(i).label : capHow(Ly)}</div>
+      <i class="cdot" ${CAP.lock.has(i)?`style="left:${CAP.lock.get(i).fx*100}%;top:${CAP.lock.get(i).fy*100}%"`:''}></i>
+      <button class="clock" data-lock="${i}">${lockLabel(CAP.lock.has(i))}</button>
+      <svg class="cring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" pathLength="100"/></svg>
+    </div>`; }
 function lockLabel(on){ return ic('lock','')+(on?'locked ×':'lock'); }
 function setLockKey(el, on){ const b=el.querySelector('.clock'); b.innerHTML=lockLabel(on);
   b.setAttribute('aria-label', on?'Effect locked: tap to release it':'Lock this effect so it stays on when you let go'); }
 function drawCaptureRolls(){ capLayers().forEach(([Ly,i])=>{ const cv=$('croll'+i); if(cv) drawRoll(Ly,i,cv); }); }
 addEventListener('resize',()=>{ if(CAP.open) renderCaptureMode(); });
 $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
-(()=>{ const grid=$('cgrid');
+function capWire(grid, capEl, rerender){
   const where=(t,e)=>{ const r=t.el.getBoundingClientRect(); return [clamp((e.clientX-r.left)/r.width,0,1), clamp(1-(e.clientY-r.top)/r.height,0,1), e.clientX-r.left, e.clientY-r.top]; };
   const apply=(t,e)=>{ const [x,y,px,py]=where(t,e); const Ly=layers[t.i], r=t.el.getBoundingClientRect();
     const dot=t.el.querySelector('.cdot'), ring=t.el.querySelector('.cring');
@@ -3482,7 +3729,6 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
     CAP.lock.set(i, t.at); el.classList.add('locked'); setLockKey(el,true); if(navigator.vibrate) navigator.vibrate(20);
   };
   // the effect chip and its menu are keys, not part of the pad
-  const capEl=$('capMode');
   capEl.addEventListener('click',e=>{
     const chip=e.target.closest('.cfxchip'), item=e.target.closest('[data-fxset]');
     const lk=e.target.closest('.clock'); if(lk){ if(e.detail===0) lockKey(+lk.dataset.lock); return; }   // a key press; touches lock on pointerdown
@@ -3496,7 +3742,7 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
       if(k==='off'){ Ly.cfx=[]; m.remove(); }
       else { Ly.cfx = capHas(Ly,k) ? capFx(Ly).filter(f=>f.k!==k) : [...capFx(Ly), {k, v:1}];   // several effects: tap to switch each on or off
         m.querySelectorAll('[data-fxset]').forEach(b=>b.classList.toggle('on', b.dataset.fxset==='off' ? !capFx(Ly).length : capHas(Ly,b.dataset.fxset))); }
-      save(); renderCaptureMode(); return; }
+      save(); rerender(); return; }
     const open=capEl.querySelector('.cfxmenu'); if(open){ const same=chip && open.dataset.fxl===chip.dataset.fxi; open.remove(); if(same || !chip) return; }
     if(!chip) return;
     const i=+chip.dataset.fxi, m=document.createElement('div'); m.className='cfxmenu'; m.dataset.fxl=i;
@@ -3506,7 +3752,7 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
   });
   grid.addEventListener('pointerdown',e=>{
     const lk=e.target.closest('.clock'); if(lk){ e.preventDefault(); e.stopPropagation(); lockKey(+lk.dataset.lock); return; }
-    if(e.target.closest('.cfxchip,.cfxmenu,.capnotes')) return;
+    if(e.target.closest('.cfxchip,.cfxmenu,.capnotes,.sfull')) return;
     if(capEl.querySelector('.cfxmenu')){ capEl.querySelector('.cfxmenu').remove(); e.preventDefault(); return; }
     const el=e.target.closest('.ctile'); if(!el) return; e.preventDefault();
     try{ el.setPointerCapture(e.pointerId); }catch(err){}
@@ -3535,7 +3781,9 @@ $('capClose').innerHTML=ic('close',''); $('capClose').onclick=closeCapture;
   };
   ['pointerup','pointercancel'].forEach(ev=>grid.addEventListener(ev,end));
   grid.addEventListener('contextmenu',e=>e.preventDefault());
-})();
+}
+capWire($('cgrid'), $('capMode'), ()=>renderCaptureMode());
+capWire($('sPad'), $('sPad'), ()=>sPadRender());
 
 /* test chords: the seven chords of C major, like the HiChord's buttons */
 const CHORDS=[['C',0,'maj','I'],['Dm',2,'min','ii'],['Em',4,'min','iii'],['F',5,'maj','IV'],['G',7,'maj','V'],['Am',9,'min','vi'],['Bdim',11,'dim','vii°']];
@@ -3555,6 +3803,7 @@ let VELH=56;   // the trim lane under the notes (smaller on short screens)
 const ED={ open:false, li:0, snap:'1/16', tool:'select', ppb:60, rowH:16, sx:0, sy:0, sel:new Set(), hist:[], fut:[],
   drag:null, pointers:new Map(), lastLen:0, lastTap:null, chordMode:true, lastShape:[0,4,7] };
 const edCv=$('edCanvas');
+new ResizeObserver(()=>{ if(ED.open){ edResize(); if(ED.dock && !ED.fitted){ edFit(); edFitPitch(); } edClamp(); edDraw(); } }).observe(edCv);   // the docked editor changes size with the iPad layout
 const edLy = () => layers[ED.li];
 const snapGrid = () => SNAPS.find(s=>s[0]===ED.snap)[2];
 const snapB = (b, free) => { const g=snapGrid(); return g&&!free ? Math.round(b/g)*g : b; };
@@ -3573,6 +3822,7 @@ const fmtLen = d => { const s=d*4; if(Math.abs(s-Math.round(s))>1e-6) return `${
 const edDefaultMode = () => { ED.chordMode = !MONO_INST.has(edLy().inst); };
 function openEditor(i){
   if(i!=null && i!==S.sel) selectLayer(i);
+  if(ED.dock){ setFull('ed'); return; }   // iPad: the docked editor goes full screen
   ED.li=S.sel; ED.open=true; ED.sel.clear(); ED.hist=[]; ED.fut=[];
   ED.tool='select'; edDefaultMode(); edOrient=innerWidth>innerHeight;
   $('editor').classList.remove('hidden');
@@ -3580,12 +3830,13 @@ function openEditor(i){
   edResize(); edFit(); edCenterPitch(); edRenderTools(); edDraw();
 }
 function closeEditor(){
+  if(ED.dock){ setFull(sFull()==='ed'?'':'ed'); return; }   // iPad: its key toggles full screen
   ED.open=false; ED.drag=null; ED.pointers.clear(); $('editor').classList.add('hidden'); edMenuClose(); $('edVelPop').classList.add('hidden');
   renderLayers(); save();
 }
 function edResize(){
   const dpr=devicePixelRatio||1, {W,H}=edDims();
-  VELH = H < 330 ? 46 : 56;   // the trim lane: tall enough for its handles
+  VELH = H < 200 ? 36 : H < 330 ? 46 : 56;   // the trim lane: tall enough for its handles
   edCv.width=Math.round(W*dpr); edCv.height=Math.round(H*dpr);
 }
 function edClamp(){
@@ -4028,7 +4279,7 @@ $('edVel').addEventListener('change',()=>{ velPushed=false; save(); renderLayerM
 $('editBtn').onclick=()=>openEditor();
 function edKey(e){
   const k=e.key, mod2=e.metaKey||e.ctrlKey;
-  if(k==='Escape'){ if(ED.sel.size){ ED.sel.clear(); edRenderTools(); edDraw(); } else closeEditor(); }
+  if(k==='Escape'){ if(ED.sel.size){ ED.sel.clear(); edRenderTools(); edDraw(); } else if(!ED.dock || sFull()==='ed') closeEditor(); }
   else if(k==='Delete'||k==='Backspace') edDeleteSel();
   else if(mod2 && (k==='z'||k==='Z')) e.shiftKey?edRedo():edUndo();
   else if(mod2 && (k==='d'||k==='D')) edDuplicate();
@@ -4108,7 +4359,9 @@ $('themeBtn').onclick=()=>{ const r=document.documentElement, dark=r.dataset.the
 try{ const th=localStorage.getItem('hcl-theme'); if(th) document.documentElement.dataset.theme=th; }catch(e){}
 addEventListener('keydown',e=>{
   if(['INPUT','SELECT'].includes(e.target.tagName)||!ctx) return;
-  if(ED.open){ edKey(e); return; }
+  if(ED.open && (!ED.dock || sFull()==='ed')){ edKey(e); return; }
+  // iPad: the docked editor takes the keys that act on its selected notes
+  if(ED.dock && ED.sel.size && (['Delete','Backspace','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','q','Q'].includes(e.key) || ((e.metaKey||e.ctrlKey) && 'dD'.includes(e.key)))){ edKey(e); return; }
   if((e.metaKey||e.ctrlKey) && (e.key==='s'||e.key==='S')){ e.preventDefault(); projSaveNow(); return; }
   if(e.key==='Escape' && document.querySelector('.fxpop')){ fxPopClose(); return; }
   if(e.key==='Escape' && document.querySelector('.sheet.open')){ closeSheets(); return; }

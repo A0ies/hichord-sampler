@@ -21,6 +21,8 @@ Open it at https://a0ies.github.io/hichord-sampler/ (Chrome or Edge), or use the
 
 ## iPhone app
 
+The same app runs on iPad, as a studio. In landscape the layers are a sidebar on the left. The note editor of the selected layer is always open across the top, with the graph strip (waveform, filter, envelope, play and solo) under it. Below that, the settings (timing, instrument and mix behind tabs) sit next to the layer's capture pad: drag to play its effects, hold still to lock them. In portrait the layers sit on top, two per row, with the same windows under them. Each window has a full-screen key: the settings show timing, instrument and mix side by side, the capture pad takes the whole width, and the note editor fills the screen. The editor and graph strip stay where they are.
+
 iOS browsers have no Web MIDI, so `ios/` holds a small app: a full-screen WebView with a CoreMIDI bridge (`MIDIBridge.swift` + `midi-shim.js`). It loads the published page and falls back to the bundled copy offline.
 
 ```
