@@ -514,7 +514,7 @@ body.projopen .pbar{display:none}
 .pundo svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--rec);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 /* toast with an action */
 .toast{display:flex;align-items:center;gap:12px}
-.toast.act{pointer-events:auto}
+.toast.show button{pointer-events:auto}   /* only the toast's own key takes taps, and only while it shows: the faded pill never blocks what is under it */
 .toast button{min-height:30px;padding:4px 10px;background:#2c2c2c;color:var(--acc);box-shadow:none;font-weight:600}
 /* alert line */
 .alert{position:sticky;top:calc(56px + var(--st));z-index:4;margin:0 max(14px,calc(var(--sr) + 8px)) 8px max(14px,calc(var(--sl) + 8px));
@@ -1368,7 +1368,7 @@ body.cap .undofab,body.projopen .undofab,body.sheetopen .undofab{display:none}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.54';
+const PAGE_VERSION = '2026-11-12.55';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2601,11 +2601,28 @@ function renderLayers(){
   document.addEventListener('touchstart',e=>{ cancelAnimationFrame(raf); y0=null; if(e.touches.length!==1 || !ok(e)) return;
     y0=last=e.touches[0].clientY; lt=performance.now(); v=0; on=false; },{passive:true});
   document.addEventListener('touchmove',e=>{ if(y0==null) return; const y=e.touches[0].clientY;
-    if(!on){ if(Math.abs(y-y0)<6) return; on=true; }   // a tap stays a tap
+    if(!on){ if(Math.abs(y-y0)<12) return; on=true; }   // a tap stays a tap (same 12 px as the tap rescue below)
     const dy=last-y, now=performance.now(); pane().scrollTop+=dy; v=dy/Math.max(1,now-lt); last=y; lt=now; e.preventDefault(); },{passive:false});
   document.addEventListener('touchend',()=>{ if(y0==null) return; y0=null; if(!on) return;
     const step=()=>{ v*=0.95; if(Math.abs(v)<0.02) return; pane().scrollTop+=v*16; raf=requestAnimationFrame(step); }; raf=requestAnimationFrame(step); });
   document.addEventListener('wheel',e=>{ if(!ok(e)) return; pane().scrollTop+=e.deltaY; e.preventDefault(); },{passive:false});
+})();
+/* iOS cancels a tap when the finger moves a few points inside something that scrolls (the layer list, the page):
+   it takes the press for the start of a scroll and sends no click. Real thumbs nearly always move a little, so a
+   press that stayed within 12 px and lasted under half a second still counts as a tap. */
+(()=>{
+  let t=null;
+  const SKIP='#capMode,#editor,.pads,.xy,input,select,textarea,label,.proj,canvas.noresc';
+  document.addEventListener('touchstart',e=>{ t=null; if(e.touches.length!==1) return;
+    const el=e.target.closest && e.target.closest('button,.layer'); if(!el || e.target.closest(SKIP) || el.disabled) return;
+    const p=e.touches[0]; t={target:e.target, x:p.clientX, y:p.clientY, t0:performance.now(), moved:0, clicked:false}; },{passive:true});
+  document.addEventListener('touchmove',e=>{ if(!t) return; const p=e.touches[0]; t.moved=Math.max(t.moved, Math.hypot(p.clientX-t.x, p.clientY-t.y)); },{passive:true});
+  document.addEventListener('click',()=>{ if(t) t.clicked=true; },true);
+  // the end of the press (iOS may end it with touchcancel once it decided to scroll)
+  const end=e=>{ const s=t; if(!s || e.touches.length) return;
+    if(s.moved>12 || performance.now()-s.t0>450) { t=null; return; }
+    setTimeout(()=>{ if(!s.clicked && s.target.isConnected) s.target.click(); if(t===s) t=null; }, 120); };
+  document.addEventListener('touchend',end,{passive:true}); document.addEventListener('touchcancel',end,{passive:true});
 })();
 /* landscape: room under the list so its last item can scroll up to the top of the pane, and no further */
 function fitLayerTail(){ const last=$('layers').lastElementChild; if(last) document.querySelector('.layerpane').style.setProperty('--tailh', last.offsetHeight+'px'); }
