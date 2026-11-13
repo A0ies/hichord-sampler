@@ -1297,9 +1297,7 @@ body.projopen .fabs,body.sheetopen .fabs{display:none}
   display:none;align-items:center;justify-content:center;padding:0 4px}
 .lockfab.on .lnum{display:inline-flex}
 .ctile .clock{display:none!important}   /* the pads' own lock key moved to the bottom-left stack */
-/* the note editor's undo and redo moved to the stack too */
-#edUndo,#edRedo{display:none}
-.edtools>#edMore{border-radius:10px}
+/* the full-screen note editor keeps undo and redo in its own toolbar, so the stack never covers the trim lane or the hint */
 .main{padding-bottom:calc(150px + var(--sb))}
 /* phone in landscape: the docked pane fills the right side, so undo sits bottom left, over the layer list */
 @media (min-width:640px) and (max-height:560px){
@@ -1757,7 +1755,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-13.69';
+const PAGE_VERSION='2026-11-13.70';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5107,7 +5105,7 @@ addEventListener('resize',()=>requestAnimationFrame(fabLiftCheck));
 function renderFabs(){
   const full=edFullOpen(), studio=document.body.dataset.studio, sf=sFull();
   const pads = CAP.open || (studio && sf!=='st' && sf!=='ed');
-  const showUndo = !CAP.open, showRedo = !CAP.open && (full || (studio && sf!=='st'));
+  const showUndo = !CAP.open && !full, showRedo = !CAP.open && !full && studio && sf!=='st';
   const held=[...CAP.touch.values()].some(t=>t.active && t.ready && t.at && !CAP.lock.has(t.i));
   const tgt=lockTarget(), locked = tgt!=null && CAP.lock.has(tgt) && !held;
   const lockState = !pads ? 'none' : held ? 'arm' : locked ? 'on' : 'idle';
