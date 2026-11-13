@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Looper for HiChord</title>
+<meta name="description" content="A free looper for the HiChord pocket synth. Play, layer, change it later, perform it live and build a song. In your browser.">
+<meta property="og:title" content="Looper for HiChord">
+<meta property="og:description" content="Just turn it on and play. A free looper for the HiChord pocket synth.">
+<meta property="og:image" content="media/poster.jpg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0f0e; --bg2:#171716; --card:#1d1d1c; --ink:#f0f0ec; --dim:#a5a59f; --line:#2c2c2a;
+  --light:#d9d9d5; --light-ink:#151515; --light-dim:#5d5d58;
+  --acc:#ff5000; --l0:#2f6fe0; --l1:#00a651; --l2:#ff5000; --l3:#ffc400; --l4:#ff3d8b;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --sans:"Inter",system-ui,sans-serif;
+  --serif:"Instrument Serif",Georgia,serif;
+  --gut:clamp(16px,4vw,56px);
+}
+/* The page is dark by design, like the stage it lives on; a light visitor preference keeps it dark. */
+:root[data-theme="light"]{ }
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--sans);overflow-x:clip}
+a{color:inherit}
+img,video{display:block;max-width:100%}
+.mono{font-family:var(--mono)}
+.it{font-family:var(--serif);font-style:italic;font-weight:400;letter-spacing:-.01em}
+.wrap{max-width:1600px;margin:0 auto;padding:0 var(--gut)}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:50;background:rgba(15,15,14,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.nav.scrolled{border-color:var(--line)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:68px;gap:16px}
+.brand{display:flex;align-items:center;gap:12px;font-weight:600;text-decoration:none;white-space:nowrap}
+.brand img{width:32px;height:32px;border-radius:8px}
+.nav nav{display:flex;align-items:center;gap:28px}
+.nav nav a{font:500 14px var(--mono);text-decoration:none;color:var(--dim)}
+.nav nav a:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 22px;border-radius:14px;font:600 15px var(--mono);text-decoration:none;border:0;cursor:pointer;white-space:nowrap;transition:transform .15s,background .2s}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--acc);color:#fff}
+.btn.primary:hover{background:#ff6a26}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px #3a3a37}
+.btn.ghost:hover{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.btn.sm{min-height:40px;padding:0 16px;font-size:14px;border-radius:11px}
+
+/* hero */
+.hero{padding:clamp(56px,9vw,120px) 0 0;text-align:center;position:relative}
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 50% at 50% 70%,rgba(255,80,0,.16),transparent 70%),radial-gradient(40% 40% at 20% 20%,rgba(47,111,224,.10),transparent 70%);pointer-events:none}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;font:500 14px var(--mono);color:var(--dim);background:var(--card);padding:8px 16px;border-radius:999px;margin-bottom:28px}
+.eyebrow .dot{width:9px;height:9px;border-radius:50%;background:var(--l1);box-shadow:0 0 0 0 rgba(0,166,81,.5);animation:ping 2s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(0,166,81,.55)}80%,100%{box-shadow:0 0 0 10px rgba(0,166,81,0)}}
+h1{font-size:clamp(46px,9.4vw,164px);line-height:.92;letter-spacing:-.045em;font-weight:700;margin:0 auto}
+h1 .it{font-size:1.12em;color:var(--acc)}
+.lead{font-size:clamp(17px,1.6vw,22px);color:var(--dim);max-width:34em;margin:28px auto 34px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.need{font:13px var(--mono);color:var(--dim);margin:16px 0 0}
+
+/* device frames */
+/* device mockups: the bezel is the screen's margin (a % of the device's own width, wherever the device sits) */
+.dev{position:relative;background:linear-gradient(145deg,#2a2a28,#0a0a0a 38%,#141413);box-shadow:0 40px 90px -30px rgba(0,0,0,.85),inset 0 0 0 1px #3a3a37,inset 0 0 0 2.5px #0b0b0b}
+.dev > img,.dev > video{display:block;height:auto;background:var(--light)}
+.dev.phone{border-radius:14% / 6.5%}
+.dev.phone > *{width:94%;margin:3%;border-radius:11% / 5.1%}
+.dev.phone-l{border-radius:6.5% / 14%}
+.dev.phone-l > *{width:97%;margin:1.5%;border-radius:5.1% / 11%}
+.dev.tab{border-radius:3.4%}
+.dev.tab > *{width:96.8%;margin:1.6%;border-radius:1.9%}
+.dev.lap{border-radius:1.6% 1.6% 0 0}
+.dev.lap > *{width:97.8%;margin:1.1%;border-radius:.5%}
+.lapbase{height:clamp(10px,1.2vw,18px);background:linear-gradient(#3a3a38,#232322);border-radius:0 0 14px 14px;margin:0 -6%;position:relative}
+.lapbase::after{content:"";position:absolute;left:50%;top:0;width:14%;height:40%;transform:translateX(-50%);background:#161615;border-radius:0 0 8px 8px}
+
+.stage{margin:clamp(48px,7vw,96px) auto 0;width:min(1380px,100%);display:grid;grid-template-columns:minmax(0,.33fr) minmax(0,1fr) minmax(0,.6fr);gap:clamp(14px,2.2vw,36px);align-items:end;
+}
+
+/* marquee */
+.band{background:var(--acc);color:#fff;overflow:hidden;white-space:nowrap;margin-top:clamp(56px,8vw,110px);transform:rotate(-1.2deg) scale(1.02)}
+.band .track{display:inline-flex;gap:0;animation:marq 32s linear infinite;padding:16px 0}
+.band span{font:600 clamp(18px,2.2vw,30px) var(--mono);letter-spacing:.04em;text-transform:uppercase;padding-right:1.4em}
+@keyframes marq{to{transform:translateX(-50%)}}
+
+/* sections */
+section{padding:clamp(72px,11vw,160px) 0}
+.kicker{font:500 14px var(--mono);color:var(--dim);margin:0 0 18px;display:flex;align-items:center;gap:10px}
+.kicker .n{display:inline-flex;width:26px;height:26px;border-radius:7px;align-items:center;justify-content:center;font:600 13px var(--mono);color:#fff}
+h2{font-size:clamp(44px,7vw,116px);line-height:.95;letter-spacing:-.04em;font-weight:700;margin:0 0 24px}
+h2 .it{font-size:1.1em}
+.copy{font-size:clamp(17px,1.4vw,20px);color:var(--dim);max-width:30em;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+.chip{font:500 14px var(--mono);padding:9px 14px;border-radius:999px;background:var(--card);color:var(--ink);display:inline-flex;align-items:center;gap:8px}
+.chip i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.chips.tight{margin-top:10px;gap:8px}
+.chips.tight .chip{font-size:13px;padding:7px 12px}
+.chip.own{box-shadow:inset 0 0 0 1.5px #3a3a37;background:transparent}
+.clabel{font:500 12px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:28px 0 0}
+.clabel + .chips{margin-top:10px}
+
+.feat{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(32px,6vw,110px);align-items:center}
+.feat.flip{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}
+.feat.flip .txt{order:2}
+.feat .vis{display:flex;justify-content:center}
+.feat .vis .phone{width:min(380px,78%)}
+.feat .vis .tab{width:100%}
+.feat .vis .phone-l{width:100%}
+
+/* video */
+.video-wrap{position:relative;border-radius:clamp(16px,2vw,28px);overflow:hidden;background:#000;box-shadow:0 60px 140px -40px rgba(255,80,0,.25),0 0 0 1px var(--line)}
+.video-wrap video{width:100%;aspect-ratio:16/9}
+.sound{position:absolute;right:16px;bottom:16px;z-index:2}
+
+/* devices row */
+.code{display:inline-flex;align-items:center;gap:10px;margin-top:30px;font:600 clamp(26px,3vw,40px) var(--mono);letter-spacing:.14em;background:var(--card);padding:14px 26px;border-radius:16px;box-shadow:inset 0 0 0 1.5px #2e2e2b}
+.code i{font-style:normal;color:var(--dim)} .code span{color:var(--ink)}
+.trio{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,2.6fr) minmax(0,1.6fr);gap:clamp(16px,3vw,44px);align-items:end;margin-top:clamp(40px,6vw,80px)}
+
+/* start */
+.light{background:var(--light);color:var(--light-ink)}
+.light .copy,.light .kicker{color:var(--light-dim)}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:48px}
+.card{background:#f2f2ef;border-radius:20px;padding:28px}
+.card h3{margin:0 0 8px;font-size:22px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card p{margin:0;color:var(--light-dim)}
+.tag{font:500 12px var(--mono);padding:4px 9px;border-radius:7px;background:var(--light);color:var(--light-dim)}
+.tag.ok{background:#00a651;color:#fff}
+.light .btn.ghost{color:var(--light-ink);box-shadow:inset 0 0 0 1.5px #b8b8b2}
+
+footer{padding:40px 0 56px;font:13px var(--mono);color:var(--dim)}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px 32px}
+footer p{margin:0;max-width:52em}
+
+/* reveal on scroll */
+.rv{opacity:0;transform:translateY(46px);filter:blur(10px);transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1),filter .9s}
+.rv.in{opacity:1;transform:none;filter:none}
+.rv.d1{transition-delay:.08s}.rv.d2{transition-delay:.16s}.rv.d3{transition-delay:.24s}
+.no-js .rv{opacity:1;transform:none;filter:none}
+@media (prefers-reduced-motion:reduce){
+  .rv{opacity:1;transform:none;filter:none;transition:none}
+  .band .track,.eyebrow .dot{animation:none}
+}
+
+@media (max-width:980px){
+  .feat,.feat.flip{grid-template-columns:minmax(0,1fr);gap:40px}
+  .feat.flip .txt{order:0}
+  .cards{grid-template-columns:minmax(0,1fr)}
+  .trio{grid-template-columns:minmax(0,1fr) minmax(0,2.4fr)}
+  .trio .t-land{grid-column:1 / -1;width:80%;margin:0 auto}
+  .nav nav a.hide-s{display:none}
+}
+@media (max-width:560px){
+  .stage{grid-template-columns:minmax(0,.55fr) minmax(0,1fr);gap:12px}
+  .stage .s-tab{grid-column:1 / -1;order:-1}
+  .nav nav{gap:14px}
+}
+</style>
+</head>
+<body class="no-js">
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="icon.svg" alt="">Looper for HiChord</a>
+    <nav>
+      <a class="hide-s" href="#features">features</a>
+      <a class="hide-s" href="#start">get started</a>
+      <a class="hide-s" href="https://github.com/A0ies/hichord-sampler">github</a>
+      <a class="btn primary sm" href="https://a0ies.github.io/hichord-sampler/">Open the app</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow rv"><span class="dot"></span>free · for the HiChord pocket synth</div>
+    <h1 class="rv d1">Just turn it on<br>and <span class="it">play</span></h1>
+    <p class="lead rv d2">Play chords on your HiChord and the app loops them. Stack up layers, change any note while it plays, and shape your loops into a song.</p>
+    <div class="cta rv d3">
+      <a class="btn primary" href="https://a0ies.github.io/hichord-sampler/">Open the app →</a>
+      <a class="btn ghost" href="#video">Watch the demo</a>
+    </div>
+    <p class="need rv d3">Chrome or Edge · plug in your HiChord over USB-C</p>
+
+    <div class="stage" id="stage">
+      <div class="dev phone s-phone rv d1"><video src="media/hero-phone.mp4" poster="media/iphone-p-layers.jpg" autoplay muted loop playsinline preload="metadata" aria-label="Layers on iPhone, playing"></video></div>
+      <div class="dev tab s-tab rv"><video src="media/hero-tab.mp4" poster="media/ipad-l-song.jpg" autoplay muted loop playsinline preload="metadata" aria-label="Song page on iPad, playing"></video></div>
+      <div class="dev phone-l s-land rv d2"><video src="media/hero-land.mp4" poster="media/iphone-l-capture.jpg" autoplay muted loop playsinline preload="metadata" aria-label="Capture mode on iPhone in landscape, playing"></video></div>
+    </div>
+  </div>
+
+  <div class="band" aria-hidden="true"><div class="track">
+    <span>play</span><span>•</span><span>loop</span><span>•</span><span>layer</span><span>•</span><span>change it later</span><span>•</span><span>perform live</span><span>•</span><span>build a song</span><span>•</span>
+    <span>play</span><span>•</span><span>loop</span><span>•</span><span>layer</span><span>•</span><span>change it later</span><span>•</span><span>perform live</span><span>•</span><span>build a song</span><span>•</span>
+  </div></div>
+</div>
+
+<section id="video">
+  <div class="wrap">
+    <p class="kicker rv">45 seconds · sound on</p>
+    <h2 class="rv d1">See it <span class="it">play.</span></h2>
+    <div class="video-wrap rv d2">
+      <video id="demo" src="media/demo.mp4" poster="media/poster.jpg" playsinline muted loop preload="metadata" controls aria-label="Demo video of Looper for HiChord"></video>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="feat">
+      <div class="txt">
+        <p class="kicker rv"><span class="n" style="background:var(--l0)">1</span>layers</p>
+        <h2 class="rv d1">Layer it <span class="it">up.</span></h2>
+        <p class="copy rv d2">Eight layers, each with its own sound. Pick a built-in instrument, sample your own HiChord, or bring in any sound you like.</p>
+        <p class="clabel rv d3">built in</p>
+        <div class="chips tight rv d3"><span class="chip">grand piano</span><span class="chip">electric piano</span><span class="chip">electric guitar</span><span class="chip">strings</span><span class="chip">horns</span><span class="chip">pad</span><span class="chip">saw lead</span><span class="chip">square lead</span><span class="chip">electric bass</span><span class="chip">synth bass</span><span class="chip">drums</span></div>
+        <p class="clabel rv d3">your own</p>
+        <div class="chips tight rv d3"><span class="chip own"><i style="background:var(--acc)"></i>sample your HiChord</span><span class="chip own"><i style="background:var(--l1)"></i>record with the mic</span><span class="chip own"><i style="background:var(--l0)"></i>upload a file</span></div>
+      </div>
+      <div class="vis rv d1"><div class="dev phone" data-par="0.06"><video src="media/layers-p.mp4" poster="media/iphone-p-layers.jpg" autoplay muted loop playsinline preload="none" aria-label="Layers on iPhone"></video></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="feat flip">
+      <div class="txt">
+        <p class="kicker rv"><span class="n" style="background:var(--l1)">2</span>notes, not audio</p>
+        <h2 class="rv d1">Change it <span class="it">later.</span></h2>
+        <p class="copy rv d2">The app keeps the notes you played, so nothing is final. Quantize, swing, humanize, swap the instrument, or fix a note in the piano roll. Your original timing is always one tap away.</p>
+        <div class="chips rv d3"><span class="chip">quantize</span><span class="chip">swing</span><span class="chip">humanize</span><span class="chip">piano roll</span></div>
+      </div>
+      <div class="vis rv d1"><div class="dev tab" data-par="0.05"><video src="media/editor-ipad.mp4" poster="media/ipad-l-editor.jpg" autoplay muted loop playsinline preload="none" aria-label="Note editor on iPad"></video></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="feat">
+      <div class="txt">
+        <p class="kicker rv"><span class="n" style="background:var(--l2)">3</span>capture mode</p>
+        <h2 class="rv d1">Perform it <span class="it">live.</span></h2>
+        <p class="copy rv d2">Every layer becomes a pad. Tap to drop it out, tap again to bring it back. Hold and drag to bend it with an effect, hold still to lock it, and record the take.</p>
+        <p class="clabel rv d3">gestures</p>
+        <div class="chips tight rv d3"><span class="chip own">tap · on / off</span><span class="chip own">hold + drag · effect</span><span class="chip own">hold still · lock</span></div>
+        <p class="clabel rv d3">effects</p>
+        <div class="chips tight rv d3"><span class="chip">◢ low-pass</span><span class="chip">◣ high-pass</span><span class="chip">▥ gate · 1/4 to 1/32</span><span class="chip">⋯ delay</span><span class="chip">≋ reverb</span><span class="chip">↕ pitch</span><span class="chip">∿ drive</span></div>
+      </div>
+      <div class="vis rv d1"><div class="dev phone-l" data-par="0.05"><video src="media/capture-l.mp4" poster="media/iphone-l-capture.jpg" autoplay muted loop playsinline preload="none" aria-label="Capture mode on iPhone"></video></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="feat flip">
+      <div class="txt">
+        <p class="kicker rv"><span class="n" style="background:var(--l3);color:#151515">4</span>song parts</p>
+        <h2 class="rv d1">Build a <span class="it">song.</span></h2>
+        <p class="copy rv d2">Make an intro, a verse and a chorus, then lay them out on a tape that plays from part to part.</p>
+        <div class="chips rv d3"><span class="chip"><i style="background:var(--l0)"></i>A intro</span><span class="chip"><i style="background:var(--l1)"></i>B verse</span><span class="chip"><i style="background:var(--l2)"></i>C chorus</span></div>
+      </div>
+      <div class="vis rv d1"><div class="dev tab" data-par="0.05"><video src="media/song-ipad.mp4" poster="media/ipad-l-song.jpg" autoplay muted loop playsinline preload="none" aria-label="Song page on iPad"></video></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap" style="text-align:center">
+    <p class="kicker rv" style="justify-content:center">one app · every screen</p>
+    <h2 class="rv d1">Pick it up <span class="it">anywhere.</span></h2>
+    <p class="copy rv d2" style="margin:0 auto">Start a loop on your phone, finish the song on your laptop. Share a project with a six-character code and open it on any device, your own sounds included. No account needed.</p>
+    <div class="code rv d3" aria-label="Example share code"><span>K7Q</span><i>-</i><span>M2P</span></div>
+    <div class="trio">
+      <div class="dev phone rv"><img src="media/iphone-p-capture.jpg" alt="Capture mode on iPhone" loading="lazy"></div>
+      <div class="rv d1"><div class="dev lap"><img src="media/desktop-layers.jpg" alt="Looper for HiChord on a laptop" loading="lazy"></div><div class="lapbase"></div></div>
+      <div class="dev tab t-land rv d2" style="width:100%"><img src="media/ipad-p-layers.jpg" alt="Looper for HiChord on iPad in portrait" loading="lazy"></div>
+    </div>
+  </div>
+</section>
+
+<section class="light" id="start">
+  <div class="wrap">
+    <p class="kicker rv">get started</p>
+    <h2 class="rv d1">Plug in. <span class="it">Play.</span></h2>
+    <p class="copy rv d2">No account and nothing to install on a computer or Android. Your projects are saved in your browser.</p>
+    <div class="cards">
+      <div class="card rv"><h3>Computer <span class="tag ok">ready</span></h3><p>Chrome or Edge on Mac, Windows or Linux. Connect the HiChord with a USB-C cable and open the app.</p></div>
+      <div class="card rv d1"><h3>Android <span class="tag ok">ready</span></h3><p>Chrome, with the HiChord on USB-C. Use an OTG adapter if your phone needs one.</p></div>
+      <div class="card rv d2"><h3>iPhone and iPad <span class="tag">coming</span></h3><p>iOS browsers can't talk to MIDI devices, so this needs a small app. It's built and on its way.</p></div>
+    </div>
+    <div class="cta rv" style="margin-top:44px">
+      <a class="btn primary" href="https://a0ies.github.io/hichord-sampler/">Open the app →</a>
+      <a class="btn ghost" href="https://github.com/A0ies/hichord-sampler">View on GitHub</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Looper for HiChord is an unofficial fan project, made by a HiChord owner. It is not made by or affiliated with Pocket Audio. HiChord is a trademark of Pocket Audio Corporation. Bundled instruments come from openly licensed sample libraries; see the credits on <a href="https://github.com/A0ies/hichord-sampler">GitHub</a>.</p>
+    <span><a href="https://a0ies.github.io/hichord-sampler/">open the app</a> · <a href="https://github.com/A0ies/hichord-sampler">github</a></span>
+  </div>
+</footer>
+
+<script>
+document.body.classList.remove('no-js');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// reveal on scroll
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+const land = document.querySelector('.stage .s-land');
+const leads = [...document.querySelectorAll('.stage .s-phone, .stage .s-tab')];
+const [trioPhone, trioLap, trioTab] = document.querySelector('.trio').children;
+const custom = [...leads, trioPhone, trioLap, trioTab];
+document.querySelectorAll('.rv').forEach(el => { if (custom.includes(el)) return; const r = el.getBoundingClientRect(); if (r.top < innerHeight && r.bottom > 0) requestAnimationFrame(() => el.classList.add('in')); else io.observe(el); });
+// "Pick it up anywhere": iPhone, laptop, iPad cascade left to right around the laptop's own trigger point.
+// Positions are re-measured on every scroll, since lazy images above and inside the row change its height.
+(function trio() {
+  // scroll position at which an element's top crosses 92% of the viewport (the shared .rv trigger)
+  const at = el => el.getBoundingClientRect().top + scrollY - innerHeight * 0.92;
+  let left = [trioPhone, trioLap, trioTab];
+  const check = () => {
+    const L = at(trioLap), D = innerHeight * 0.08;
+    // never before a device's own top is on screen (matters when the iPad wraps to its own row on narrow screens)
+    const when = { phone: Math.max(at(trioPhone), L - D), lap: L, tab: Math.max(at(trioTab), L + D) };
+    const go = [[trioPhone, when.phone], [trioLap, when.lap], [trioTab, when.tab]];
+    go.forEach(([el, y]) => { if (left.includes(el) && y <= scrollY) { el.classList.add('in'); left = left.filter(x => x !== el); } });
+    if (!left.length) { removeEventListener('scroll', check); removeEventListener('resize', check); }
+  };
+  addEventListener('scroll', check, { passive: true });
+  addEventListener('resize', check);
+  check();
+})();
+// hero devices: the two that are already on screen cascade in on scroll, landing in step with the landscape iPhone's trigger
+(function cascade() {
+  // scroll position at which the landscape iPhone's observer fires (its top crosses 92% of the viewport)
+  const landAt = () => land.getBoundingClientRect().top + scrollY - innerHeight * 0.92;
+  // reveal order follows the layout: left to right, or top first when stacked (the iPad leads on small screens)
+  const ordered = () => leads.map(el => ({ el, r: el.getBoundingClientRect() }))
+    .sort((a, b) => Math.abs(a.r.top - b.r.top) > a.r.height / 2 ? a.r.top - b.r.top : a.r.left - b.r.left).map(o => o.el);
+  let steps = [];
+  const plan = () => { const T = landAt(), seq = ordered(); steps = seq.map((el, i) => ({ el, at: T * (i + 1) / (seq.length + 1) })); };
+  const check = () => {
+    steps = steps.filter(s => { if (s.at <= scrollY) { s.el.classList.add('in'); return false; } return true; });
+    if (!steps.length) { removeEventListener('scroll', check); removeEventListener('resize', replan); }
+  };
+  const replan = () => { const left = new Set(steps.map(s => s.el)); plan(); steps = steps.filter(s => left.has(s.el)); check(); };
+  plan();
+  // landscape iPhone already visible (short or wide viewport): no scroll needed, keep the staggered entrance
+  if (landAt() <= 0) { leads.forEach(el => requestAnimationFrame(() => el.classList.add('in'))); return; }
+  addEventListener('scroll', check, { passive: true });
+  addEventListener('resize', replan);
+  check();
+})();
+// play clips only while visible
+const vio = new IntersectionObserver(es => es.forEach(e => { const v = e.target; if (e.isIntersecting) { if (v.preload === 'none') v.preload = 'auto'; if (v.id !== 'demo') v.play().catch(() => {}); } else v.pause(); }), { threshold: 0.15 });
+document.querySelectorAll('video').forEach(v => vio.observe(v));
+// gentle parallax
+const par = [...document.querySelectorAll('[data-par]')];
+let tick = false;
+function onScroll() {
+  document.getElementById('nav').classList.toggle('scrolled', scrollY > 8);
+  if (reduce) return;
+  if (tick) return; tick = true;
+  requestAnimationFrame(() => {
+    const vh = innerHeight;
+    par.forEach(el => { const r = el.getBoundingClientRect(); const c = (r.top + r.height / 2 - vh / 2); el.style.transform = `translateY(${Math.round(-c * parseFloat(el.dataset.par))}px)`; });
+    tick = false;
+  });
+}
+addEventListener('scroll', onScroll, { passive: true }); onScroll();
+// demo video: autoplay muted when visible
+const demo = document.getElementById('demo');
+new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) demo.play().catch(() => {}); else demo.pause(); }), { threshold: 0.4 }).observe(demo);
+
+</script>
+</body>
+</html>
