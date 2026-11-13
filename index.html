@@ -373,7 +373,7 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .sptip{font-family:var(--mono);font-size:11px;color:var(--dim);display:none}
 @media (max-width:699px){ .sphead .spx{display:none} }
 .spkey{min-width:44px;min-height:44px;height:44px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;text-transform:lowercase}
-.spkey::before{display:none}
+.spkey::before,.spkey.on::before{display:none}
 .spkey svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .songpg .spplay{background:var(--dark-key);color:var(--dark-key-ink)} .spplay svg{fill:currentColor;stroke:none;width:16px;height:16px}
 .songpg .spplay.on{background:var(--dark-key);color:var(--enc2)}
@@ -391,7 +391,7 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .sptrack{position:absolute;left:0;top:12px;bottom:10px;will-change:transform}
 .spblk{position:absolute;top:0;bottom:0;border-radius:6px;background:var(--pc);color:#0b0b0b;opacity:.55;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;
   padding:4px 7px;box-sizing:border-box;font-family:var(--mono);font-weight:600;font-size:13px;min-height:0;box-shadow:none;text-transform:none;overflow:hidden}
-.spblk::before{display:none}
+.spblk::before,.spblk.on::before{display:none}
 .spblk span{font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .spblk.now{opacity:1}
 .spblk.queued{opacity:1;box-shadow:inset 0 0 0 2px var(--screen-ink)}
@@ -405,7 +405,7 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .sppads{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--pcols,3),minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:8px}
 .sppad{position:relative;border-radius:14px;background:var(--panel);padding:10px;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;
   min-height:0;min-width:0;box-shadow:none;touch-action:none;text-transform:none;overflow:hidden;container-type:size}
-.sppad::before{display:none}
+.sppad::before,.sppad.on::before{display:none}
 .songpg .sppad.on{background:var(--panel);color:var(--ink);box-shadow:inset 0 0 0 2px var(--acc)}
 .sppad .pk{display:flex;justify-content:space-between;align-items:flex-start;gap:4px}
 .sppad .pk b{font-family:var(--sans);font-weight:700;font-size:26px;line-height:1;color:var(--pc)}
@@ -1285,7 +1285,7 @@ body[data-state="count"] .tbar,body[data-state="recording"] .tbar{background:var
   display:flex;align-items:center;justify-content:center;background:var(--key);box-shadow:0 6px 18px rgba(0,0,0,.25),0 1px 0 var(--key-edge)}
 .undofab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .undofab:disabled{opacity:.45}
-.undofab::before{display:none}
+.undofab::before,.undofab.on::before{display:none}
 body.projopen .fabs,body.sheetopen .fabs{display:none}
 /* the lock key: a red lock on a white key; it pulses while the effect you hold can be locked, a closed lock with the
    layer's number while one is locked */
@@ -1757,7 +1757,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-13.68';
+const PAGE_VERSION='2026-11-13.69';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -4073,43 +4073,45 @@ function renderSongPage(){
   spNow(); spFrame(true);
 }
 function spNow(){
-  const k=SONG.cur;
+  const H=songHeard(), k=H.cur;
   $('spBadge').textContent=PART_L(k); $('spBadge').style.setProperty('--pc',`var(--l${k})`); $('spBadge').parentElement.style.setProperty('--pc',`var(--l${k})`);
   $('spName').textContent = SONG.parts[k].name || `part ${PART_L(k)}`;
   $('spHint').textContent = S.playing ? 'tap a block to play it next' : 'tap a block to go there';
-  document.querySelectorAll('#spTrack .spblk').forEach(b=>{ const i=+b.dataset.n; b.classList.toggle('now',i===SONG.pos); b.classList.toggle('queued',i===SONG.jump); });
-  document.querySelectorAll('#spPads .sppad[data-k]').forEach(b=>b.classList.toggle('on',+b.dataset.k===SONG.cur));
+  document.querySelectorAll('#spTrack .spblk').forEach(b=>{ const i=+b.dataset.n; b.classList.toggle('now',i===H.pos); b.classList.toggle('queued',i===H.jump); });
+  document.querySelectorAll('#spPads .sppad[data-k]').forEach(b=>b.classList.toggle('on',+b.dataset.k===k));
 }
 // where the tape is: playing, the pass and how far into it; stopped, the pass you are on (or where you swiped to)
 let spLastKey='';
 function spFrame(force){
   if(!SPG.open) return;
-  const W=spW(), tape=$('spTape'), n=SONG.order.length; let v;
+  const W=spW(), tape=$('spTape'), n=SONG.order.length, H=songHeard(), pos=H.pos; let v;
   let frac=0;
   if(S.playing && ctx){ const L=loopLen(), b=beatAt(ctx.currentTime); frac = b<0 ? 0 : mod(b,L)/L; }
   if(SPG.drag || (SPG.press && SPG.press.scrub)) v=SPG.view;
-  else { v = (SONG.pos<0 ? SPG.view : SONG.pos) + (S.playing ? frac : 0); SPG.view = SONG.pos<0 ? SPG.view : SONG.pos; }
+  else { v = (pos<0 ? SPG.view : pos) + (S.playing ? frac : 0); SPG.view = pos<0 ? SPG.view : pos; }
   if(SPG.drag && SPG.drag.edge){ SPG.view=clamp(SPG.view+SPG.drag.edge*0.06,0,Math.max(0,n-1)); v=SPG.view; spDragMove(SPG.drag.x, SPG.drag.y); }
   $('spTrack').style.transform=`translateX(${(tape.clientWidth/2 - v*W).toFixed(1)}px)`;
   // the clock and the pass
-  const passes=n, at = (Math.max(0,SONG.pos) + frac)*loopSecs();
-  const key=`${SONG.pos}|${SONG.jump}|${SONG.cur}|${S.playing}|${Math.floor(at)}`;
+  const passes=n, at = (Math.max(0,pos) + frac)*loopSecs();
+  const key=`${pos}|${H.jump}|${H.cur}|${S.playing}|${Math.floor(at)}`;
   if(key!==spLastKey || force){ spLastKey=key;
-    $('spPos').textContent = `${SONG.pos<0 ? 'not on the tape' : `pass ${SONG.pos+1} / ${passes}`} · ${mmss(at)} / ${mmss(passes*loopSecs())}`; spNow(); }
-  spDrawRoll(frac);
+    $('spPos').textContent = `${pos<0 ? 'not on the tape' : `pass ${pos+1} / ${passes}`} · ${mmss(at)} / ${mmss(passes*loopSecs())}`; spNow(); }
+  spDrawRoll(frac, H.ahead && H.cur!==SONG.cur ? H.cur : null);
 }
 // the preview: every layer of the part that plays, a lane each, with the playhead
-function spDrawRoll(frac){
+function spDrawRoll(frac, heardPart){
   const cv=$('spRoll'), dpr=devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight; if(!W||!H) return;
   if(cv.width!==Math.round(W*dpr) || cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
   const L=loopLen(); g.fillStyle=cssVar('--screen-line'); for(let b=1;b<S.bars;b++) g.fillRect(Math.round(b*4/L*W),0,1,H);
   const lanes=layers.map((Ly,i)=>[Ly,i]).filter(([Ly])=>Ly.shown); const lh=H/Math.max(1,lanes.length);
   lanes.forEach(([Ly,i],li)=>{
-    const evs=effEvents(Ly); if(!evs.length) return;
+    const evs = heardPart==null ? effEvents(Ly) : effEvents(Object.assign(Object.create(Ly),{events:SONG.parts[heardPart].ev[i]||[]}));
+    if(!evs.length) return;
     let lo=Infinity, hi=-Infinity; evs.forEach(e=>{ lo=Math.min(lo,e.note); hi=Math.max(hi,e.note); });
     const span=Math.max(6,hi-lo+1), y0=li*lh+3, hh=lh-6, rh=Math.max(2,hh/span-1);
-    g.globalAlpha = audible(Ly) ? 1 : 0.25; g.fillStyle=cssVar('--l'+i);
+    const on = heardPart==null ? audible(Ly) : (layers.some(x=>x.solo) ? Ly.solo : !SONG.parts[heardPart].mute[i]);
+    g.globalAlpha = on ? 1 : 0.25; g.fillStyle=cssVar('--l'+i);
     evs.forEach(e=>{ const x=e.pos/L*W, w=Math.max(2,e.dur/L*W-1), y=y0+hh-((e.note-lo+1)/span)*hh; g.fillRect(x,y,Math.min(w,W-x),rh); });
   });
   g.globalAlpha=1;
@@ -4245,7 +4247,13 @@ function songBoundary(a, b){
   const L=loopLen(), B=(Math.floor(a/L)+1)*L;
   return B>0 && B<=b && SONG.doneAt!==B ? B : null;
 }
+// what you hear right now: songAdvance runs when the scheduler looks ahead, so until the 1 the previous pass still plays
+function songHeard(){
+  const ahead = S.playing && ctx && SONG.doneAt!=null && beatAt(ctx.currentTime) < SONG.doneAt && SONG.prevPos!=null;
+  return ahead ? {pos:SONG.prevPos, cur:SONG.prevCur, jump:SONG.prevJump, ahead:true} : {pos:SONG.pos, cur:SONG.cur, jump:SONG.jump, ahead:false};
+}
 function songAdvance(B){
+  SONG.prevPos=SONG.pos; SONG.prevJump=SONG.jump;
   SONG.prevCur=SONG.cur;   // what you hear until the 1 (the scheduler runs a little ahead)
   SONG.doneAt=B; const np=songNext(), k=SONG.order[np], changed=k!==SONG.cur;
   SONG.jump=null; SONG.pos=np;
@@ -4265,7 +4273,8 @@ function songAdvance(B){
 function renderCapSong(){
   const show = SONG.parts.length>1 || SONG.order.length>1;
   $('capSong').classList.toggle('hidden',!show); if(!show){ $('capNext').classList.add('hidden'); return; }
-  $('capTl').innerHTML = SONG.order.map((k,n)=>`<button data-tp="${n}" class="${n===SONG.pos?'now':''} ${k===SONG.cur?'same':''} ${SONG.jump===n?'queued':''}" aria-label="${partName(k)}${n===SONG.pos?', playing':''}">${PART_L(k)}<i></i></button>`).join('');
+  const H=songHeard();
+  $('capTl').innerHTML = SONG.order.map((k,n)=>`<button data-tp="${n}" class="${n===H.pos?'now':''} ${k===H.cur?'same':''} ${H.jump===n?'queued':''}" aria-label="${partName(k)}${n===H.pos?', playing':''}">${PART_L(k)}<i></i></button>`).join('');
   $('capAuto').classList.toggle('on',SONG.follow); $('capAuto').setAttribute('aria-pressed',SONG.follow);
 }
 $('capTl').onclick=e=>{ const b=e.target.closest('[data-tp]'); if(!b) return; const n=+b.dataset.tp;
