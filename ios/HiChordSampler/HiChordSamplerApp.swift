@@ -24,6 +24,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
 
     private let bridge = MIDIBridge()
     private let audio = AudioRouter()
+    private let store = SoundStore()
     private var webView: WKWebView!
     private var triedRemote = false
     private var downloadURLs: [ObjectIdentifier: URL] = [:]
@@ -44,6 +45,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         }
         content.add(bridge, name: "midi")
         content.add(audio, name: "audio")
+        content.addScriptMessageHandler(store, contentWorld: .page, name: "store")   // the HiChord sounds, kept as files
         config.userContentController = content
 
         webView = WKWebView(frame: .zero, configuration: config)

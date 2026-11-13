@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0D6380DD4BD2F18A7A4118A9 /* SoundStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9DC5538961F147A9EDFC9A /* SoundStore.swift */; };
 		1D73FDC9FC1AAA1D689CB5B8 /* MIDIBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D8A7CBFB49866E21CC2E4F3 /* MIDIBridge.swift */; };
 		3F8215EC3A5EAA6FEB2CD683 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 792CDC0FFFFCF1B6106DCE6A /* Assets.xcassets */; };
 		4CD69C98F341F5036F69D33E /* HiChordSamplerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15CED2210A541BC3E4079D69 /* HiChordSamplerApp.swift */; };
@@ -23,6 +24,7 @@
 		7A269B4B58CAAE39FB888082 /* AudioRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRouter.swift; sourceTree = "<group>"; };
 		8D8A7CBFB49866E21CC2E4F3 /* MIDIBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIBridge.swift; sourceTree = "<group>"; };
 		D97C5A50945DE89A3467C30C /* midi-shim.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "midi-shim.js"; sourceTree = "<group>"; };
+		FF9DC5538961F147A9EDFC9A /* SoundStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -34,6 +36,7 @@
 				15CED2210A541BC3E4079D69 /* HiChordSamplerApp.swift */,
 				D97C5A50945DE89A3467C30C /* midi-shim.js */,
 				8D8A7CBFB49866E21CC2E4F3 /* MIDIBridge.swift */,
+				FF9DC5538961F147A9EDFC9A /* SoundStore.swift */,
 			);
 			path = HiChordSampler;
 			sourceTree = "<group>";
@@ -140,6 +143,7 @@
 				B2F7795DC0E0D3E288DC3768 /* AudioRouter.swift in Sources */,
 				4CD69C98F341F5036F69D33E /* HiChordSamplerApp.swift in Sources */,
 				1D73FDC9FC1AAA1D689CB5B8 /* MIDIBridge.swift in Sources */,
+				0D6380DD4BD2F18A7A4118A9 /* SoundStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
