@@ -644,6 +644,16 @@ body.projopen .pbar{display:none}
 .proj.swiping .pbg,.proj.armed .pbg{opacity:1}
 .pnew{display:flex;align-items:center;justify-content:center;min-height:64px;border:2px dashed var(--line);border-radius:12px;background:transparent;box-shadow:none;color:var(--dim);font-size:13px;flex:none}
 .pnew::before{display:none}
+.pnewrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.pnewrow .pnew{white-space:normal;text-align:center;line-height:1.35;padding:6px 10px;min-width:0}
+/* share / receive with a code */
+.xfer .xcode{font-family:var(--mono);font-size:clamp(30px,10vw,44px);font-weight:600;letter-spacing:.14em;text-align:center;background:var(--screen);color:var(--screen-ink);
+  border-radius:14px;padding:18px 8px;-webkit-user-select:text;user-select:text}
+.xfer .xin{font-family:var(--mono);font-size:clamp(24px,8vw,32px);font-weight:600;text-align:center;letter-spacing:.14em;text-transform:uppercase;padding:12px}
+.xfer .xin::placeholder{color:var(--line)}
+.xfer .xmeta{display:flex;flex-wrap:wrap;gap:6px}
+.xfer .xmeta span{background:var(--key);border-radius:8px;padding:5px 9px;font-family:var(--mono);font-size:12px;color:var(--ink);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xfer .row button:disabled{opacity:.4}
 .proj .pdel{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;font-weight:600;text-transform:lowercase}
 .proj .pdel svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
 .proj.armed .pdel svg{transform:scale(1.2)}
@@ -1203,6 +1213,9 @@ body.projopen .tbar{display:none}
 #projSheet .pnamerow{display:contents}
 #projSheet .pnamerow .textin{grid-column:1;grid-row:2}
 #projSheet .pnamerow button{grid-column:2;grid-row:2}
+#projSheet>.p.wide{grid-template-columns:minmax(0,1fr) auto auto}
+#projSheet>.p.wide>label{grid-column:1/-1}
+#projSheet .pnamerow #projShare{grid-column:3}
 #projSheet>h2{margin:4px 0 0}
 #projSheet .projlist{overflow:auto;align-content:start;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding-bottom:4px}
 #projSheet .proj{flex:none}
@@ -1615,7 +1628,7 @@ body.studio .tbar .pos b{font-size:26px}
   <div class="grab"></div>
   <div class="row sheethead"><h2 style="margin:0">projects</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
   <div class="p wide"><label><span>this project</span><b id="projStatus">saves automatically</b></label>
-    <div class="pnamerow"><input id="projNameInput" class="textin" maxlength="60" aria-label="Project name" enterkeyhint="done"><button id="projCopy" title="Duplicate this project and continue in the copy">duplicate</button></div></div>
+    <div class="pnamerow"><input id="projNameInput" class="textin" maxlength="60" aria-label="Project name" enterkeyhint="done"><button id="projCopy" title="Duplicate this project and continue in the copy">duplicate</button><button id="projShare" title="Send this project to another device with a code">share</button></div></div>
   <div style="height:18px"></div>
   <h2>all projects</h2>
   <div class="projlist" id="projList"></div>
@@ -1703,7 +1716,7 @@ body.studio .tbar .pos b{font-size:26px}
         <li><b>drums</b> <a href="https://github.com/sfzinstruments/virtuosity_drums">Virtuosity Drums</a> by Versilian Studios · CC0</li>
         <li><b>electric piano, leads, pad, synth bass</b> made for this app · CC0</li>
       </ul>
-      <p class="hint">Your own sounds (file, microphone, sampled HiChord) stay on this device. Nothing is uploaded or shared.</p>
+      <p class="hint">Your own sounds (file, microphone, sampled HiChord) stay on this device. Nothing leaves it unless you share a project: then the project and its own sounds go to the share relay, which deletes them as soon as they are received, or after 24 hours.</p>
     </div>
   </div>
 </section>
@@ -1748,6 +1761,8 @@ body.studio .tbar .pos b{font-size:26px}
 </div>
 <!-- sampling your own HiChord: the app plays it note by note over USB MIDI and records its USB audio -->
 <div class="hcs hidden" id="hcs" role="dialog" aria-modal="true" aria-label="Sample your HiChord"><div class="hcsbox" id="hcsBox"></div></div>
+<!-- sending a project to another device: a six-character code through the share relay (relay/) -->
+<div class="hcs xfer hidden" id="xfer" role="dialog" aria-modal="true" aria-label="Share a project"><div class="hcsbox" id="xferBox"></div></div>
 <div class="toast" id="toast"></div>
 <!-- own sounds come from the Files app only: a list of audio file types (no audio/*, no camera or library) -->
 <input type="file" id="fileIn" accept=".wav,.mp3,.m4a,.aac,.aif,.aiff,.caf,.flac,.ogg,.opus" class="hidden">
@@ -1755,7 +1770,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-13.70';
+const PAGE_VERSION='2026-11-13.71';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2553,7 +2568,7 @@ function hcsOpen(target){
 function hcsIntro(err){
   const mins=Math.round(HCS_NOTES.length*HCS_STEP/6)/10;
   $('hcsBox').innerHTML=`<h3>sample your HiChord</h3>
-    <p>The app plays your HiChord note by note over USB and records what comes back over USB audio: ${HCS_NOTES.length} notes, about ${mins} minute${mins===1?'':'s'}. The recording stays on this device.</p>
+    <p>The app plays your HiChord note by note over USB and records what comes back over USB audio: ${HCS_NOTES.length} notes, about ${mins} minute${mins===1?'':'s'}. The recording stays on this device unless you share the project.</p>
     <ul><li>pick the sound on the HiChord</li><li>turn reverb, delay, chorus and glide off</li><li>USB AUD on, MIDI OUT on DAW (the defaults)</li></ul>
     <div class="hcsin ${HC.connected?'':'warn'}"><span>midi</span><b>${HC.connected?'HiChord connected':'not connected: start connects it'}</b></div>
     ${err?`<p class="err">${err}</p>`:''}
@@ -3069,7 +3084,7 @@ function renderProjects(){
   const inp=$('projNameInput'); if(cur && document.activeElement!==inp) inp.value=cur.name;
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   PRJ.list.sort((a,b)=>(b.updated||0)-(a.updated||0));   // last edited first
-  $('projList').innerHTML = '<button class="pnew" id="projNewTile">+ new project</button>' + PRJ.list.map(p=>{
+  $('projList').innerHTML = '<div class="pnewrow"><button class="pnew" id="projNewTile">+ new project</button><button class="pnew" id="projRecvTile">receive with a code</button></div>' + PRJ.list.map(p=>{
     const z=PRJ.pend.get(p.id);
     if(z){ const left=Math.max(0,z.until-Date.now());
       return `<button class="pundo" data-undo="${p.id}" aria-label="Restore ${esc(p.name)}">
@@ -3085,6 +3100,172 @@ function renderProjects(){
     </div>`; }).join('') || '<p class="hint">No projects yet.</p>';
 }
 async function openProjects(){ flushSave(); await refreshProjects().catch(()=>{}); renderProjects(); openSheet('projSheet'); }
+/* ============ share a project with a code ============
+   One file goes through the share relay (relay/worker.js, a Cloudflare Worker): the project as JSON plus
+   its own sounds as 16-bit PCM, gzipped. Built-in instruments travel by name only. The relay hands out a
+   six-character code; the other device types it, gets the file, deletes it from the relay and opens it as
+   a new project. No accounts: the code is the key, and the relay forgets the file after 24 hours. */
+const RELAY_URL = '';   // the deployed relay, e.g. 'https://looper-relay.<you>.workers.dev' (README: "Share a project")
+let SHARE_MAX = 30*1024*1024;   // the relay's MAX_BYTES
+const CODE_ABC = '23456789ABCDEFGHJKMNPQRSTUVWXYZ', CODE_N = 6;
+function relayUrl(){ let o=''; try{ o=localStorage.getItem('hcl-relay')||''; }catch(e){} return (o||RELAY_URL).replace(/\/+$/,''); }
+const fmtCode = c => c.slice(0,3)+'-'+c.slice(3);
+const fmtMB = n => n<1e6 ? `${Math.max(1,Math.round(n/1e3))} kB` : `${(n/1e6).toFixed(n<1e7?1:0)} MB`;
+const XF={ busy:false, xhr:null, ctl:null };
+function xferShow(html){ $('xferBox').innerHTML=html; $('xfer').classList.remove('hidden'); }
+function xferClose(){ if(XF.xhr) XF.xhr.abort(); if(XF.ctl) XF.ctl.abort(); XF.xhr=XF.ctl=null; XF.busy=false; $('xfer').classList.add('hidden'); }
+$('xfer').addEventListener('click',e=>{ if(e.target.id==='xfer' && !XF.busy) xferClose(); });
+async function gz(blob, dir){
+  const S2 = dir==='in' ? new CompressionStream('gzip') : new DecompressionStream('gzip');
+  return new Uint8Array(await new Response(blob.stream().pipeThrough(S2)).arrayBuffer());
+}
+// the current project, as it is now (own sounds straight from the layers)
+async function packProject(){
+  flushSave();
+  const p=PRJ.list.find(x=>x.id===PRJ.current), d=sessionData(), sounds=[], bins=[];
+  layers.forEach((Ly,i)=>{
+    if(Ly.inst!=='custom' || !Ly.buffer || !d.layers[i]) return;
+    const b=Ly.buffer, nch=Math.min(2,b.numberOfChannels), len=b.length, pcm=new Int16Array(nch*len);
+    for(let c=0;c<nch;c++){ const x=b.getChannelData(c), o=c*len; for(let n=0;n<len;n++){ const v=x[n]; pcm[o+n] = v>=1 ? 32767 : v<=-1 ? -32767 : Math.round(v*32767); } }
+    sounds.push({ i, name:Ly.customName||'sample', sampleRate:b.sampleRate, nch, len, zones:Ly.czones||null, kind:Ly.ckind||null }); bins.push(pcm);
+  });
+  const head=new TextEncoder().encode(JSON.stringify({ v:1, app:'looper-for-hichord', page:PAGE_VERSION, name:p?p.name:'shared project', named:!!(p&&p.named), data:d, sounds }));
+  const pre=new Uint8Array(8); pre.set([76,70,72,49]); new DataView(pre.buffer).setUint32(4, head.length, true);   // 'LFH1', header length
+  const raw=new Blob([pre, head, ...bins]);
+  return { file: await gz(raw,'in'), raw: raw.size, name: p?p.name:'shared project', sounds, summary: summary(d) };
+}
+// names and other text from someone else's project: no markup, no prototype keys
+function cleanIn(x, depth=0){
+  if(depth>12) return null;
+  if(typeof x==='string') return x.replace(/[<>"`\\]/g,'').slice(0,200);
+  if(Array.isArray(x)) return x.map(v=>cleanIn(v,depth+1));
+  if(x && typeof x==='object'){ const o={}; for(const k of Object.keys(x)){ if(k==='__proto__'||k==='constructor'||k==='prototype') continue; o[k]=cleanIn(x[k],depth+1); } return o; }
+  return typeof x==='number' ? (isFinite(x)?x:0) : x;
+}
+async function unpackProject(bytes){
+  const raw=await gz(new Blob([bytes]),'out');
+  if(raw.length<8 || String.fromCharCode(...raw.slice(0,4))!=='LFH1') throw new Error('this is not a Looper project');
+  const hl=new DataView(raw.buffer, raw.byteOffset, 8).getUint32(4,true);
+  if(8+hl>raw.length) throw new Error('the project arrived incomplete');
+  const head=JSON.parse(new TextDecoder().decode(raw.subarray(8,8+hl)));
+  if(head.app!=='looper-for-hichord') throw new Error('this is not a Looper project');
+  if(head.v>1) throw new Error('this project comes from a newer version: update the app and try again');
+  const h=cleanIn(head); if(!h.data || !h.data.S || !Array.isArray(h.data.layers)) throw new Error('this project is damaged');
+  let off=8+hl; const sounds={};
+  for(const sm of (h.sounds||[])){
+    const nch=sm.nch|0, len=sm.len|0, sr=+sm.sampleRate, i=sm.i|0, bytesN=nch*len*2;
+    if(nch<1 || nch>2 || len<1 || len>sr*900 || !(sr>=8000 && sr<=192000) || i<0 || i>=layers.length || off+bytesN>raw.length) throw new Error('a sound in this project is damaged');
+    const pcm=new Int16Array(raw.slice(off, off+bytesN).buffer); off+=bytesN;
+    const channels=[...Array(nch)].map((_,c)=>{ const f=new Float32Array(len); for(let n=0;n<len;n++) f[n]=pcm[c*len+n]/32767; return f; });
+    sounds[i]={ name:String(sm.name||'sample'), sampleRate:sr, channels, zones:Array.isArray(sm.zones)?sm.zones:null, kind:sm.kind||null };
+  }
+  // this device keeps its own input and timing settings
+  ['input','recOffset','followClock','sendTempo','hcTransport','metro','countIn'].forEach(k=>{ if(k in S) h.data.S[k]=S[k]; });
+  return { name:String(h.name||'shared project'), named:!!h.named, data:h.data, sounds };
+}
+
+/* share: explain, pack, upload, show the code */
+async function xferShare(){
+  if(!relayUrl()){
+    xferShow(`<h3>share this project</h3>
+      <p>Sharing isn't set up yet: it needs a small relay server, which isn't running for this app yet (see the README, "Share a project"). Until then, projects stay on this device.</p>
+      <div class="row"><button id="xfOk" class="primary">ok</button></div>`);
+    $('xfOk').onclick=xferClose; return;
+  }
+  if(typeof CompressionStream==='undefined'){ xferShow(`<h3>share this project</h3><p class="err">This browser can't pack a project for sharing. Try a newer browser, or the app.</p><div class="row"><button id="xfOk">ok</button></div>`); $('xfOk').onclick=xferClose; return; }
+  xferShow(`<h3>share this project</h3><p>packing…</p>`);
+  let pk; try{ pk=await packProject(); }catch(e){ console.warn(e); xferShow(`<h3>share this project</h3><p class="err">Couldn't pack this project.</p><div class="row"><button id="xfOk">ok</button></div>`); $('xfOk').onclick=xferClose; return; }
+  if($('xfer').classList.contains('hidden')) return;
+  const sm=pk.summary, big=pk.file.length>SHARE_MAX;
+  const chips=[`${sm.layers} layer${sm.layers===1?'':'s'}`, sm.parts>1?`${sm.parts} parts`:'', `${sm.bpm} bpm`, ...pk.sounds.map(x=>x.name), fmtMB(pk.file.length)].filter(Boolean);
+  xferShow(`<h3>share "${escH(pk.name)}"</h3>
+    <div class="xmeta">${chips.map(c=>`<span>${escH(c)}</span>`).join('')}</div>
+    ${big ? `<p class="err">This project is ${fmtMB(pk.file.length)} packed, more than the ${fmtMB(SHARE_MAX)} that can be shared. Shorter or fewer own sounds make it smaller.</p>`
+          : `<p>The project${pk.sounds.length?' and its own sounds':''} go to the share relay and you get a code. On the other device: projects → receive with a code. The relay deletes it as soon as it is received, or after 24 hours.</p>`}
+    <div class="row"><button id="xfCancel">cancel</button>${big?'':'<button id="xfGo" class="primary">share</button>'}</div>`);
+  $('xfCancel').onclick=xferClose; if(!big) $('xfGo').onclick=()=>xferUpload(pk);
+}
+function xferUpload(pk){
+  XF.busy=true;
+  xferShow(`<h3>share "${escH(pk.name)}"</h3><p id="xfMsg">uploading…</p><div class="hcsprog"><i id="xfBar"></i></div>
+    <div class="row"><button id="xfCancel">cancel</button></div>`);
+  $('xfCancel').onclick=xferClose;
+  const x=new XMLHttpRequest(); XF.xhr=x;
+  x.open('POST', relayUrl()+'/share'); x.setRequestHeader('Content-Type','application/octet-stream');
+  x.upload.onprogress=e=>{ if(!e.lengthComputable) return; $('xfBar').style.width=(e.loaded/e.total*100)+'%'; $('xfMsg').textContent=`uploading ${fmtMB(e.loaded)} of ${fmtMB(e.total)}`; };
+  const fail=(msg, retry=true)=>{ XF.xhr=null; XF.busy=false;
+    xferShow(`<h3>share "${escH(pk.name)}"</h3><p class="err">${msg}</p><div class="row"><button id="xfCancel">close</button>${retry?'<button id="xfGo" class="primary">try again</button>':''}</div>`);
+    $('xfCancel').onclick=xferClose; if(retry) $('xfGo').onclick=()=>xferUpload(pk); };
+  x.onerror=()=>fail("Couldn't reach the share relay. Check the connection and try again.");
+  x.onload=()=>{
+    let r={}; try{ r=JSON.parse(x.responseText); }catch(e){}
+    if(x.status===413) return fail(`This project is too big to share (${fmtMB(pk.file.length)}; at most ${fmtMB(r.max||SHARE_MAX)}). Shorter or fewer own sounds make it smaller.`, false);
+    if(x.status===429) return fail('Too many shares in a short time. Wait a minute and try again.');
+    if(x.status!==201 || !r.code) return fail(`The share relay didn't accept the project (${x.status}).`);
+    XF.xhr=null; XF.busy=false;
+    const until=new Date(r.expires), code=fmtCode(r.code);
+    const when=`${until.toDateString()===new Date().toDateString()?'today':'tomorrow'} ${String(until.getHours()).padStart(2,'0')}:${String(until.getMinutes()).padStart(2,'0')}`;
+    xferShow(`<h3>share "${escH(pk.name)}"</h3>
+      <div class="xcode" id="xfCode" aria-label="Code ${code.split('').join(' ')}">${code}</div>
+      <p>On the other device: projects → receive with a code, then type this code. It works once, until ${when}.</p>
+      <div class="row"><button id="xfCopy">copy code</button><button id="xfDone" class="primary">done</button></div>`);
+    $('xfDone').onclick=xferClose;
+    $('xfCopy').onclick=()=>{ (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(()=>toast('code copied'),()=>toast(`the code is ${code}`)); };
+  };
+  x.send(pk.file);
+}
+
+/* receive: type the code, download, add as a new project and open it */
+function xferReceive(err, val){
+  if(!relayUrl()){
+    xferShow(`<h3>receive a project</h3><p>Sharing isn't set up yet: it needs a small relay server, which isn't running for this app yet (see the README, "Share a project").</p><div class="row"><button id="xfOk" class="primary">ok</button></div>`);
+    $('xfOk').onclick=xferClose; return;
+  }
+  xferShow(`<h3>receive a project</h3>
+    <input class="textin xin" id="xfIn" maxlength="7" placeholder="K7Q-M2P" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Code">
+    <p>Type the code from the other device. The project arrives here as a new project, with its own sounds.</p>
+    ${err?`<p class="err">${err}</p>`:''}
+    <div class="row"><button id="xfCancel">cancel</button><button id="xfGo" class="primary" disabled>receive</button></div>`);
+  const inp=$('xfIn'), go=$('xfGo');
+  const norm=()=>inp.value.toUpperCase().replace(/[^0-9A-Z]/g,'').slice(0,CODE_N);
+  const fix=()=>{ const c=norm(); inp.value = c.length>3 ? fmtCode(c) : c; go.disabled = c.length!==CODE_N; };
+  inp.addEventListener('input',fix); inp.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter' && !go.disabled) go.click(); });
+  if(val){ inp.value=val; fix(); }
+  $('xfCancel').onclick=xferClose;
+  go.onclick=()=>{ const c=norm();
+    if([...c].some(ch=>!CODE_ABC.includes(ch))) return xferReceive('Codes never use 0, 1, I, L or O: check the code and try again.', inp.value);
+    xferFetch(c); };
+  setTimeout(()=>inp.focus(),50);
+}
+async function xferFetch(code){
+  XF.busy=true; const ctl=new AbortController(); XF.ctl=ctl;
+  xferShow(`<h3>receive a project</h3><p id="xfMsg">looking up ${fmtCode(code)}…</p><div class="hcsprog"><i id="xfBar"></i></div><div class="row"><button id="xfCancel">cancel</button></div>`);
+  $('xfCancel').onclick=xferClose;
+  const back=msg=>{ XF.busy=false; XF.ctl=null; if(!ctl.signal.aborted) xferReceive(msg, fmtCode(code)); };
+  let res; try{ res=await fetch(relayUrl()+'/share/'+code, {signal:ctl.signal, cache:'no-store'}); }catch(e){ return back("Couldn't reach the share relay. Check the connection and try again."); }
+  if(res.status===404) return back('This code is unknown or has expired (codes work once, for 24 hours). Ask for a new one.');
+  if(res.status===429) return back('Too many tries in a short time. Wait a minute and try again.');
+  if(!res.ok) return back(`The share relay had a problem (${res.status}). Try again.`);
+  const total=+res.headers.get('Content-Length')||0, rd=res.body.getReader(), chunks=[]; let got=0;
+  try{ for(;;){ const {done,value}=await rd.read(); if(done) break; chunks.push(value); got+=value.length;
+      if(total){ $('xfBar').style.width=(got/total*100)+'%'; $('xfMsg').textContent=`downloading ${fmtMB(got)} of ${fmtMB(total)}`; } } }
+  catch(e){ return back('The download stopped. Try again: the code still works.'); }
+  let pj; try{ pj=await unpackProject(new Blob(chunks)); }catch(e){ console.warn(e); return back(e.message && !/JSON|gzip|decod/i.test(e.message) ? e.message : 'This project arrived damaged. Ask for a new code.'); }
+  if(ctl.signal.aborted) return;
+  $('xfMsg').textContent='adding the project…';
+  try{
+    const now=Date.now(), p={ id:newId(), name:pj.name, named:pj.named, created:now, updated:now, data:pj.data, summary:summary(pj.data), received:now };
+    await dbDo('projects','readwrite',st=>st.put(p));
+    for(const [i,rec] of Object.entries(pj.sounds)) await dbDo('sounds','readwrite',st=>st.put(rec, p.id+':'+i));
+    PRJ.list.unshift(p);
+    fetch(relayUrl()+'/share/'+code, {method:'DELETE'}).catch(()=>{});   // it's here: the relay can forget it
+    XF.busy=false; XF.ctl=null; $('xfer').classList.add('hidden');
+    await openProject(p.id);
+    toast(`received "${p.name}"`);
+  }catch(e){ console.warn(e); back("Couldn't store the project on this device (storage full?)."); }
+}
+$('projShare').onclick=xferShare;
+
 
 /* ============ UI ============ */
 function param(host,label,get,set,min,max,step,fmt){
@@ -3400,6 +3581,7 @@ $('projNameInput').addEventListener('change',e=>renameProject(e.target.value));
 $('projNameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') e.target.blur(); e.stopPropagation(); });
 $('projList').onclick=e=>{
   if(e.target.closest('#projNewTile')){ newProject(); return; }
+  if(e.target.closest('#projRecvTile')){ xferReceive(); return; }
   const u=e.target.closest('[data-undo]'); if(u){ restoreProject(u.dataset.undo); return; }
   const b=e.target.closest('[data-pa]'); if(!b) return; const row=b.closest('.proj'); if(row.dataset.swiped) return;
   openProject(row.dataset.id); };

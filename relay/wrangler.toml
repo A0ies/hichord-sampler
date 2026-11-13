@@ -1,0 +1,30 @@
+# The share relay for Looper for HiChord (see README.md, "Share a project", for deploying it).
+name = "looper-relay"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+# the bucket holding shared projects until they are received (or expire)
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "looper-shares"
+
+[vars]
+# where the app runs: the GitHub Pages site, the iOS app's bundled fallback page ("null"), local testing
+ALLOWED_ORIGINS = "https://a0ies.github.io,null,http://localhost:8417"
+MAX_BYTES = "31457280"   # 30 MB per shared project
+TTL_HOURS = "24"
+
+# per IP, per minute: uploads, and lookups/downloads (so codes can't be guessed)
+[[ratelimits]]
+name = "RL_SHARE"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }
+
+[[ratelimits]]
+name = "RL_GET"
+namespace_id = "1002"
+simple = { limit = 30, period = 60 }
+
+# hourly clean-up of expired uploads
+[triggers]
+crons = ["17 * * * *"]
