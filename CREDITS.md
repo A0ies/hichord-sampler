@@ -12,7 +12,7 @@ other changes. The licence of each source was checked in the project's own licen
 | Electric guitar | [FSBS Electric Guitar Clean](https://github.com/freepats/electric-guitar-FSBS-clean) (bridge pickup) | FreePats | [CC0 1.0](https://github.com/freepats/electric-guitar-FSBS-clean/blob/main/LICENSE.txt) |
 | Electric bass | [Growlybass](https://github.com/sfzinstruments/karoryfer.growlybass) (Squier Jazz Bass) | Karoryfer Lecolds | [CC0 1.0](https://github.com/sfzinstruments/karoryfer.growlybass/blob/master/LICENSE) |
 | Drums | [Virtuosity Drums](https://github.com/sfzinstruments/virtuosity_drums) (mid microphones) | Versilian Studios, with Karoryfer; played by Austin McMahon | [CC0 1.0](https://github.com/sfzinstruments/virtuosity_drums/blob/master/LICENSE) |
-| Electric piano, saw lead, square lead, pad, synth bass | synthesised for this app by `tools/synth_sounds.py` (no samples) | HiChord Looper | CC0 1.0 |
+| Electric piano, saw lead, square lead, pad, synth bass | synthesised for this app by `tools/synth_sounds.py` (no samples) | Looper for HiChord | CC0 1.0 |
 
 The Salamander Grand Piano is used under CC BY 3.0: credit to Alexander Holm, with the changes listed above.
 VSCO 2 CE is CC0; Versilian Studios asks (without obligation) for credit and that the samples not be sold on their

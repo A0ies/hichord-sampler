@@ -3,7 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>HiChord Looper</title>
+<title>Looper for HiChord</title>
+<meta name="apple-mobile-web-app-title" content="Looper">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -692,7 +696,9 @@ body.projopen .pbar{display:none}
 .overlay{background:var(--bg)}
 .overlay h1{font-family:var(--sans);font-weight:700;letter-spacing:-.04em;text-transform:lowercase}
 .overlay h1 span{color:var(--ink);font-weight:400}
-.overlay h1::after{content:"";display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--acc);margin-left:8px;vertical-align:6px}
+/* the name next to the app icon ("Layers"); HiChord keeps its capitals: this is an unofficial app for it */
+.overlay h1{text-transform:none}
+.overlay h1 .appicon{width:1.15em;height:1.15em;display:inline-block;vertical-align:-0.2em;margin-right:.3em}
 .overlay button{background:var(--dark-key);color:var(--dark-key-ink);font-size:14px;padding:12px 26px;border-radius:12px}
 /* song parts: a row of keys above the layers */
 .partbar{display:flex;gap:6px;align-items:center;margin:0 0 10px;min-width:0}
@@ -1094,12 +1100,13 @@ body.projopen .pbar{display:none}
 #settingsSheet .setpage[data-k=sound] .padsbox h2{margin-bottom:10px}
 #settingsSheet .setpage[data-k=room] .rgroup{display:flex;flex-direction:column}
 #settingsSheet .setpage[data-k=room] .rgroup .params{flex:1;align-content:space-around}
-/* the looper's logo in the middle of the settings header, as on the start screen */
+/* the app's icon and name in the middle of the settings header, as on the start screen */
 #settingsSheet .sheethead{position:relative}
 .setlogo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:var(--sans);font-weight:700;font-size:18px;letter-spacing:-.03em;
   text-transform:lowercase;white-space:nowrap;pointer-events:none;color:var(--ink)}
 .setlogo span{font-weight:400}
-.setlogo::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--acc);margin-left:5px;vertical-align:3px}
+.setlogo{text-transform:none}
+.setlogo .appicon{width:22px;height:22px;display:inline-block;vertical-align:-5px;margin-right:6px}
 /* your own sound as two icon keys; the microphone key turns red while it records */
 .ownsnd button.icon{width:40px;height:40px;padding:0;flex:none}
 .ownsnd button.icon::before{display:none}
@@ -1487,7 +1494,7 @@ body.studio .tbar .pos b{font-size:26px}
 <script>if(window.__isHiChordApp) document.documentElement.classList.add('in-app');</script>
 <div class="overlay" id="overlay">
   <div class="box">
-    <h1>HiChord <span>Looper</span></h1>
+    <h1><svg class="appicon" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#1d1d1c"/><rect x="16" y="22" width="46" height="9" rx="4.5" fill="#2f6fe0"/><rect x="30" y="37" width="54" height="9" rx="4.5" fill="#00a651"/><rect x="16" y="52" width="34" height="9" rx="4.5" fill="#ff5000"/><rect x="40" y="67" width="44" height="9" rx="4.5" fill="#ffc400"/><rect x="55" y="15" width="3" height="68" rx="1.5" fill="#f0f0ec"/></svg>Looper <span>for HiChord</span></h1>
     <p>Play on your HiChord, record it in layers, then change timing, instruments and mix while it loops. Connect the HiChord over USB-C and turn its own volume down. Works in Chrome or Edge, and in the iPhone app.</p>
     <button id="startBtn">Start</button>
   </div>
@@ -1661,7 +1668,7 @@ body.studio .tbar .pos b{font-size:26px}
 <!-- app settings: HiChord, sound, room -->
 <section class="sheet tall" id="settingsSheet" aria-label="Settings">
   <div class="grab"></div>
-  <div class="row sheethead"><h2 style="margin:0">Settings</h2><span class="setlogo" aria-hidden="true">hichord <span>looper</span></span><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
+  <div class="row sheethead"><h2 style="margin:0">Settings</h2><span class="setlogo" aria-hidden="true"><svg class="appicon" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#1d1d1c"/><rect x="16" y="22" width="46" height="9" rx="4.5" fill="#2f6fe0"/><rect x="30" y="37" width="54" height="9" rx="4.5" fill="#00a651"/><rect x="16" y="52" width="34" height="9" rx="4.5" fill="#ff5000"/><rect x="40" y="67" width="44" height="9" rx="4.5" fill="#ffc400"/><rect x="55" y="15" width="3" height="68" rx="1.5" fill="#f0f0ec"/></svg>Looper <span>for HiChord</span></span><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
   <!-- the HiChord screen stays on top; tabs below pick sync, sound check or room -->
   <div class="setbody">
     <div class="hcscreen">

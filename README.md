@@ -1,4 +1,6 @@
-# HiChord Looper
+# Looper for HiChord
+
+An unofficial fan project, not made by or affiliated with Pocket Audio, the makers of the HiChord.
 
 A looper for the HiChord pocket synth, in the spirit of [fm1-sampler](https://github.com/ferluht/fm1-sampler): you play on the HiChord, this app records it in layers and makes the sound, and you change timing, instruments and mix while it loops.
 
@@ -29,4 +31,5 @@ iOS browsers have no Web MIDI, so `ios/` holds a small app: a full-screen WebVie
 ```
 cd ios && xcodegen generate && open HiChordSampler.xcodeproj
 ```
+The app icon ("Layers") lives in `icons/icon.svg`; `sh tools/make_icons.sh` makes the iOS icon, the home-screen web clip and the favicon from it.
 Pick your team under Signing & Capabilities, plug in the iPhone and press Run.
