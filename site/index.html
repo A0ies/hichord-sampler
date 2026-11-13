@@ -115,6 +115,149 @@ h2 .it{font-size:1.1em}
 .video-wrap video{width:100%;aspect-ratio:16/9}
 .sound{position:absolute;right:16px;bottom:16px;z-index:2}
 
+/* feature boxes: a working piece of the app per feature (feature-boxes.js) */
+.fbox{width:100%;background:var(--light);color:var(--light-ink);border-radius:clamp(18px,2vw,28px);padding:clamp(12px,1.5vw,20px);display:flex;flex-direction:column;gap:clamp(10px,1.2vw,14px);
+  box-shadow:0 40px 90px -30px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.04);transition:box-shadow .4s;-webkit-tap-highlight-color:transparent}
+.fbox.loud{box-shadow:0 40px 90px -30px rgba(0,0,0,.85),0 0 0 2px var(--acc),0 30px 80px -30px rgba(255,80,0,.45)}
+.fbox > img{border-radius:14px}
+.feat .vis .fb-layers,.feat .vis .fbox[data-box="layers"]{max-width:440px}
+.fbox button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
+.fb-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px}
+.fb-titles{display:flex;align-items:baseline;gap:10px;min-width:0;flex-wrap:wrap}
+.fb-title{font:600 16px var(--sans);letter-spacing:-.01em}
+.fb-info{font:500 13px var(--mono);color:var(--light-dim);font-variant-numeric:tabular-nums}
+.fb-orig{display:inline-flex;align-items:center;gap:7px;flex:none;min-height:38px;padding:0 13px 0 11px;border-radius:11px;border:0;cursor:pointer;
+  background:#f2f2ef;box-shadow:0 2px 0 #b9b9b3;font:600 13px var(--mono)!important;transition:opacity .2s,transform .12s}
+.fb-orig svg{width:16px;height:16px}
+.fb-orig:active{transform:translateY(1px);box-shadow:0 1px 0 #b9b9b3}
+.fb-orig:disabled{opacity:.38;cursor:default;box-shadow:none;background:transparent}
+.fb-foot{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.fb-hint{font:12.5px/1.4 var(--mono);color:var(--light-dim)}
+.fb-mute{flex:none;width:44px;height:44px;border-radius:50%;border:0;padding:0;cursor:pointer;display:grid;place-items:center;background:#1d1d1b;color:#f0f0ec!important;
+  box-shadow:0 6px 18px -6px rgba(0,0,0,.6);transition:background .2s,transform .15s}
+.fb-mute:hover{transform:scale(1.06)}
+.fb-mute svg{width:21px;height:21px}
+.fb-mute .on{display:none}
+.fb-mute[aria-pressed="false"]{background:var(--acc)}
+.fb-mute[aria-pressed="false"] .on{display:block}
+.fb-mute[aria-pressed="false"] .off{display:none}
+.fbox button:focus-visible,.fbox select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.badge{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;color:#fff;font:600 13px var(--mono);flex:none}
+.badge.dark{color:#151515}
+
+.fb-body{display:flex;flex-direction:column;gap:12px}
+
+/* 1 layers */
+.lcards{display:flex;flex-direction:column;gap:8px}
+.lcard{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:8px 8px;background:#ebebe7;border-radius:15px;padding:9px 10px 10px;transition:opacity .2s}
+.lcard.off .lname,.lcard.off .badge{opacity:.45}
+.lname{min-width:0}
+.lsel{appearance:none;-webkit-appearance:none;max-width:100%;border:0;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23151515' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 4px center/10px 6px;
+  font:600 15px var(--sans);color:var(--light-ink);padding:6px 20px 6px 4px;border-radius:8px;cursor:pointer;text-overflow:ellipsis}
+.lsel:hover{background-color:#dededa}
+.lfixed{font:600 15px var(--sans);padding:6px 4px;display:inline-block}
+.lcard.loading .lname::after{content:"loading…";font:12px var(--mono);color:var(--light-dim);margin-left:6px}
+.lbtn{width:40px;height:36px;border-radius:10px;border:0;cursor:pointer;background:#f7f7f4;box-shadow:0 2px 0 #b9b9b3;font:600 14px var(--mono)!important}
+.lbtn:active{transform:translateY(1px)}
+.lbtn.m[aria-pressed="true"]{background:#1d1d1b;color:#f0f0ec;box-shadow:0 2px 0 #000}
+.lbtn.s[aria-pressed="true"]{background:var(--c);color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.lstrip{grid-column:1 / -1;width:100%;height:38px;border-radius:8px;display:block}
+
+/* 2 note editor */
+.eroll{display:block;width:100%;aspect-ratio:16 / 8.4;border-radius:12px;touch-action:none;background:#131312}
+/* the app's control bar under the roll: only on a phone, as in the app */
+.ebar{display:none;align-items:center;gap:10px;background:#0b0b0b;color:#f0f0ec;border-radius:14px;padding:8px;margin-top:-4px}
+.ebig{width:46px;height:46px;border-radius:12px;border:0;background:#1d1d1b;cursor:pointer;display:grid;place-items:center;flex:none}
+.eplay::before{content:"";width:15px;height:15px;background:#f0f0ec;border-radius:2px}
+.eplay.stopped::before{width:0;height:0;border-radius:0;background:none;border-style:solid;border-width:9px 0 9px 15px;border-color:transparent transparent transparent #00a651;margin-left:4px}
+.epos{display:flex;flex-direction:column;line-height:1.15}
+.epos b{font:600 20px var(--mono);font-variant-numeric:tabular-nums}
+.epos small{font:12px var(--mono);color:#a5a59f}
+.espace{flex:1}
+.egrid{min-width:64px;height:46px;border-radius:12px;border:0;background:#1d1d1b;color:#f0f0ec!important;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:0 10px}
+.egrid small{font:11px var(--mono);color:#a5a59f}
+.egrid b{font:600 16px var(--mono)}
+
+/* 3 capture mode */
+.cpads{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ctile{position:relative;display:flex;flex-direction:column;gap:7px;padding:9px;border-radius:16px;background:#ebebe7;box-shadow:inset 0 0 0 2.5px var(--c);
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:crosshair;transition:opacity .2s,box-shadow .2s}
+.ctile:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.ctile.touch,.ctile.locked{box-shadow:inset 0 0 0 3.5px var(--c)}
+.ctile.off{opacity:.5}
+.chead{display:flex;align-items:center;gap:8px;min-width:0;pointer-events:none}
+.cname{flex:1;min-width:0;font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cstate{font:600 11.5px var(--mono);background:var(--c);color:#fff;border-radius:999px;padding:2px 8px;flex:none}
+.ctile.off .cstate{background:#9d9d97}
+.ctile.locked .cstate{background:#1d1d1b}
+.cstrip{width:100%;height:28px;border-radius:7px;display:block;pointer-events:none}
+.cgridpad{position:relative;height:clamp(84px,9vw,118px);border-radius:9px;overflow:hidden;pointer-events:none;background-color:#dcdcd8;
+  background-image:linear-gradient(#c3c3be 1px,transparent 1px),linear-gradient(90deg,#c3c3be 1px,transparent 1px);background-size:25% 25%;background-position:-1px -1px}
+.cchip{position:absolute;left:6px;top:6px;font:500 11.5px var(--mono);border:1.5px solid var(--c);background:#ebebe7;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.chow{position:absolute;left:7px;right:7px;bottom:5px;font:500 11px var(--mono);color:var(--light-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctile.fx .chow{color:var(--light-ink);font-weight:600}
+.cxl,.cyl,.cdot{position:absolute;display:none}
+.cxl{top:0;bottom:0;left:var(--x,50%);width:1.5px;margin-left:-.75px;background:var(--c)}
+.cyl{left:0;right:0;top:var(--y,50%);height:1.5px;margin-top:-.75px;background:var(--c)}
+.cdot{left:var(--x,50%);top:var(--y,50%);width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px solid var(--c);background:color-mix(in srgb,var(--c) 30%,transparent)}
+.ctile.hover .cxl,.ctile.hover .cyl{display:block;opacity:.45}
+.ctile.fx .cxl,.ctile.fx .cyl,.ctile.fx .cdot{display:block;opacity:1}
+.ctile.fx .cgridpad{background-color:color-mix(in srgb,var(--c) 14%,#dcdcd8)}
+.ctile.arming .cdot{animation:arm 1.2s linear forwards}
+@keyframes arm{from{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 0%,transparent)}to{box-shadow:0 0 0 9px color-mix(in srgb,var(--c) 45%,transparent)}}
+.ctile.locked .cdot{background:var(--c)}
+.cprog{height:10px;border-radius:6px;background:#1d1d1b;overflow:hidden}
+.cprog i{display:block;height:100%;background:#00a651;transform-origin:0 50%;transform:scaleX(0)}
+
+/* 4 song */
+.sview{background:#0b0b0b;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:10px;color:#f0f0ec}
+.svhead{display:flex;align-items:center;gap:10px}
+.spname{font:600 17px var(--sans)}
+.spinfo{margin-left:auto;font:500 12px var(--mono);color:#a5a59f;font-variant-numeric:tabular-nums;text-align:right}
+.sroll{display:block;width:100%;aspect-ratio:16 / 5.2;border-radius:8px}
+.stape{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.stape::-webkit-scrollbar{display:none}
+.sblock,.sgap{flex:0 0 clamp(76px,15%,112px);height:62px;border-radius:8px}
+.sblock{position:relative;overflow:hidden;background:color-mix(in srgb,var(--c) 55%,#000);color:#fff;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:7px 8px;transition:background .2s,transform .15s}
+.sblock:hover{transform:translateY(-2px)}
+.sblock.cur{background:var(--c)}
+.sblock.lifted{display:none}
+.sblock b{font:600 14px var(--mono);pointer-events:none} .sblock span{font:12px var(--mono);opacity:.9;pointer-events:none}
+.sblock:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.sgap{border:2px dashed rgba(255,255,255,.55);background:rgba(255,255,255,.06)}
+.sdrop{flex:1 0 120px;height:62px;border-radius:8px;border:1.5px dashed #3a3a37;display:grid;place-items:center;font:12px var(--mono);color:#77776f;padding:0 8px;text-align:center}
+.sdragging .sdrop{border-color:#77776f;color:#a5a59f}
+.sx{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:7px;border:0;background:rgba(0,0,0,.28);color:#fff!important;cursor:pointer;font:600 15px/1 var(--mono)!important;opacity:.75}
+.sx:hover{opacity:1;background:rgba(0,0,0,.5)}
+.sprog{position:absolute;left:0;top:0;width:100%;height:3px;background:#fff;transform-origin:0 50%;transform:scaleX(0);display:none;pointer-events:none}
+.sblock.cur .sprog{display:block}
+.sparts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.spart{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:14px;border:0;cursor:grab;background:#f2f2ef;box-shadow:0 2px 0 #b9b9b3;text-align:left;
+  touch-action:none;user-select:none;-webkit-user-select:none;transition:transform .15s}
+.spart:hover{transform:translateY(-2px)}
+.spart b{font:700 30px/1 var(--sans);pointer-events:none}
+.spart span{font:600 14px var(--sans);pointer-events:none}
+.sbars{display:flex;flex-direction:column;gap:3px;width:100%}
+.sbars i{display:block;height:4px;border-radius:2px}
+.sghost{position:fixed;left:0;top:0;z-index:100;pointer-events:none;width:96px;height:62px;margin:-31px 0 0 -48px;border-radius:8px;background:var(--c);color:#fff;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:7px 8px;box-shadow:0 16px 40px -10px rgba(0,0,0,.6);rotate:-3deg;transition:opacity .15s}
+.sghost b{font:600 14px var(--mono)} .sghost span{font:12px var(--mono)}
+.sghost.away{opacity:.55}
+.sghost.away::after{content:"×";position:absolute;top:4px;right:8px;font:700 18px var(--mono)}
+.sdragging,.sdragging *{cursor:grabbing!important}
+
+@media (max-width:560px){
+  .cpads{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cgridpad{height:84px}
+  .eroll{aspect-ratio:4 / 5}
+  .ebar{display:flex}
+  .fb-editor .fb-info{display:none}
+  .sroll{aspect-ratio:16 / 7}
+  .spart b{font-size:24px}
+  .fb-hint{font-size:11.5px}
+}
+
 /* devices row */
 .code{display:inline-flex;align-items:center;gap:10px;margin-top:30px;font:600 clamp(26px,3vw,40px) var(--mono);letter-spacing:.14em;background:var(--card);padding:14px 26px;border-radius:16px;box-shadow:inset 0 0 0 1.5px #2e2e2b}
 .code i{font-style:normal;color:var(--dim)} .code span{color:var(--ink)}
@@ -221,7 +364,7 @@ footer p{margin:0;max-width:52em}
         <p class="clabel rv d3">your own</p>
         <div class="chips tight rv d3"><span class="chip own"><i style="background:var(--acc)"></i>sample your HiChord</span><span class="chip own"><i style="background:var(--l1)"></i>record with the mic</span><span class="chip own"><i style="background:var(--l0)"></i>upload a file</span></div>
       </div>
-      <div class="vis rv d1"><div class="dev phone" data-par="0.06"><video src="media/layers-p.mp4" poster="media/iphone-p-layers.jpg" autoplay muted loop playsinline preload="none" aria-label="Layers on iPhone"></video></div></div>
+      <div class="vis rv d1"><div class="fbox" data-box="layers"><img src="media/iphone-p-layers.jpg" alt="Layers in the app" loading="lazy"></div></div>
     </div>
   </div>
 </section>
@@ -235,7 +378,7 @@ footer p{margin:0;max-width:52em}
         <p class="copy rv d2">The app keeps the notes you played, so nothing is final. Quantize, swing, humanize, swap the instrument, or fix a note in the piano roll. Your original timing is always one tap away.</p>
         <div class="chips rv d3"><span class="chip">quantize</span><span class="chip">swing</span><span class="chip">humanize</span><span class="chip">piano roll</span></div>
       </div>
-      <div class="vis rv d1"><div class="dev tab" data-par="0.05"><video src="media/editor-ipad.mp4" poster="media/ipad-l-editor.jpg" autoplay muted loop playsinline preload="none" aria-label="Note editor on iPad"></video></div></div>
+      <div class="vis rv d1"><div class="fbox" data-box="editor"><img src="media/ipad-l-editor.jpg" alt="Note editor in the app" loading="lazy"></div></div>
     </div>
   </div>
 </section>
@@ -252,7 +395,7 @@ footer p{margin:0;max-width:52em}
         <p class="clabel rv d3">effects</p>
         <div class="chips tight rv d3"><span class="chip">◢ low-pass</span><span class="chip">◣ high-pass</span><span class="chip">▥ gate · 1/4 to 1/32</span><span class="chip">⋯ delay</span><span class="chip">≋ reverb</span><span class="chip">↕ pitch</span><span class="chip">∿ drive</span></div>
       </div>
-      <div class="vis rv d1"><div class="dev phone-l" data-par="0.05"><video src="media/capture-l.mp4" poster="media/iphone-l-capture.jpg" autoplay muted loop playsinline preload="none" aria-label="Capture mode on iPhone"></video></div></div>
+      <div class="vis rv d1"><div class="fbox" data-box="capture"><img src="media/iphone-l-capture.jpg" alt="Capture mode in the app" loading="lazy"></div></div>
     </div>
   </div>
 </section>
@@ -266,7 +409,7 @@ footer p{margin:0;max-width:52em}
         <p class="copy rv d2">Make an intro, a verse and a chorus, then lay them out on a tape that plays from part to part.</p>
         <div class="chips rv d3"><span class="chip"><i style="background:var(--l0)"></i>A intro</span><span class="chip"><i style="background:var(--l1)"></i>B verse</span><span class="chip"><i style="background:var(--l2)"></i>C chorus</span></div>
       </div>
-      <div class="vis rv d1"><div class="dev tab" data-par="0.05"><video src="media/song-ipad.mp4" poster="media/ipad-l-song.jpg" autoplay muted loop playsinline preload="none" aria-label="Song page on iPad"></video></div></div>
+      <div class="vis rv d1"><div class="fbox" data-box="song"><img src="media/ipad-l-song.jpg" alt="Song page in the app" loading="lazy"></div></div>
     </div>
   </div>
 </section>
@@ -381,5 +524,6 @@ const demo = document.getElementById('demo');
 new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) demo.play().catch(() => {}); else demo.pause(); }), { threshold: 0.4 }).observe(demo);
 
 </script>
+<script src="feature-boxes.js" data-sounds="../sounds/"></script>
 </body>
 </html>
