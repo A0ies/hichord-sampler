@@ -447,6 +447,21 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 }
 @media (min-width:700px) and (min-height:700px) and (orientation:portrait){ .spscreen{height:min(50%,560px)} .sptip{display:none} }
 @media (min-width:1000px) and (min-height:700px) and (orientation:landscape){ .spscreen{height:auto;flex:1} .sppads{flex:0 0 auto;height:clamp(140px,22vh,190px)} }
+/* sampling the HiChord: a card over everything, with the steps, a level meter and progress */
+.hcs{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px}
+.hcs.hidden{display:none}
+.hcsbox{width:min(420px,100%);max-height:calc(100dvh - 32px);overflow:auto;background:var(--panel);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;
+  box-shadow:0 24px 60px rgba(0,0,0,.35);font-family:var(--mono);font-size:12px;box-sizing:border-box}
+.hcsbox h3{margin:0;font-family:var(--sans);font-size:18px;font-weight:600}
+.hcsbox p{margin:0;line-height:1.5;color:var(--dim)}
+.hcsbox ul{margin:0;padding-left:18px;line-height:1.6;color:var(--ink)}
+.hcsbox .hcsin{display:flex;align-items:center;gap:8px;background:var(--key);border-radius:10px;padding:8px 10px}
+.hcsbox .hcsin b{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hcsbox .hcsin.warn{box-shadow:inset 0 0 0 2px var(--rec)}
+.hcsmeter{height:8px;border-radius:4px;background:var(--line);overflow:hidden} .hcsmeter i{display:block;height:100%;width:0;background:var(--enc2);transition:width .05s}
+.hcsprog{height:6px;border-radius:3px;background:var(--line);overflow:hidden} .hcsprog i{display:block;height:100%;width:0;background:var(--acc)}
+.hcsbox .row{display:flex;gap:8px;justify-content:flex-end} .hcsbox .row button{min-height:44px;padding:0 16px}
+.hcsbox .err{color:var(--rec);line-height:1.5}
 /* the new-layer sheet: your own sound from a file or the microphone */
 .inst.own{color:var(--ink)}
 .inst.own.micrec{background:var(--rec);color:#fff}
@@ -1067,6 +1082,10 @@ body.projopen .pbar{display:none}
 /* the three settings pages fill the same height (the tallest page sets it): their rows spread out, so switching tabs
    keeps the same block of content instead of jumping between a full and a half-empty page */
 #settingsSheet .setpage{display:flex;flex-direction:column}
+#settingsSheet .credits ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:11px;line-height:1.45}
+#settingsSheet .credits b{font-weight:600;margin-right:4px}
+#settingsSheet .credits a{color:inherit;text-decoration-color:var(--line)}
+@media (max-height:700px){ #settingsSheet .credits ul{gap:3px;line-height:1.35} #settingsSheet .credits .hint{display:none} }
 #settingsSheet .setpage[data-k=sync]>.params{flex:1;align-content:space-between}
 #settingsSheet .setpage[data-k=room] .roomgroups{flex:1}
 #settingsSheet .setpage[data-k=sound] .padsbox{margin-top:auto;padding-top:18px}
@@ -1652,7 +1671,7 @@ body.studio .tbar .pos b{font-size:26px}
       </div>
       <div class="hcstate" id="hcState"></div>
     </div>
-    <div class="tabs settabs" id="setTabs"><button data-k="sync" class="on">Sync</button><button data-k="sound">Sound check</button><button data-k="room">Room</button></div>
+    <div class="tabs settabs" id="setTabs"><button data-k="sync" class="on">Sync</button><button data-k="sound">Sound check</button><button data-k="room">Room</button><button data-k="credits">Credits</button></div>
     <div class="setpage" data-k="sync">
       <div class="params" id="pSync"></div>
       <p class="hint">Don't use the HiChord's own looper while you record here: its replays would come in as notes too.</p>
@@ -1669,6 +1688,17 @@ body.studio .tbar .pos b{font-size:26px}
     </div>
     <div class="setpage" data-k="room" hidden>
       <div class="roomgroups" id="pGlobal"></div>
+    </div>
+    <div class="setpage credits" data-k="credits" hidden>
+      <ul>
+        <li><b>grand piano</b> <a href="https://github.com/sfzinstruments/SalamanderGrandPiano">Salamander Grand Piano V3</a> by Alexander Holm · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>, trimmed and levelled</li>
+        <li><b>strings, horns</b> <a href="https://versilian-studios.com/vsco-community/">VSCO 2 Community Edition</a> by Versilian Studios / Sam Gossner · CC0</li>
+        <li><b>electric guitar</b> <a href="https://github.com/freepats/electric-guitar-FSBS-clean">FSBS Electric Guitar Clean</a> by FreePats · CC0</li>
+        <li><b>electric bass</b> <a href="https://github.com/sfzinstruments/karoryfer.growlybass">Growlybass</a> by Karoryfer Lecolds · CC0</li>
+        <li><b>drums</b> <a href="https://github.com/sfzinstruments/virtuosity_drums">Virtuosity Drums</a> by Versilian Studios · CC0</li>
+        <li><b>electric piano, leads, pad, synth bass</b> made for this app · CC0</li>
+      </ul>
+      <p class="hint">Your own sounds (file, microphone, sampled HiChord) stay on this device. Nothing is uploaded or shared.</p>
     </div>
   </div>
 </section>
@@ -1711,6 +1741,8 @@ body.studio .tbar .pos b{font-size:26px}
     <div class="edgrid"><small>grid</small><b id="edGridVal">1/16</b><select id="edSnap" aria-label="Grid"></select></div>
   </div>
 </div>
+<!-- sampling your own HiChord: the app plays it note by note over USB MIDI and records its USB audio -->
+<div class="hcs hidden" id="hcs" role="dialog" aria-modal="true" aria-label="Sample your HiChord"><div class="hcsbox" id="hcsBox"></div></div>
 <div class="toast" id="toast"></div>
 <!-- own sounds come from the Files app only: a list of audio file types (no audio/*, no camera or library) -->
 <input type="file" id="fileIn" accept=".wav,.mp3,.m4a,.aac,.aif,.aiff,.caf,.flac,.ogg,.opus" class="hidden">
@@ -1718,7 +1750,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION = '2026-11-12.67';
+const PAGE_VERSION = '2026-11-13.68';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1756,14 +1788,14 @@ const S = { bpm:100, bars:4, playing:false, rec:false, metro:true, countIn:true,
 const layers = [];
 let ctx, preFx, tape, master, limiter, recDest, revIn, convolver, revOut, dlyIn, delay, dlyFb, dlyLp, dlyOut;
 
-/* ============ instruments (multisampled, recorded in Ableton) ============
+/* ============ instruments (multisampled from openly licensed sample sets, or synthesised: see CREDITS.md) ============
    Each instrument is one compressed file in sounds/ with a note recorded every 3 semitones;
    sounds/sounds.json says where each note starts and, for sustained sounds, where its loop is.
    A played note uses the nearest recording, shifted by at most a semitone and a half. */
 const TAU = Math.PI*2;
 const LIB = {
   piano:  {name:'Grand piano',     a:0.002, r:0.35},
-  keys:   {name:'Rhodes',          a:0.002, r:0.35},
+  keys:   {name:'Electric piano',  a:0.002, r:0.35},
   strings:{name:'Strings',         a:0.002, r:0.6},
   horns:  {name:'Horns',           a:0.002, r:0.25},
   guitar: {name:'Electric guitar', a:0.002, r:0.3},
@@ -1957,7 +1989,7 @@ const selLayer = () => layers[S.sel];
 
 /* ============ voices ============ */
 function playNote(Ly, note, vel, when, durSec){
-  const lib = Ly.inst!=='custom' && SND[Ly.inst];
+  const lib = Ly.inst!=='custom' ? SND[Ly.inst] : Ly.czones ? {buffer:Ly.buffer, zones:Ly.czones, kind:Ly.ckind} : null;
   if(!lib && (Ly.inst!=='custom' || !Ly.buffer)){ if(LIB[Ly.inst]) loadSound(Ly.inst).catch(()=>{}); return null; }
   const n = note + 12*Ly.oct;
   if(Ly.voices.size>28){ const old=[...Ly.voices].find(v=>!v.released); if(old) releaseVoice(old, ctx.currentTime, 0.02); }
@@ -2273,6 +2305,7 @@ function handleMsg(d, fromHC){
     return;
   }
   if(S.input!=='all' && String(ch)!==S.input) return;
+  if(HCS && HCS.running) return;   // sampling the HiChord: what it plays is being recorded, not played along
   if(fromHC && (type===0x90||type===0x80) && hcIsEcho(d[1], type===0x90 && d[2]>0)) return;   // our own loop notes coming back from the HiChord
   if(type===0x90 && d[2]>0) liveOn(d[1],d[2],ch);
   else if(type===0x80 || type===0x90) liveOff(d[1]);
@@ -2461,8 +2494,10 @@ async function loadFile(file){
   try{ setCustom(Ly, await decodeFile(file), fileSoundName(file)); }
   catch(e){ toast('The browser cannot read this file'); }
 }
-function setCustomSound(Ly, buf, name){
-  Ly.inst='custom'; Ly.customName=name; Ly.buffer=normalize(buf); Ly.mode='melodic'; Ly.slices=null;
+function setCustomSound(Ly, buf, name, zones, kind){
+  Ly.inst='custom'; Ly.customName=name; Ly.mode='melodic'; Ly.slices=null;
+  if(zones){ Ly.buffer=buf; Ly.czones=zones; Ly.ckind=kind||'decay'; Ly.root=60; return; }   // a multisample (sampled from the HiChord)
+  Ly.buffer=normalize(buf); Ly.czones=null; Ly.ckind=null;
   const f=detectPitch(Ly.buffer); Ly.root = f ? Math.round(69+12*Math.log2(f/440)) : 60;
 }
 function setCustom(Ly, buf, name){
@@ -2487,6 +2522,199 @@ function detectPitch(buf){
   let run=0; const cm=new Float32Array(maxLag+1); cm[0]=1; for(let l=1;l<=maxLag;l++){ run+=dif[l]; cm[l]=dif[l]*l/(run||1); }
   let lag=-1; for(let l=minLag;l<=maxLag;l++){ if(cm[l]<0.15){ while(l+1<=maxLag&&cm[l+1]<cm[l]) l++; lag=l; break; } }
   return lag<0 ? null : sr/lag;
+}
+
+/* ============ sample your own HiChord over USB audio ============
+   The app plays the HiChord note by note over USB MIDI (a note every 3 semitones, the same spacing as the bundled
+   instruments) and records its USB audio. Each note is cut out by its timing plus onset detection (USB latency),
+   trimmed, given a loop if the sound sustains, and the whole set becomes one of your own sounds: kept in this
+   browser's storage with the project, never uploaded or shared. */
+var HCS=null;
+const HCS_NOTES=[]; for(let n=36;n<=96;n+=3) HCS_NOTES.push(n);
+const HCS_ON=1.6, HCS_STEP=2.8, HCS_LEAD=0.8, HCS_VEL=100;
+const nativeAudio = msg => { try{ window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.audio && window.webkit.messageHandlers.audio.postMessage(msg); return true; }catch(e){ return false; } };
+function hcsName(){
+  const p=HC.state.preset, hit=HC_PRESETS.find(x=>x[0]===p);
+  const base = hit ? `HiChord ${hit[1].toLowerCase()}` : 'HiChord';
+  const used=new Set(layers.filter(l=>l.inst==='custom').map(l=>l.customName));
+  if(!used.has(base)) return base; let n=2; while(used.has(`${base} ${n}`)) n++; return `${base} ${n}`;
+}
+function hcsOpen(target){
+  if(!ctx){ toast('press start first'); return; }
+  if(HCS && HCS.running) return;
+  HCS={ target, running:false, input:null, stream:null };
+  $('hcs').classList.remove('hidden'); hcsIntro();
+}
+function hcsIntro(err){
+  const mins=Math.round(HCS_NOTES.length*HCS_STEP/6)/10;
+  $('hcsBox').innerHTML=`<h3>sample your HiChord</h3>
+    <p>The app plays your HiChord note by note over USB and records what comes back over USB audio: ${HCS_NOTES.length} notes, about ${mins} minute${mins===1?'':'s'}. The recording stays on this device.</p>
+    <ul><li>pick the sound on the HiChord</li><li>turn reverb, delay, chorus and glide off</li><li>USB AUD on, MIDI OUT on DAW (the defaults)</li></ul>
+    <div class="hcsin ${HC.connected?'':'warn'}"><span>midi</span><b>${HC.connected?'HiChord connected':'not connected: start connects it'}</b></div>
+    ${err?`<p class="err">${err}</p>`:''}
+    <div class="row"><button id="hcsCancel">cancel</button><button id="hcsStart" class="primary">start</button></div>`;
+  $('hcsCancel').onclick=hcsClose; $('hcsStart').onclick=hcsStart;
+}
+// the HiChord's USB audio as input: ask once for access (device names stay hidden until then), then pick it by name
+async function hcsOpenInput(){
+  const raw={ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:2 };
+  if(inApp()){   // iOS: the input follows the audio route, so the app switches the route to the USB input
+    nativeAudio({cmd:'usbInput', on:true}); await new Promise(r=>setTimeout(r,350));
+    const st=await navigator.mediaDevices.getUserMedia({audio:raw});
+    return { stream:st, label:(st.getAudioTracks()[0]||{}).label || 'USB audio', found:true };
+  }
+  let st=await navigator.mediaDevices.getUserMedia({audio:raw});
+  const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput');
+  const hc=devs.find(d=>/hichord/i.test(d.label));
+  if(hc && st.getAudioTracks()[0].getSettings().deviceId!==hc.deviceId){
+    st.getTracks().forEach(t=>t.stop());
+    st=await navigator.mediaDevices.getUserMedia({audio:{...raw, deviceId:{exact:hc.deviceId}}});
+  }
+  return { stream:st, label: hc ? hc.label : (st.getAudioTracks()[0]||{}).label || 'default input', found:!!hc };
+}
+async function hcsStart(){
+  if(!HC.connected) await hcConnect();
+  if(!HC.connected){ hcsIntro('No HiChord over USB MIDI. Plug it in with USB-C and try again.'); return; }
+  if(S.playing) stopTransport(); if(S.rec) setRec(false); stopAllVoices(true);
+  setAudioSessionType('play-and-record');
+  let inp;
+  try{ inp=await hcsOpenInput(); }catch(e){ hcsDone(); hcsIntro('No access to audio input. Allow the microphone for this page (the HiChord\'s USB audio counts as one).'); return; }
+  if(!inp.found && !HCS.anyInput){
+    inp.stream.getTracks().forEach(t=>t.stop());
+    $('hcsBox').innerHTML=`<h3>no HiChord input</h3><p>There is no audio input called "HiChord". Check that USB AUD is on, and that the HiChord is plugged in over USB-C. The input in use is "${escH(inp.label)}".</p>
+      <div class="row"><button id="hcsCancel">cancel</button><button id="hcsAny">use "${escH(inp.label.slice(0,24))}"</button></div>`;
+    $('hcsCancel').onclick=hcsClose; $('hcsAny').onclick=()=>{ HCS.anyInput=true; hcsStart(); }; return;
+  }
+  HCS.stream=inp.stream; HCS.label=inp.label;
+  // record raw samples (no codec): a script processor gives the input as it arrives
+  const src=ctx.createMediaStreamSource(inp.stream), proc=ctx.createScriptProcessor(4096,2,2), sink=ctx.createGain(); sink.gain.value=0;
+  const L=[], R=[]; let peak=0, recStart=null;
+  proc.onaudioprocess=e=>{
+    const a=e.inputBuffer.getChannelData(0), b=e.inputBuffer.numberOfChannels>1 ? e.inputBuffer.getChannelData(1) : a;
+    if(recStart==null) recStart=performance.now() - a.length/ctx.sampleRate*1000;
+    L.push(a.slice()); R.push(b.slice()); let p=0; for(let i=0;i<a.length;i+=8) p=Math.max(p,Math.abs(a[i]),Math.abs(b[i])); peak=Math.max(peak*0.85,p); HCS.level=p;
+  };
+  src.connect(proc); proc.connect(sink); sink.connect(ctx.destination);
+  Object.assign(HCS,{ running:true, src, proc, sink, L, R, getRecStart:()=>recStart, maxPeak:0 });
+  // the mode: incoming notes should simply sound (no strum, arp, repeat or drone); put the mode back afterwards
+  const m=HC.state.mode; HCS.prevMode=m;
+  if(m!=null && m!==0 && m!==2) hcCC(HC.CC.MODE,0);
+  $('hcsBox').innerHTML=`<h3>sampling ${escH(hcsName())}</h3>
+    <div class="hcsin"><span>input</span><b>${escH(inp.label)}</b></div>
+    <div class="hcsmeter" aria-hidden="true"><i id="hcsMeter"></i></div>
+    <p id="hcsNote">getting ready…</p><div class="hcsprog" aria-hidden="true"><i id="hcsProg"></i></div>
+    <div class="row"><button id="hcsCancel">cancel</button></div>`;
+  $('hcsCancel').onclick=hcsCancel;
+  // every note scheduled ahead, on the MIDI clock (performance.now)
+  const T0=performance.now()+HCS_LEAD*1000; HCS.T0=T0;
+  HCS_NOTES.forEach((n,i)=>{ const on=T0+i*HCS_STEP*1000, off=on+HCS_ON*1000;
+    try{ HC.out.send([0x90,n,HCS_VEL], on); HC.out.send([0x80,n,0], off); }catch(e){}
+    qPush(hcSentAt,'on'+n,on); qPush(hcSentAt,'off'+n,off); });
+  const total=HCS_NOTES.length*HCS_STEP*1000;
+  const tick=()=>{
+    if(!HCS || !HCS.running) return;
+    const t=performance.now()-T0, i=clamp(Math.floor(t/(HCS_STEP*1000)),0,HCS_NOTES.length-1);
+    HCS.maxPeak=Math.max(HCS.maxPeak, HCS.level||0);
+    const m=$('hcsMeter'); if(m) m.style.width=Math.min(100,(HCS.level||0)*120)+'%';
+    const pr=$('hcsProg'); if(pr) pr.style.width=clamp(t/total*100,0,100)+'%';
+    const nt=$('hcsNote'); if(nt) nt.textContent = t<0 ? 'getting ready…' : `note ${i+1} of ${HCS_NOTES.length} · ${noteName(HCS_NOTES[i])}`;
+    // two notes in and nothing came in: stop and say what to check
+    if(t>2*HCS_STEP*1000+600 && HCS.maxPeak<0.003){ hcsFail('No sound came in from the HiChord. Check that USB AUD is on and the HiChord\'s volume is up, that MIDI IN is on (the Companion App switches it on), and that the input is the HiChord.'); return; }
+    if(t>total+400){ hcsFinish(); return; }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+function hcsStop(){
+  if(!HCS) return;
+  try{ HCS.proc && (HCS.proc.onaudioprocess=null); HCS.src && HCS.src.disconnect(); HCS.proc && HCS.proc.disconnect(); HCS.sink && HCS.sink.disconnect(); }catch(e){}
+  if(HCS.stream) HCS.stream.getTracks().forEach(t=>t.stop());
+  if(HCS.running){ HCS_NOTES.forEach(n=>hcSend([0x80,n,0])); hcSend([0xB0,123,0]); }
+  if(HCS.prevMode!=null && HCS.prevMode!==0 && HCS.prevMode!==2) hcCC(HC.CC.MODE,HCS.prevMode);
+  HCS.running=false; HCS.prevMode=null;
+  if(inApp()) nativeAudio({cmd:'usbInput', on:false});
+  setAudioSessionType(playbackSession());
+}
+function hcsDone(){ hcsStop(); }
+function hcsClose(){ hcsStop(); HCS=null; $('hcs').classList.add('hidden'); $('hcsBox').innerHTML=''; }
+function hcsCancel(){ hcsClose(); toast('sampling cancelled'); }
+function hcsFail(msg){ hcsStop(); hcsIntro(msg); }
+function hcsFinish(){
+  const run=HCS; hcsStop();
+  $('hcsBox').innerHTML='<h3>cutting the notes…</h3><p>finding where each note starts and where it can loop</p>';
+  setTimeout(()=>{
+    let res; try{ res=hcsBuild(run); }catch(e){ console.warn(e); hcsIntro('Something went wrong while cutting the notes. Try again.'); return; }
+    if(!res){ hcsIntro('Too few notes came in to make an instrument. Check the HiChord\'s volume and that it plays incoming MIDI (MIDI IN on), then try again.'); return; }
+    const name=hcsName();
+    if(run.target==='new') addLayer('keys',{buf:res.buffer, name, zones:res.zones, kind:res.kind});
+    else { const Ly=layers[run.target]; Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05)); setCustomSound(Ly,res.buffer,name,res.zones,res.kind); applyLayer(Ly); renderLayers(); renderDetail(); save(); storeSound(run.target); }
+    $('hcsBox').innerHTML=`<h3>${escH(name)} is ready</h3><p>${res.zones.length} notes, ${res.kind==='sustain'?'sustained (looped)':'decaying'}${res.missing?`, ${res.missing} note${res.missing>1?'s':''} came in too quiet and were left out`:''}${res.shifted?`. Everything sounded at another pitch than sent (the HiChord's key or octave setting?), so the notes were placed where they sound`:''}.</p>
+      <div class="row"><button id="hcsOk" class="primary">done</button></div>`;
+    $('hcsOk').onclick=hcsClose;
+  }, 30);
+}
+// cut the recording into notes: timing first, then the real onset (USB latency) within a window around it
+function hcsBuild(run){
+  const sr=ctx.sampleRate, n=run.L.reduce((a,b)=>a+b.length,0), L=new Float32Array(n), R=new Float32Array(n);
+  let o=0; run.L.forEach((c,i)=>{ L.set(c,o); R.set(run.R[i],o); o+=c.length; });
+  const rs=run.getRecStart(); if(rs==null) return null;
+  const at = ms => Math.round((ms-rs)/1000*sr);
+  const notes=[]; let missing=0;
+  HCS_NOTES.forEach((note,i)=>{
+    const nom=at(run.T0+i*HCS_STEP*1000), a=Math.max(0,nom-Math.round(0.15*sr)), b=Math.min(n,nom+Math.round(0.7*sr));
+    let pk=0; for(let k=a;k<b;k++) pk=Math.max(pk,Math.abs(L[k]),Math.abs(R[k]));
+    if(pk<0.004){ missing++; return; }
+    const thr=Math.max(pk*0.08,0.002); let on=a; while(on<b && Math.abs(L[on])<thr && Math.abs(R[on])<thr) on++;
+    on=Math.max(0,on-Math.round(0.002*sr));
+    const end=Math.min(n, at(run.T0+(i+1)*HCS_STEP*1000)-Math.round(0.12*sr), on+Math.round((HCS_STEP-0.2)*sr));
+    notes.push({note, on, end});
+  });
+  if(notes.length<Math.max(3,HCS_NOTES.length/3)) return null;
+  // sustained or decaying: level late in the held note against the start
+  const rms=(s,e)=>{ let q=0; for(let k=s;k<e;k++) q+=L[k]*L[k]+R[k]*R[k]; return Math.sqrt(q/Math.max(1,(e-s)*2)); };
+  const ratios=notes.map(z=>rms(z.on+Math.round(1.15*sr),z.on+Math.round(1.45*sr))/Math.max(1e-6,rms(z.on+Math.round(0.03*sr),z.on+Math.round(0.33*sr)))).sort((x,y)=>x-y);
+  const kind = ratios[Math.floor(ratios.length/2)]>0.3 ? 'sustain' : 'decay';
+  const segs=notes.map(z=>{
+    let len;
+    if(kind==='sustain') len=Math.min(z.end-z.on, Math.round((HCS_ON-0.05)*sr));   // up to the note-off
+    else { let pk=0; for(let k=z.on;k<z.end;k++) pk=Math.max(pk,Math.abs(L[k])); let last=z.end-1; const fl=pk*0.001; while(last>z.on && Math.abs(L[last])<fl && Math.abs(R[last])<fl) last--; len=Math.min(z.end-z.on,last-z.on+Math.round(0.02*sr)); }
+    const l=L.slice(z.on,z.on+len), r=R.slice(z.on,z.on+len), seg={note:z.note, l, r};
+    if(kind==='sustain'){
+      const m=new Float32Array(len); for(let k=0;k<len;k++) m[k]=(l[k]+r[k])*0.5;
+      const ls=Math.round(0.55*sr), win=Math.round(0.06*sr), xf=Math.round(0.12*sr);
+      let best=-2, le=len-win-1;
+      const ref=m.subarray(ls,ls+win); let rn=0; for(let k=0;k<win;k++) rn+=ref[k]*ref[k];
+      for(let c=ls+Math.round(0.35*sr); c<len-win; c+=16){ let d=0,cn=0; for(let k=0;k<win;k++){ d+=ref[k]*m[c+k]; cn+=m[c+k]*m[c+k]; } const sc=d/Math.sqrt(rn*cn+1e-12); if(sc>best){ best=sc; le=c; } }
+      // crossfade the end of the loop into what comes just before its start, so the jump back is seamless
+      for(const ch of [l,r]) for(let k=0;k<xf;k++){ const w=Math.sin(k/xf*Math.PI/2)**2; ch[le-xf+k]=ch[le-xf+k]*Math.sqrt(1-w)+ch[ls-xf+k]*Math.sqrt(w); }
+      const tail=Math.min(Math.round(0.25*sr), len-ls);
+      seg.l=new Float32Array(le+tail); seg.l.set(l.subarray(0,le)); seg.l.set(l.subarray(ls,ls+tail),le);
+      seg.r=new Float32Array(le+tail); seg.r.set(r.subarray(0,le)); seg.r.set(r.subarray(ls,ls+tail),le);
+      seg.loop=[ls/sr, le/sr];
+    }
+    const f=Math.min(seg.l.length, Math.round(0.02*sr)); for(let k=0;k<f;k++){ const g=k/f; seg.l[seg.l.length-1-k]*=g; seg.r[seg.r.length-1-k]*=g; }
+    return seg;
+  });
+  // the pitch the notes really have: the HiChord's key or octave setting may shift everything it plays. One pitch
+  // reading can be off (octave errors, very high notes), so only a shift most notes agree on is applied, to all
+  let shifted=0; const ds=[];
+  segs.forEach(sg=>{
+    if(sg.note>84) return;   // the pitch finder doesn't reach the top notes reliably
+    const tb=ctx.createBuffer(1,Math.min(sg.l.length,Math.round(1.5*sr)),sr); tb.copyToChannel(sg.l.subarray(0,tb.length),0);
+    const f=detectPitch(tb); if(!f) return; const m=69+12*Math.log2(f/440);
+    if(Math.abs(m-Math.round(m))<0.3) ds.push(Math.round(m)-sg.note);
+  });
+  const cnt=new Map(); ds.forEach(d=>cnt.set(d,(cnt.get(d)||0)+1));
+  const [dTop,nTop]=[...cnt.entries()].sort((x,y)=>y[1]-x[1])[0]||[0,0];
+  if(dTop!==0 && Math.abs(dTop)<=24 && nTop>=Math.max(3,ds.length*0.6)){ segs.forEach(sg=>{ sg.note+=dTop; }); shifted=segs.length; }
+  segs.sort((x,y)=>x.note-y.note);
+  // one gain for the whole set, peaks at -1 dBFS; then one buffer with every note after the other
+  let pk=0; segs.forEach(sg=>{ for(let k=0;k<sg.l.length;k++) pk=Math.max(pk,Math.abs(sg.l[k]),Math.abs(sg.r[k])); });
+  const g=0.89/Math.max(pk,1e-6), pre=Math.round(0.05*sr), total=segs.reduce((a,sg)=>a+pre+sg.l.length,0)+pre;
+  const out=ctx.createBuffer(2,total,sr), oL=out.getChannelData(0), oR=out.getChannelData(1), zones=[]; let p=0;
+  segs.forEach(sg=>{ p+=pre; for(let k=0;k<sg.l.length;k++){ oL[p+k]=sg.l[k]*g; oR[p+k]=sg.r[k]*g; }
+    const z={note:sg.note, start:p/sr, len:sg.l.length/sr}; if(sg.loop) z.loop=[p/sr+sg.loop[0], p/sr+sg.loop[1]]; zones.push(z); p+=sg.l.length; });
+  return { buffer:out, zones, kind, missing, shifted };
 }
 
 /* ============ record output ============ */
@@ -2570,7 +2798,7 @@ function describeChange(aJ,bJ){
 }
 /* your own sounds, by name: removing or renumbering layers moves them, and undo finds them again */
 const SOUNDS_KEPT=new Map();
-function keepSound(Ly){ SOUNDS_KEPT.set(Ly.customName, {buffer:Ly.buffer, mode:Ly.mode}); }
+function keepSound(Ly){ SOUNDS_KEPT.set(Ly.customName, {buffer:Ly.buffer, mode:Ly.mode, zones:Ly.czones||null, kind:Ly.ckind||null}); }
 function applySnapshot(json){
   HIST.applying=true;
   const d=JSON.parse(json);
@@ -2582,7 +2810,7 @@ function applySnapshot(json){
     Object.assign(Ly, nd);
     if(Ly.inst==='custom' && (before!=='custom' || beforeName!==Ly.customName)){
       const k=SOUNDS_KEPT.get(Ly.customName);
-      if(k){ Ly.buffer=k.buffer; Ly.mode=k.mode; Ly.slices=null; storeSound(i); } else Ly.inst=DEFAULT_INST[i];
+      if(k){ Ly.buffer=k.buffer; Ly.mode=k.mode; Ly.slices=null; Ly.czones=k.zones; Ly.ckind=k.kind; storeSound(i); } else Ly.inst=DEFAULT_INST[i];
     }
     if(Ly.inst!=='custom' && (Ly.inst!==before || !Ly.buffer)) setInstrument(Ly, Ly.inst, true);
     applyLayer(Ly);
@@ -2697,7 +2925,7 @@ async function soundsOf(id){
 }
 function storeSound(i){
   const Ly=layers[i]; if(!PRJ.current || Ly.inst!=='custom' || !Ly.buffer) return;
-  const b=Ly.buffer, rec={ name:Ly.customName, sampleRate:b.sampleRate, channels:[...Array(b.numberOfChannels)].map((_,c)=>b.getChannelData(c).slice()) };
+  const b=Ly.buffer, rec={ name:Ly.customName, sampleRate:b.sampleRate, channels:[...Array(b.numberOfChannels)].map((_,c)=>b.getChannelData(c).slice()), zones:Ly.czones||null, kind:Ly.ckind||null };
   dbDo('sounds','readwrite',st=>st.put(rec, PRJ.current+':'+i)).catch(e=>console.warn('sound save', e));
 }
 function bufferFrom(rec){ const b=ctx.createBuffer(rec.channels.length, rec.channels[0].length, rec.sampleRate); rec.channels.forEach((ch,c)=>b.copyToChannel(ch,c)); return b; }
@@ -2731,7 +2959,7 @@ function applySession(d, sounds){
     Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.02));
     Object.assign(Ly, newLayerData(i), JSON.parse(JSON.stringify(nd))); capFx(Ly);   // older projects: one effect becomes a list
     const snd=sounds && sounds[i];
-    if(Ly.inst==='custom' && snd){ Ly.buffer=bufferFrom(snd); Ly.customName=snd.name; Ly.mode='melodic'; Ly.slices=null; }
+    if(Ly.inst==='custom' && snd){ Ly.buffer=bufferFrom(snd); Ly.customName=snd.name; Ly.mode='melodic'; Ly.slices=null; Ly.czones=snd.zones||null; Ly.ckind=snd.kind||null; }
     else { Ly.inst = Ly.inst==='custom' ? DEFAULT_INST[i] : instKey(Ly.inst,i); newSounds(Ly, nd); setInstrument(Ly, Ly.inst, true); }
     Ly.events.forEach(e=>{ if(!e.id) e.id=evId++; evId=Math.max(evId,e.id+1); if(e.chord!=null) chordSeq=Math.max(chordSeq,e.chord+1); });
     applyLayer(Ly);
@@ -2766,7 +2994,7 @@ async function initProjects(){
     }
     setCurrent(p.id);
     const sounds=await soundsOf(p.id);
-    layers.forEach((Ly,i)=>{ if(Ly.wantCustom && sounds[i]){ Ly.inst='custom'; Ly.buffer=bufferFrom(sounds[i]); Ly.customName=sounds[i].name; Ly.mode='melodic'; Ly.slices=null; } delete Ly.wantCustom; });
+    layers.forEach((Ly,i)=>{ if(Ly.wantCustom && sounds[i]){ Ly.inst='custom'; Ly.buffer=bufferFrom(sounds[i]); Ly.customName=sounds[i].name; Ly.mode='melodic'; Ly.slices=null; Ly.czones=sounds[i].zones||null; Ly.ckind=sounds[i].kind||null; } delete Ly.wantCustom; });
     renderLayers(); renderDetail();
   }catch(e){ console.warn('projects unavailable', e); setAlert('proj','projects are not available in this browser (private mode?)'); }
 }
@@ -2932,6 +3160,7 @@ const ICONS={
   drums:'<ellipse cx="12" cy="10" rx="8" ry="3"/><path d="M4 10v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M6 3l5 5M18 3l-5 5"/>',
   custom:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
   upload:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9.5 14.5 12 12l2.5 2.5"/>',
+  hichord:'<rect x="3" y="7" width="18" height="11" rx="2.5"/><path d="M7 11v3M10.5 11v3M14 11v3M17.5 11v3M9 4h6"/>',
   reset:'<path d="M4 4v5h5"/><path d="M5.6 15.5A7 7 0 1 0 6.7 7.3L4 9"/>',
   mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
   folder:'<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.2h7.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>',
@@ -3093,7 +3322,7 @@ function addLayer(key, own){
   Object.assign(Ly, newLayerData(idx), { inst:key, shown:true });
   setInstrument(Ly, key); Ly.q = key==='drums' ? '1/16' : 'off';
   Ly.rev = key==='pad'||key==='strings' ? 0.35 : 0.18;
-  if(own) setCustomSound(Ly, own.buf, own.name);   // a file or a recording: the layer is named after it
+  if(own) setCustomSound(Ly, own.buf, own.name, own.zones, own.kind);   // a file or a recording: the layer is named after it
   applyLayer(Ly); freshInParts(idx);
   closeSheets();
   selectLayer(idx); renderLayers(); save();
@@ -3154,7 +3383,8 @@ $('menuList').onclick=e=>{
 };
 $('instGrid').innerHTML = Object.entries(LIB).map(([k,v])=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${v.name}</button>`).join('')
   + `<button class="inst own" data-own="file" aria-label="New layer from an audio file in Files">${ic('upload')}audio file</button>`
-  + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New layer from the microphone">${ic('mic')}<span class="ml">microphone</span><span class="micmeter"><i></i></span></button>`;
+  + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New layer from the microphone">${ic('mic')}<span class="ml">microphone</span><span class="micmeter"><i></i></span></button>`
+  + `<button class="inst own" data-own="hc" aria-label="New layer sampled from your HiChord over USB">${ic('hichord')}from HiChord</button>`;
 $('settingsBtn').innerHTML=ic('cog',''); $('themeBtn').innerHTML=ic('theme',''); $('projIcon').innerHTML=ic('folder','');
 $('projBtn').onclick=openProjects;
 $('projCopy').onclick=saveAsCopy;
@@ -3201,6 +3431,7 @@ setInterval(()=>{ if($('projSheet').classList.contains('open')) renderProjStatus
 document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close',''));
 $('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(!b) return;
   if(b.dataset.own==='file'){ $('newFileIn').click(); return; }
+  if(b.dataset.own==='hc'){ closeSheets(); hcsOpen('new'); return; }
   if(b.dataset.own==='mic'){ if(mic && !mic.onBuf) return; toggleMic(buf=>addLayer('keys',{buf,name:sampleName()})); return; }
   addLayer(b.dataset.k); };
 $('newFileIn').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return;
@@ -3522,9 +3753,9 @@ function renderPage(host,tab,Ly){
     fp.classList.add('pwide');
     param(grid,'Resonance',()=>Ly.reso,v=>{Ly.reso=v;applyLayer(Ly);},0,1,0.01,pct);
     const row=document.createElement('div'); row.className='row ownsnd';
-    row.innerHTML=`<span class="sub">Your own sound</span><button id="fileBtn" class="icon" aria-label="Load your own sound from an audio file" title="Audio file">${ic('upload','')}</button><button id="micBtn" class="icon${mic?' on micrec':''}" aria-label="${mic?'Stop recording':'Record your own sound with the microphone'}" title="${mic?'Stop recording':'Microphone'}">${ic('mic','')}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
+    row.innerHTML=`<span class="sub">Your own sound</span><button id="fileBtn" class="icon" aria-label="Load your own sound from an audio file" title="Audio file">${ic('upload','')}</button><button id="hcsBtn" class="icon" aria-label="Sample your HiChord over USB" title="Sample from HiChord">${ic('hichord','')}</button><button id="micBtn" class="icon${mic?' on micrec':''}" aria-label="${mic?'Stop recording':'Record your own sound with the microphone'}" title="${mic?'Stop recording':'Microphone'}">${ic('mic','')}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
     grid.appendChild(row);   // in the grid: under the sliders on a phone, next to the instrument in landscape
-    $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=()=>toggleMic();
+    $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=()=>toggleMic(); $('hcsBtn').onclick=()=>hcsOpen(S.sel);
     // phone and iPad in portrait (docked): the picker's column is narrow, so back to default joins the own-sound keys
     const st=document.body.dataset.studio;
     if((st==='port' && sFull()!=='st') || (!st && !isShortWide())) row.appendChild($('instDefBtn'));

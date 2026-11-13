@@ -11,6 +11,8 @@ final class AudioRouter: NSObject, WKScriptMessageHandler {
     weak var webView: WKWebView?
     private var allowUSBOutput = false
     private var forcedSpeaker = false
+    /// While the page samples the HiChord: record from its USB audio, and leave the route alone otherwise.
+    private var usbInput = false
 
     func start() {
         let s = AVAudioSession.sharedInstance()
@@ -44,7 +46,8 @@ final class AudioRouter: NSObject, WKScriptMessageHandler {
         let s = AVAudioSession.sharedInstance()
         let outs = s.currentRoute.outputs
         let soundOnUSB = outs.contains { $0.portType == .usbAudio }
-        let wantSpeaker = usbConnected && !allowUSBOutput && !otherOutput
+        // forcing the speaker also moves the input to the built-in microphone, so not while sampling over USB
+        let wantSpeaker = usbConnected && !allowUSBOutput && !otherOutput && !usbInput
         do {
             if wantSpeaker && soundOnUSB {
                 // overriding to the speaker only works in play-and-record
@@ -100,6 +103,25 @@ final class AudioRouter: NSObject, WKScriptMessageHandler {
         switch cmd {
         case "route":
             report()
+        case "usbInput":
+            usbInput = (body["on"] as? Bool) ?? false
+            let s = AVAudioSession.sharedInstance()
+            do {
+                if usbInput {
+                    if s.category != .playAndRecord {
+                        try s.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothA2DP])
+                    }
+                    if forcedSpeaker { try s.overrideOutputAudioPort(.none); forcedSpeaker = false }
+                    if let usb = (s.availableInputs ?? []).first(where: { $0.portType == .usbAudio }) {
+                        try s.setPreferredInput(usb)
+                    }
+                } else {
+                    try s.setPreferredInput(nil)
+                }
+            } catch {
+                print("[audio] usb input: \(error)")
+            }
+            apply()
         case "usbOutput":
             allowUSBOutput = (body["on"] as? Bool) ?? false
             apply()
