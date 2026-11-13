@@ -1771,7 +1771,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-13.72';
+const PAGE_VERSION='2026-11-13.73';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3114,7 +3114,7 @@ async function openProjects(){ flushSave(); await refreshProjects().catch(()=>{}
    its own sounds as 16-bit PCM, gzipped. Built-in instruments travel by name only. The relay hands out a
    six-character code; the other device types it, gets the file, deletes it from the relay and opens it as
    a new project. No accounts: the code is the key, and the relay forgets the file after 24 hours. */
-const RELAY_URL = '';   // the deployed relay, e.g. 'https://looper-relay.<you>.workers.dev' (README: "Share a project")
+const RELAY_URL = 'https://looper-relay.looper-hichord.workers.dev';   // the deployed relay, e.g. 'https://looper-relay.<you>.workers.dev' (README: "Share a project")
 let SHARE_MAX = 30*1024*1024;   // the relay's MAX_BYTES
 const CODE_ABC = '23456789ABCDEFGHJKMNPQRSTUVWXYZ', CODE_N = 6;
 function relayUrl(){ let o=''; try{ o=localStorage.getItem('hcl-relay')||''; }catch(e){} return (o||RELAY_URL).replace(/\/+$/,''); }
