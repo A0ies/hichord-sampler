@@ -1269,8 +1269,9 @@ body.cap .capmode{bottom:0;padding-bottom:calc(10px + var(--sb))}
 .caprec .crec.on i{border-radius:2px;background:#fff}
 .caprec .ctime{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;min-width:44px;color:var(--screen-dim)}
 .caprec.rec .ctime{color:var(--screen-ink)}
-.caprec .cmeter{flex:1;min-width:30px;height:6px;border-radius:3px;background:var(--screen-line);overflow:hidden}
-.caprec .cmeter i{display:block;height:100%;width:0;background:var(--enc2);transition:width .05s linear}
+.caprec .cmeter{position:relative;flex:1;min-width:30px;height:6px;border-radius:3px;background:var(--screen-line);overflow:hidden}
+.caprec .cmeter i{display:block;height:100%;width:0;background:var(--enc2)}
+.caprec .cmeter b{position:absolute;top:0;bottom:0;left:0;width:2px;margin-left:-2px;background:var(--screen-ink);opacity:0}   /* peak hold */
 /* the play bar: a black strip along the bottom, like the record strip in capture mode; capture is its orange key.
    Undo floats as a round key just above it. --tbarh is the room the bar takes, so sheets and panels stay above it */
 :root{--tbarh:calc(82px + var(--sb))}
@@ -1611,7 +1612,7 @@ body.studio .tbar .pos b{font-size:26px}
     <button class="cbtn" id="capPlay" aria-label="Play / stop (space)"><svg viewBox="0 0 24 24" id="capPlayIcon"><path d="M7 4l13 8-13 8z"/></svg></button>
     <button class="cbtn crec" id="capRecBtn" aria-label="Record what you hear to an audio file"><i></i><span id="capRecLbl">rec out</span></button>
     <span class="ctime" id="capTime">0:00</span>
-    <span class="cmeter"><i id="capMeter"></i></span>
+    <span class="cmeter"><i id="capMeter"></i><b id="capPeak"></b></span>
   </div>
 </section>
 <div class="backdrop" id="backdrop"></div>
@@ -1770,7 +1771,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-13.71';
+const PAGE_VERSION='2026-11-13.72';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2755,11 +2756,19 @@ function renderBounce(){
   $('capRecLbl').textContent = bouncer ? 'stop · save' : 'rec out';
   if(!bouncer) $('capTime').textContent='0:00';
 }
+const METER={db:-60, pk:-60, pkT:0, clipT:-1e9, t:0}, METER_FALL=24;   // dB, dB per second
 function drawCapRec(){
   if(!meterA){ meterA=ctx.createAnalyser(); meterA.fftSize=1024; meterBuf=new Float32Array(meterA.fftSize); limiter.connect(meterA); }
   meterA.getFloatTimeDomainData(meterBuf); let pk=0; for(const s of meterBuf) pk=Math.max(pk,Math.abs(s));
-  const db=20*Math.log10(pk||1e-6), w=clamp((db+48)/48,0,1);
-  const m=$('capMeter'); m.style.width=(w*100).toFixed(1)+'%'; m.style.background = pk>0.97 ? 'var(--rec)' : 'var(--enc2)';
+  // ballistics, like a hardware meter: instant attack, falls 24 dB/s; a peak tick holds 1 s, then falls too; red stays 1 s after a clip
+  const now=performance.now(), dt=Math.min(0.1,(now-(METER.t||now))/1000); METER.t=now;
+  const db=Math.max(-60, 20*Math.log10(pk||1e-6));
+  METER.db = Math.max(db, METER.db - METER_FALL*dt);
+  if(db>=METER.pk){ METER.pk=db; METER.pkT=now; } else if(now-METER.pkT>1000) METER.pk=Math.max(METER.db, METER.pk - METER_FALL*dt);
+  if(pk>0.97) METER.clipT=now;
+  const W=d=>clamp((d+48)/48,0,1), clip=now-METER.clipT<1000;
+  const m=$('capMeter'); m.style.width=(W(METER.db)*100).toFixed(1)+'%'; m.style.background = clip ? 'var(--rec)' : 'var(--enc2)';
+  const pt=$('capPeak'); pt.style.left=(W(METER.pk)*100).toFixed(1)+'%'; pt.style.opacity = W(METER.pk)>0.02 ? 1 : 0; pt.style.background = clip ? 'var(--rec)' : '';
   if(bouncer){ const s=Math.floor((performance.now()-bounceT0)/1000); $('capTime').textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
 }
 
