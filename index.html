@@ -470,6 +470,18 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .hcsbox .hcmap{list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}
 .hcsbox .hcmap li{display:flex;gap:6px;white-space:nowrap;overflow:hidden;color:var(--dim)} .hcsbox .hcmap li b{font-weight:600;color:var(--ink)}
 .hcsbox .hcmap li.ok b::after{content:" ✓";color:var(--ok)} .hcsbox .hcmap li.now b{color:var(--acc)}
+/* phone in landscape: the box goes wide and flat instead of tall, so nothing scrolls */
+@media (orientation:landscape) and (max-height:560px){
+  .hcs{padding:calc(8px + var(--st)) calc(12px + var(--sr)) calc(8px + var(--sb)) calc(12px + var(--sl))}
+  .hcsbox{width:min(780px,100%);padding:12px 16px;gap:7px;max-height:100%}
+  .hcsbox h3{font-size:16px}
+  .hcsbox p{font-size:11px;line-height:1.4}
+  .hcsbox .hcmap{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));font-size:11px;gap:1px 12px}
+  .hcsbox ul:not(.hcmap){display:flex;flex-wrap:wrap;gap:2px 18px;padding-left:16px;font-size:11px;line-height:1.4}
+  .hcsbox ul:not(.hcmap) li{margin-right:4px}
+  .hcsbox .hcsin{padding:5px 10px}
+  .hcsbox .row button{min-height:38px}
+}
 .params .hcsync{grid-column:1/-1;display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap}
 .params .hcsync button{min-height:40px;flex:none;text-align:left;white-space:normal;max-width:100%;line-height:1.3;padding-top:7px;padding-bottom:7px}
 .params .hcsync .hcb.done{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -1782,7 +1794,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-13.75';
+const PAGE_VERSION='2026-11-13.76';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2646,22 +2658,26 @@ function hcsIntro(err){
     <div class="row"><button id="hcsCancel">cancel</button><button id="hcsStart" class="primary">start</button></div>`;
   $('hcsCancel').onclick=hcsClose; $('hcsStart').onclick=hcsStart;
 }
-// the HiChord's USB audio as input: ask once for access (device names stay hidden until then), then pick it by name
+// the HiChord's USB audio as input: ask once for access (device names stay hidden until then), then pick it by name.
+// On iPhone and iPad too: WebKit picks its own default input (the built-in microphone) for getUserMedia and sets the
+// audio session to it, over the app's own choice of the USB input, so the device has to be asked for by its ID.
+const HCS_BUILTIN = /iphone|ipad|built-?in|internal|default|headset|airpods|bluetooth|macbook|webcam|facetime/i;
+function hcsPickInput(devs){
+  return devs.find(d=>/hichord/i.test(d.label))
+    || (inApp() || /iPhone|iPad/.test(navigator.userAgent) ? devs.find(d=>/usb/i.test(d.label)) || devs.find(d=>d.label && !HCS_BUILTIN.test(d.label)) : null);
+}
 async function hcsOpenInput(){
   const raw={ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:2 };
-  if(inApp()){   // iOS: the input follows the audio route, so the app switches the route to the USB input
-    nativeAudio({cmd:'usbInput', on:true}); await new Promise(r=>setTimeout(r,350));
-    const st=await navigator.mediaDevices.getUserMedia({audio:raw});
-    return { stream:st, label:(st.getAudioTracks()[0]||{}).label || 'USB audio', found:true };
-  }
+  if(inApp()){ nativeAudio({cmd:'usbInput', on:true}); await new Promise(r=>setTimeout(r,350)); }   // the app moves the route to the USB input
   let st=await navigator.mediaDevices.getUserMedia({audio:raw});
   const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput');
-  const hc=devs.find(d=>/hichord/i.test(d.label));
+  const hc=hcsPickInput(devs);
   if(hc && st.getAudioTracks()[0].getSettings().deviceId!==hc.deviceId){
     st.getTracks().forEach(t=>t.stop());
     st=await navigator.mediaDevices.getUserMedia({audio:{...raw, deviceId:{exact:hc.deviceId}}});
   }
-  return { stream:st, label: hc ? hc.label : (st.getAudioTracks()[0]||{}).label || 'default input', found:!!hc };
+  const label=(st.getAudioTracks()[0]||{}).label || (hc && hc.label) || 'default input';
+  return { stream:st, label, inputs:devs.map(d=>d.label).filter(Boolean), found: !!hc && !HCS_BUILTIN.test(label) || /hichord/i.test(label) };
 }
 async function hcsStart(){
   if(!HC.connected) await hcConnect();
@@ -2678,8 +2694,8 @@ async function hcsStart(){
   try{ inp=await hcsOpenInput(); }catch(e){ hcsDone(); hcsIntro('No access to audio input. Allow the microphone for this page (the HiChord\'s USB audio counts as one).'); return; }
   if(!inp.found && !HCS.anyInput){
     inp.stream.getTracks().forEach(t=>t.stop());
-    $('hcsBox').innerHTML=`<h3>no HiChord input</h3><p>There is no audio input called "HiChord". Check that USB AUD is on, and that the HiChord is plugged in over USB-C. The input in use is "${escH(inp.label)}".</p>
-      <div class="row"><button id="hcsCancel">cancel</button><button id="hcsAny">use "${escH(inp.label.slice(0,24))}"</button></div>`;
+    $('hcsBox').innerHTML=`<h3>no HiChord input</h3><p>There is no audio input called "HiChord". Check that USB AUD is on, and that the HiChord is plugged in over USB-C. The input in use is "${escH(inp.label)}"${inp.inputs&&inp.inputs.length>1?`; inputs found: ${inp.inputs.map(escH).join(', ')}`:''}.</p>
+      <div class="row"><button id="hcsCancel">cancel</button>${HCS_BUILTIN.test(inp.label)?'':`<button id="hcsAny">use "${escH(inp.label.slice(0,24))}"</button>`}</div>`;
     $('hcsCancel').onclick=hcsClose; $('hcsAny').onclick=()=>{ HCS.anyInput=true; hcsStart(); }; return;
   }
   HCS.stream=inp.stream; HCS.label=inp.label;
