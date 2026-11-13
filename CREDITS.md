@@ -23,7 +23,7 @@ own, which this app doesn't do.
 Sounds you add yourself (an audio file, the microphone, or your HiChord sampled over USB) are stored only in your
 browser's storage on your device, with the project they belong to. They leave the device only when you share that
 project with a code: then the project and its own sounds go to the share relay, which deletes them as soon as the
-other device has received them, or after 24 hours. The app never publishes them. Sounds of the HiChord belong to Pocket Audio; sample your own HiChord for your own music.
+other device has received them, or after 24 hours. The app never publishes them. The HiChord instruments (Settings → Sync) never leave the device: a shared project only names its instruments. Sounds of the HiChord belong to Pocket Audio; sample your own HiChord for your own music.
 
 ## Rebuilding
 

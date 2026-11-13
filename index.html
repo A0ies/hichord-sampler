@@ -466,6 +466,14 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .hcsprog{height:6px;border-radius:3px;background:var(--line);overflow:hidden} .hcsprog i{display:block;height:100%;width:0;background:var(--acc)}
 .hcsbox .row{display:flex;gap:8px;justify-content:flex-end} .hcsbox .row button{min-height:44px;padding:0 16px}
 .hcsbox .err{color:var(--rec);line-height:1.5}
+/* syncing the HiChord instruments: which app instrument gets which HiChord sound */
+.hcsbox .hcmap{list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}
+.hcsbox .hcmap li{display:flex;gap:6px;white-space:nowrap;overflow:hidden;color:var(--dim)} .hcsbox .hcmap li b{font-weight:600;color:var(--ink)}
+.hcsbox .hcmap li.ok b::after{content:" ✓";color:var(--ok)} .hcsbox .hcmap li.now b{color:var(--acc)}
+.params .hcsync{grid-column:1/-1;display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap}
+.params .hcsync button{min-height:40px;flex:none} .params .hcsync .hcsynchint{color:var(--dim);font-size:12px;line-height:1.4;flex:1;min-width:160px}
+/* the HiChord key on a layer's instrument: orange while the layer plays the HiChord instrument */
+.ownsnd #hcsBtn.hcon{background:var(--acc);color:#fff;border-color:var(--acc)}
 /* the new-layer sheet: your own sound from a file or the microphone */
 .inst.own{color:var(--ink)}
 .inst.own.micrec{background:var(--rec);color:#fff}
@@ -1080,6 +1088,7 @@ body.projopen .pbar{display:none}
   #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(3){grid-area:2/1}
   #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(4){grid-area:3/2}
   #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(5){grid-area:3/1}
+  #settingsSheet .setpage[data-k=sync] .params .hcsync{grid-area:2/2;flex-direction:column;align-items:flex-start;gap:8px} #settingsSheet .params .hcsync .hcsynchint{display:none}
   /* sound check: more air between the test key, the read-outs and the test chords */
   #settingsSheet .setpage[data-k=sound] .row+.hint{margin-top:18px}
   #settingsSheet .setpage[data-k=sound] .hint+.hint{margin-top:10px}
@@ -1771,7 +1780,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-13.73';
+const PAGE_VERSION='2026-11-13.74';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1934,6 +1943,7 @@ function newLayerData(i){
     a:L.a, d:0.4, s:1, r:L.r, cutoff:1, reso:0.1, vol:0.8, pan:0, rev: inst==='pad'||inst==='strings'?0.35:0.18, dly:0, mute:false, solo:false,
     fx:null, cfx:null,   // capture effects: filled in by capFx (a list of {k, v})
     out:'app',   // 'app' = the app's instrument, 'hc' = the HiChord plays it, 'both'
+    hc: undefined,   // HiChord instrument for this layer: true/false, or undefined to follow Settings → Sync
     gateDiv: 4,   // the gate's note: chops per beat (1 = 1/4, 2 = 1/8, 4 = 1/16, 8 = 1/32, 3 = 1/8t, 6 = 1/16t)
     fxs: [],   // effects that stay on: [{k, v}] with v from 0 to 1
     fx: inst==='drums' ? 'gate' : 'lp',   // what holding and dragging this layer does in capture mode
@@ -2010,7 +2020,7 @@ const selLayer = () => layers[S.sel];
 
 /* ============ voices ============ */
 function playNote(Ly, note, vel, when, durSec){
-  const lib = Ly.inst!=='custom' ? SND[Ly.inst] : Ly.czones ? {buffer:Ly.buffer, zones:Ly.czones, kind:Ly.ckind} : null;
+  const lib = Ly.inst!=='custom' ? (hcOn(Ly) ? HCI[Ly.inst] : SND[Ly.inst]) : Ly.czones ? {buffer:Ly.buffer, zones:Ly.czones, kind:Ly.ckind} : null;
   if(!lib && (Ly.inst!=='custom' || !Ly.buffer)){ if(LIB[Ly.inst]) loadSound(Ly.inst).catch(()=>{}); return null; }
   const n = note + 12*Ly.oct;
   if(Ly.voices.size>28){ const old=[...Ly.voices].find(v=>!v.released); if(old) releaseVoice(old, ctx.currentTime, 0.02); }
@@ -2371,6 +2381,46 @@ function bindInputs(){
 const HC = { out:null, connected:false, pendingBpmHi:null, state:{key:null,scale:null,octave:null,mode:null,preset:null,bpm:null},
   CC:{ BPM:20, BPM_LO:50, KEY:21, OCTAVE:22, PRESET:24, MODE:46, SCALE:103, HANDSHAKE:127 } };
 const HC_PRESETS=[[0,'Sine'],[1,'Saw'],[2,'Triangle'],[3,'Square'],[4,'FM EPiano'],[6,'FM Wow'],[9,'Strings'],[10,'Clarinet'],[12,'Acoustic'],[13,'Brass'],[14,'Piano'],[15,'Vibraphone'],[17,'Vox Ahh'],[18,'Retro EP'],[19,'Harp'],[21,'Humming'],[22,'Robbo'],[23,'Shutter'],[24,'Flute'],[25,'Mic Sample'],[26,'User Sample'],[27,'SawSquare'],[29,'Ocean'],[33,'Buzz Org'],[34,'Organ'],[35,'Tine EP']];
+/* HiChord instruments: every bundled instrument (not the drums) sampled from the closest HiChord sound, kept on this
+   device (not in a project). With "HiChord instruments" on in Settings → Sync, layers play these and carry the
+   HiChord's names; the HiChord key on a layer's instrument page switches one layer between the two. */
+const HC_INST = { piano:[14,'Piano'], keys:[35,'Tine EP'], strings:[9,'Strings'], horns:[13,'Brass'], guitar:[12,'Acoustic'],
+  lead:[1,'Saw'], square:[3,'Square'], pad:[17,'Vox Ahh'], ebass:[2,'Triangle'], bass:[27,'SawSquare'] };
+const HCI = {};   // key -> {buffer, zones, kind} once sampled
+try{ S.hcInst = localStorage.getItem('hcl-hcinst')==='1'; }catch(e){ S.hcInst=false; }
+const hcWants = Ly => !!(Ly && HC_INST[Ly.inst] && (Ly.hc ?? S.hcInst));
+const hcOn = Ly => hcWants(Ly) && !!HCI[Ly.inst];
+const hciCount = () => Object.keys(HCI).length;
+const HCI_ALL = Object.keys(HC_INST);
+async function loadHCI(){
+  try{
+    const r=soundRange('hci');
+    const [keys,vals]=await Promise.all([dbDo('sounds','readonly',st=>st.getAllKeys(r)), dbDo('sounds','readonly',st=>st.getAll(r))]);
+    (keys||[]).forEach((k,n)=>{ const key=String(k).slice(4); if(HC_INST[key] && vals[n]) HCI[key]={ buffer:bufferFrom(vals[n]), zones:vals[n].zones, kind:vals[n].kind||'decay' }; });
+  }catch(e){ console.warn('hichord instruments', e); }
+  if(hciCount()){ renderLayers(); renderDetail(); renderInstGrid(); renderHcSync(); }
+}
+function storeHCI(key){
+  const h=HCI[key], b=h.buffer;
+  const rec={ name:'HiChord '+HC_INST[key][1], sampleRate:b.sampleRate, channels:[...Array(b.numberOfChannels)].map((_,c)=>b.getChannelData(c).slice()), zones:h.zones, kind:h.kind };
+  return dbDo('sounds','readwrite',st=>st.put(rec, 'hci:'+key)).catch(e=>{ console.warn('hichord instrument save', e); toast('Could not keep the HiChord instrument: storage may be full'); });
+}
+// switch every layer to the HiChord instruments (or back); a layer's own choice gives way to this
+function setHcInst(on){
+  S.hcInst=!!on; try{ localStorage.setItem('hcl-hcinst', on?'1':'0'); }catch(e){}
+  layers.forEach(Ly=>{ if(Ly.hc!=null){ delete Ly.hc; } if(HC_INST[Ly.inst]) Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05)); });
+  renderLayers(); renderDetail(); renderInstGrid(); renderHcSync(); save();
+}
+// the HiChord key on a layer: switch this layer; not sampled yet: sample it (connected) or say how
+function hcLayerKey(i){
+  const Ly=layers[i]; if(!HC_INST[Ly.inst]) return;
+  if(HCI[Ly.inst]){
+    Ly.hc=!hcOn(Ly); Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05));
+    renderLayers(); renderDetail(); save();
+    toast(Ly.hc ? `Layer ${i+1} plays the HiChord's ${HC_INST[Ly.inst][1]}` : `Layer ${i+1} plays the ${LIB[Ly.inst].name} again`);
+  } else if(HC.connected) hcsOpen({sync:[Ly.inst], layer:i});
+  else toast('Connect your HiChord to sample this instrument (Settings)');
+}
 const HC_SCALES=['Major','Minor','Harm. minor','Mel. minor','Maj. pentatonic','Min. pentatonic','Blues','Dorian','Mixolydian','Lydian'];
 const HC_MODES=['Play','Strum','Lead','Drone','Arp','Repeat','Drum'];
 const HC_OCT={0:'+1',1:'0',2:'−1',3:'+2'}, HC_OCT_LIST=[[2,'−1'],[1,'0'],[0,'+1'],[3,'+2']];
@@ -2560,13 +2610,31 @@ function hcsName(){
   const used=new Set(layers.filter(l=>l.inst==='custom').map(l=>l.customName));
   if(!used.has(base)) return base; let n=2; while(used.has(`${base} ${n}`)) n++; return `${base} ${n}`;
 }
+// target: a layer index or 'new' (one own sound), or {sync:[instrument keys], layer?} (the HiChord instruments)
 function hcsOpen(target){
   if(!ctx){ toast('press start first'); return; }
   if(HCS && HCS.running) return;
   HCS={ target, running:false, input:null, stream:null };
+  if(target && target.sync){ Object.assign(HCS, { queue:target.sync, qi:0, done:[], prevPreset:HC.state.preset }); closeSheets(); }
   $('hcs').classList.remove('hidden'); hcsIntro();
 }
+const hcsKey = () => HCS && HCS.queue ? HCS.queue[HCS.qi] : null;
+const hcsMins = n => Math.max(1, Math.round(n*HCS_NOTES.length*HCS_STEP/60));
+function hcsMap(){
+  return `<ul class="hcmap">${HCS.queue.map((k,i)=>`<li class="${HCS.done.includes(k)?'ok':i===HCS.qi&&HCS.running?'now':''}"><span>${LIB[k].name}</span>→<b>${HC_INST[k][1]}</b></li>`).join('')}</ul>`;
+}
 function hcsIntro(err){
+  if(HCS && HCS.queue){
+    const left=HCS.queue.length-HCS.qi, one=HCS.queue.length===1;
+    $('hcsBox').innerHTML=`<h3>${one?`sample the HiChord's ${escH(HC_INST[HCS.queue[0]][1])}`:'sync instruments'}</h3>
+      <p>The app switches your HiChord to each sound below, plays it note by note over USB and records it over USB audio: about ${hcsMins(left)} minute${hcsMins(left)>1?'s':''}. Drums stay as they are. The sounds stay on this device; afterwards the HiChord goes back to its own sound.</p>
+      ${hcsMap()}
+      <ul><li>turn reverb, delay, chorus and glide off</li><li>USB AUD on, MIDI OUT on DAW (the defaults)</li></ul>
+      <div class="hcsin ${HC.connected?'':'warn'}"><span>midi</span><b>${HC.connected?'HiChord connected':'not connected: start connects it'}</b></div>
+      ${err?`<p class="err">${err}</p>`:''}
+      <div class="row"><button id="hcsCancel">${HCS.done.length?'stop here':'cancel'}</button><button id="hcsStart" class="primary">${HCS.qi?'go on':'start'}</button></div>`;
+    $('hcsCancel').onclick=HCS.done.length?hcsSyncEnd:hcsClose; $('hcsStart').onclick=hcsStart; return;
+  }
   const mins=Math.round(HCS_NOTES.length*HCS_STEP/6)/10;
   $('hcsBox').innerHTML=`<h3>sample your HiChord</h3>
     <p>The app plays your HiChord note by note over USB and records what comes back over USB audio: ${HCS_NOTES.length} notes, about ${mins} minute${mins===1?'':'s'}. The recording stays on this device unless you share the project.</p>
@@ -2596,6 +2664,12 @@ async function hcsOpenInput(){
 async function hcsStart(){
   if(!HC.connected) await hcConnect();
   if(!HC.connected){ hcsIntro('No HiChord over USB MIDI. Plug it in with USB-C and try again.'); return; }
+  const qk=hcsKey();
+  if(qk){
+    $('hcsBox').innerHTML=`<h3>switching to ${escH(HC_INST[qk][1])}…</h3>`;
+    hcCC(HC.CC.PRESET, HC_INST[qk][0]); HC.state.preset=HC_INST[qk][0]; renderHCState('preset');
+    const run=HCS; await new Promise(r=>setTimeout(r,800)); if(HCS!==run) return;
+  }
   if(S.playing) stopTransport(); if(S.rec) setRec(false); stopAllVoices(true);
   setAudioSessionType('play-and-record');
   let inp;
@@ -2620,12 +2694,13 @@ async function hcsStart(){
   // the mode: incoming notes should simply sound (no strum, arp, repeat or drone); put the mode back afterwards
   const m=HC.state.mode; HCS.prevMode=m;
   if(m!=null && m!==0 && m!==2) hcCC(HC.CC.MODE,0);
-  $('hcsBox').innerHTML=`<h3>sampling ${escH(hcsName())}</h3>
+  $('hcsBox').innerHTML=`<h3>${qk?`${HCS.queue.length>1?`${HCS.qi+1} of ${HCS.queue.length} · `:''}${escH(HC_INST[qk][1])}`:`sampling ${escH(hcsName())}`}</h3>
+    ${qk&&HCS.queue.length>1?hcsMap():''}
     <div class="hcsin"><span>input</span><b>${escH(inp.label)}</b></div>
     <div class="hcsmeter" aria-hidden="true"><i id="hcsMeter"></i></div>
     <p id="hcsNote">getting ready…</p><div class="hcsprog" aria-hidden="true"><i id="hcsProg"></i></div>
     <div class="row"><button id="hcsCancel">cancel</button></div>`;
-  $('hcsCancel').onclick=hcsCancel;
+  $('hcsCancel').onclick = qk && HCS.done.length ? ()=>{ hcsStop(); hcsSyncEnd(); } : hcsCancel;
   // every note scheduled ahead, on the MIDI clock (performance.now)
   const T0=performance.now()+HCS_LEAD*1000; HCS.T0=T0;
   HCS_NOTES.forEach((n,i)=>{ const on=T0+i*HCS_STEP*1000, off=on+HCS_ON*1000;
@@ -2657,7 +2732,36 @@ function hcsStop(){
   setAudioSessionType(playbackSession());
 }
 function hcsDone(){ hcsStop(); }
-function hcsClose(){ hcsStop(); HCS=null; $('hcs').classList.add('hidden'); $('hcsBox').innerHTML=''; }
+// one HiChord instrument is in: keep it, start the next, or end
+function hcsKeep(run, res){
+  const k=run.queue[run.qi];
+  HCI[k]={ buffer:res.buffer, zones:res.zones, kind:res.kind }; storeHCI(k); run.done.push(k);
+  layers.forEach(Ly=>{ if(Ly.inst===k) Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05)); });
+  if(res.missing>4) run.notes=(run.notes||[]).concat(`${HC_INST[k][1]}: ${res.missing} notes came in too quiet`);
+  run.qi++;
+  if(run.qi<run.queue.length){ setTimeout(()=>{ if(HCS===run) hcsStart(); }, 400); return; }
+  hcsSyncEnd();
+}
+// the end of a sync (all done, or stopped after some): the HiChord back to its sound, the layers to the HiChord instruments
+function hcsSyncEnd(){
+  const run=HCS; if(!run) return;
+  hcsRestorePreset(run);
+  if(run.done.length){
+    if(run.target.layer!=null){ const Ly=layers[run.target.layer]; if(Ly && run.done.includes(Ly.inst)) Ly.hc=true; renderLayers(); renderDetail(); renderHcSync(); save(); }
+    else setHcInst(true);
+  }
+  const n=run.done.length;
+  $('hcsBox').innerHTML=`<h3>${n===run.queue.length?(n===1?`${escH(HC_INST[run.done[0]][1])} is ready`:'instruments synced'):`${n} of ${run.queue.length} synced`}</h3>
+    <p>${run.target.layer!=null?`Layer ${run.target.layer+1} plays it now. The HiChord key on its instrument page switches back.`:`Your layers play the HiChord instruments now. Switch back under Settings → Sync, or per layer with the HiChord key on its instrument page.`}${n<run.queue.length?' Sync again for the rest.':''}</p>
+    ${(run.notes||[]).map(t=>`<p>${escH(t)}</p>`).join('')}
+    <div class="row"><button id="hcsOk" class="primary">done</button></div>`;
+  $('hcsOk').onclick=hcsClose;
+}
+function hcsRestorePreset(run){
+  if(run && run.queue && run.prevPreset!=null && HC.connected && HC.state.preset!==run.prevPreset){ hcCC(HC.CC.PRESET, run.prevPreset); HC.state.preset=run.prevPreset; renderHCState('preset'); }
+  if(run) run.prevPreset=null;
+}
+function hcsClose(){ hcsStop(); hcsRestorePreset(HCS); HCS=null; $('hcs').classList.add('hidden'); $('hcsBox').innerHTML=''; }
 function hcsCancel(){ hcsClose(); toast('sampling cancelled'); }
 function hcsFail(msg){ hcsStop(); hcsIntro(msg); }
 function hcsFinish(){
@@ -2666,6 +2770,7 @@ function hcsFinish(){
   setTimeout(()=>{
     let res; try{ res=hcsBuild(run); }catch(e){ console.warn(e); hcsIntro('Something went wrong while cutting the notes. Try again.'); return; }
     if(!res){ hcsIntro('Too few notes came in to make an instrument. Check the HiChord\'s volume and that it plays incoming MIDI (MIDI IN on), then try again.'); return; }
+    if(run.queue){ hcsKeep(run, res); return; }
     const name=hcsName();
     if(run.target==='new') addLayer('keys',{buf:res.buffer, name, zones:res.zones, kind:res.kind});
     else { const Ly=layers[run.target]; Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05)); setCustomSound(Ly,res.buffer,name,res.zones,res.kind); applyLayer(Ly); renderLayers(); renderDetail(); save(); storeSound(run.target); }
@@ -2774,7 +2879,7 @@ function drawCapRec(){
 
 /* ============ the session is kept between visits ============ */
 const SAVE_KEY='hichord-looper-v1';
-const LAYER_KEYS=['inst','customName','root','snd','fx','cfx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown','fxs','gateDiv'];
+const LAYER_KEYS=['inst','customName','root','snd','fx','cfx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown','fxs','gateDiv','hc'];
 let saveT;
 function sessionData(){
   return { v:1,
@@ -3304,7 +3409,9 @@ function checkParam(host,label,get,set){
 }
 const pct=v=>Math.round(v*100)+'%';
 const secs=v=>v<1?Math.round(v*1000)+' ms':v.toFixed(2)+' s';
-const instName = Ly => Ly.inst==='custom' ? Ly.customName : LIB[Ly.inst].name;
+const instName = Ly => Ly.inst==='custom' ? Ly.customName : hcOn(Ly) ? HC_INST[Ly.inst][1] : LIB[Ly.inst].name;
+// an instrument's name in the pickers: the HiChord's name when that instrument is played from the HiChord
+const instLabel = (k, hc) => hc && HC_INST[k] && HCI[k] ? HC_INST[k][1] : LIB[k].name;
 
 function renderTransport(){
   $('playBtn').classList.toggle('on',S.playing);
@@ -3576,10 +3683,13 @@ $('menuList').onclick=e=>{
   else if(k==='clear') clearLayer();
   else if(k==='remove') removeLayer();
 };
-$('instGrid').innerHTML = Object.entries(LIB).map(([k,v])=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${v.name}</button>`).join('')
-  + `<button class="inst own" data-own="file" aria-label="New layer from an audio file in Files">${ic('upload')}audio file</button>`
-  + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New layer from the microphone">${ic('mic')}<span class="ml">microphone</span><span class="micmeter"><i></i></span></button>`
-  + `<button class="inst own" data-own="hc" aria-label="New layer sampled from your HiChord over USB">${ic('hichord')}from HiChord</button>`;
+function renderInstGrid(){
+  $('instGrid').innerHTML = Object.keys(LIB).map(k=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${instLabel(k,S.hcInst)}</button>`).join('')
+    + `<button class="inst own" data-own="file" aria-label="New layer from an audio file in Files">${ic('upload')}audio file</button>`
+    + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New layer from the microphone">${ic('mic')}<span class="ml">microphone</span><span class="micmeter"><i></i></span></button>`;
+  renderNewMic();
+}
+renderInstGrid();
 $('settingsBtn').innerHTML=ic('cog',''); $('themeBtn').innerHTML=ic('theme',''); $('projIcon').innerHTML=ic('folder','');
 $('projBtn').onclick=openProjects;
 $('projCopy').onclick=saveAsCopy;
@@ -3929,7 +4039,8 @@ function renderPage(host,tab,Ly){
     if(!S.advOpen){ const h=document.createElement('p'); h.className='hint';
       h.textContent='Every change is live and never touches what you played. "Original" brings back your own timing.'; host.appendChild(h); }
   } else if(tab==='sound'){
-    const opts=Object.entries(LIB).map(([k,v])=>[k,v.name]); if(Ly.inst==='custom') opts.unshift(['custom',Ly.customName]);
+    const wantHc=Ly.hc ?? S.hcInst;
+    const opts=Object.keys(LIB).map(k=>[k,instLabel(k,wantHc)]); if(Ly.inst==='custom') opts.unshift(['custom',Ly.customName]);
     // the instrument picker: no label, the instrument's icon inside; a native list underneath so the phone's own picker opens
     const ip=document.createElement('div'); ip.className='p instpick';
     ip.innerHTML=`<div class="instsel">${INST_ICON[Ly.inst]}<span>${instName(Ly)}</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
@@ -3949,9 +4060,9 @@ function renderPage(host,tab,Ly){
     fp.classList.add('pwide');
     param(grid,'Resonance',()=>Ly.reso,v=>{Ly.reso=v;applyLayer(Ly);},0,1,0.01,pct);
     const row=document.createElement('div'); row.className='row ownsnd';
-    row.innerHTML=`<span class="sub">Your own sound</span><button id="fileBtn" class="icon" aria-label="Load your own sound from an audio file" title="Audio file">${ic('upload','')}</button><button id="hcsBtn" class="icon" aria-label="Sample your HiChord over USB" title="Sample from HiChord">${ic('hichord','')}</button><button id="micBtn" class="icon${mic?' on micrec':''}" aria-label="${mic?'Stop recording':'Record your own sound with the microphone'}" title="${mic?'Stop recording':'Microphone'}">${ic('mic','')}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
+    row.innerHTML=`<span class="sub">Your own sound</span><button id="fileBtn" class="icon" aria-label="Load your own sound from an audio file" title="Audio file">${ic('upload','')}</button>${HC_INST[Ly.inst]?`<button id="hcsBtn" class="icon${hcOn(Ly)?' hcon':''}" aria-pressed="${hcOn(Ly)}" aria-label="${hcOn(Ly)?`Plays the HiChord's ${HC_INST[Ly.inst][1]}: tap for the ${LIB[Ly.inst].name}`:HCI[Ly.inst]?`Play the HiChord's ${HC_INST[Ly.inst][1]} instead`:`Sample the HiChord's ${HC_INST[Ly.inst][1]} for this layer`}" title="HiChord instrument">${ic('hichord','')}</button>`:''}<button id="micBtn" class="icon${mic?' on micrec':''}" aria-label="${mic?'Stop recording':'Record your own sound with the microphone'}" title="${mic?'Stop recording':'Microphone'}">${ic('mic','')}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
     grid.appendChild(row);   // in the grid: under the sliders on a phone, next to the instrument in landscape
-    $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=()=>toggleMic(); $('hcsBtn').onclick=()=>hcsOpen(S.sel);
+    $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=()=>toggleMic(); if($('hcsBtn')) $('hcsBtn').onclick=()=>hcLayerKey(S.sel);
     // phone and iPad in portrait (docked): the picker's column is narrow, so back to default joins the own-sound keys
     const st=document.body.dataset.studio;
     if((st==='port' && sFull()!=='st') || (!st && !isShortWide())) row.appendChild($('instDefBtn'));
@@ -3998,6 +4109,23 @@ function renderSync(){
   checkParam(p,'HiChord start/stop runs the loop',()=>S.hcTransport,v=>{S.hcTransport=v;});
   selectParam(p,'Listen to',[['all','All channels'],['1','Channel 1 (live)'],['10','Channel 10 (drums)']],()=>S.input,v=>{S.input=v;});
   param(p,'Recording offset',()=>S.recOffset,v=>{S.recOffset=v;},-100,150,1,v=>(v>0?'+':'')+v+' ms');
+  const hb=document.createElement('div'); hb.id='hcSyncBox'; hb.style.display='contents'; p.appendChild(hb); renderHcSync();   // last: the layouts place the first five by position
+}
+// shown while the HiChord is connected (the switch also once instruments are sampled, so they work without it)
+function renderHcSync(){
+  const hb=$('hcSyncBox'); if(!hb) return; hb.innerHTML='';
+  const n=hciCount(), left=HCI_ALL.length-n;
+  if(!n && !HC.connected) return;
+  // one cell: the switch (once there is something to switch to) and, while connected, the key that samples them
+  const d=document.createElement('div'); d.className='p hcsync';
+  d.innerHTML=`${n?`<label class="check"><input type="checkbox" id="hcInstChk"${S.hcInst?' checked':''}> <span style="color:var(--ink)">HiChord instruments</span></label>`:''}${
+    !HC.connected ? '' : `<button id="hcSyncBtn" class="primary">${left?(n?'Sync the rest':'Sync instruments'):'Sync again'}</button><span class="hcsynchint">${
+    !n ? `samples the closest HiChord sound for each instrument · about ${Math.round(HCI_ALL.length*HCS_NOTES.length*HCS_STEP/60)} minutes`
+    : left ? `${n} of ${HCI_ALL.length} sampled · ${left} to go, about ${Math.max(1,Math.round(left*HCS_NOTES.length*HCS_STEP/60))} min`
+    : `all ${n} sampled · again takes about ${Math.round(n*HCS_NOTES.length*HCS_STEP/60)} minutes`}</span>`}`;
+  hb.appendChild(d);
+  if($('hcInstChk')) $('hcInstChk').onchange=e=>setHcInst(e.target.checked);
+  if($('hcSyncBtn')) $('hcSyncBtn').onclick=()=>hcsOpen({sync: left ? HCI_ALL.filter(k=>!HCI[k]) : HCI_ALL.slice()});
 }
 function renderHCState(flashKey){
   const s=HC.state, P=Object.fromEntries(HC_PRESETS);
@@ -4022,7 +4150,7 @@ function renderHC(){
   $('hcConnect').classList.toggle('on',HC.connected);
   $('hcDot').className='dot'+(HC.connected?' ok':'');
   $('hcStatus').innerHTML = HC.connected?`connected to ${String(HC.out.name).replace(/&/g,'&amp;').replace(/</g,'&lt;')}`:'not connected<span class="hcsub"><i> · </i>notes still come in</span>';
-  renderHCState(); renderHCControls();
+  renderHCState(); renderHCControls(); renderHcSync();
 }
 
 /* drawing */
@@ -5379,6 +5507,7 @@ async function startApp(){
   $('metroChk').checked=S.metro; $('countChk').checked=S.countIn;
   $('overlay').classList.add('hidden');
   renderBarsSeg(); renderTempo(); renderTransport(); renderLayers(); renderDetail(); renderGlobal(); renderSync(); renderHC();
+  loadHCI();   // the HiChord instruments sampled earlier on this device
   await ctx.resume();
   ctx.onstatechange=()=>{ console.log('audio state', ctx.state); renderAudioStatus(); };
   renderAudioStatus();
