@@ -142,11 +142,10 @@ details[open] summary h2::after{content:" −"}
 
 .overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:30;
   padding:calc(16px + var(--st)) calc(16px + var(--sr)) calc(16px + var(--sb)) calc(16px + var(--sl))}
-.overlay .box{max-width:460px}
+.overlay .box{width:100%;max-width:460px;max-height:100%;display:flex;flex-direction:column;min-height:0}
 .overlay h1{font-size:34px;letter-spacing:-.03em;margin:0 0 8px}
 .overlay h1 span{color:var(--acc)}
 .overlay p{color:var(--dim);line-height:1.55}
-.overlay button{font-size:16px;padding:10px 22px;margin-top:8px}
 .toast{position:fixed;left:50%;bottom:calc(92px + var(--sb));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px);z-index:20}
 .toast.show{opacity:1}
 .meter{height:6px;width:70px;background:var(--line);border-radius:3px;overflow:hidden;display:inline-block}
@@ -699,8 +698,6 @@ body.projopen .pbar{display:none}
   display:flex;align-items:center;gap:10px;background:var(--screen);color:var(--screen-ink);border-radius:10px;padding:8px 8px 8px 12px;font-family:var(--mono);font-size:12px}
 .alert #alertMsg{flex:1;min-width:0}
 .alert button{min-height:32px;padding:4px 10px;background:var(--acc);color:#fff;box-shadow:none}
-.in-app #overlay{display:none}
-.in-app #overlay.force{display:flex}
 /* long-press menu */
 .menulist{display:flex;flex-direction:column;gap:8px}
 .menulist button{min-height:48px;justify-content:flex-start;text-align:left;font-size:13px;padding:10px 16px}
@@ -731,7 +728,10 @@ body.projopen .pbar{display:none}
 /* the name next to the app icon ("Layers"); HiChord keeps its capitals: this is an unofficial app for it */
 .overlay h1{text-transform:none}
 .overlay h1 .appicon{width:1.15em;height:1.15em;display:inline-block;vertical-align:-0.2em;margin-right:.3em}
-.overlay button{background:var(--dark-key);color:var(--dark-key-ink);font-size:14px;padding:12px 26px;border-radius:12px}
+/* the start screen is also where you pick a project: new, receive, or one of yours */
+#startList{margin-top:14px;overflow:auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:2px 2px 4px;align-content:start}
+#startList .proj{flex:none;cursor:pointer}
+#startList .pface button{flex:none}
 /* song parts: a row of keys above the layers */
 .partbar{display:flex;gap:6px;align-items:center;margin:0 0 10px;min-width:0}
 .partbar button{flex:0 1 auto;min-width:0;max-width:150px;height:38px;min-height:38px;padding:0 11px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;
@@ -1531,7 +1531,7 @@ body.studio .tbar .pos b{font-size:26px}
   <div class="box">
     <h1><svg class="appicon" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#1d1d1c"/><rect x="16" y="22" width="46" height="9" rx="4.5" fill="#2f6fe0"/><rect x="30" y="37" width="54" height="9" rx="4.5" fill="#00a651"/><rect x="16" y="52" width="34" height="9" rx="4.5" fill="#ff5000"/><rect x="40" y="67" width="44" height="9" rx="4.5" fill="#ffc400"/><rect x="55" y="15" width="3" height="68" rx="1.5" fill="#f0f0ec"/></svg>Looper <span>for HiChord</span></h1>
     <p>Play on your HiChord, record it in layers, then change timing, instruments and mix while it loops. Connect the HiChord over USB-C and turn its own volume down. Works in Chrome or Edge, and in the iPhone app.</p>
-    <button id="startBtn">Start</button>
+    <div class="projlist" id="startList" aria-label="Projects"></div>
   </div>
 </div>
 
@@ -4100,7 +4100,8 @@ function renderPage(host,tab,Ly){
   }
 }
 let lastShortWide=null;
-addEventListener('resize',()=>{ const sw=isShortWide(); if(studioMode()!==(document.body.dataset.studio||'') || (lastShortWide!==null && sw!==lastShortWide)) { renderDetail(); drawAll(); } lastShortWide=sw; });
+addEventListener('resize',()=>{ if(!layers.length) return;   // still on the start screen
+  const sw=isShortWide(); if(studioMode()!==(document.body.dataset.studio||'') || (lastShortWide!==null && sw!==lastShortWide)) { renderDetail(); drawAll(); } lastShortWide=sw; });
 $('lsFull').onclick=()=>setFull(sFull()==='st'?'':'st');
 $('sPad').addEventListener('click',e=>{ if(e.target.closest('.sfull')) setFull(sFull()==='cp'?'':'cp'); });
 $('tabs').onclick=e=>{ const t=e.target.dataset.t; if(t){ S.tab=t; renderDetail(); save(); } };
@@ -5374,7 +5375,7 @@ function edKey(e){
 /* self test: plays two layers and measures, per beat, whether sound leaves the engine */
 async function selfTest(){
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
-  $('startBtn').click(); await wait(800);
+  await startWith('open', null); await wait(800);
   setTempo(120); S.bars=1; S.metro=false; S.countIn=true; renderBarsSeg();
   layers.forEach(Ly=>{ Ly.events=[]; Ly.mute=false; Ly.solo=false; Ly.out='app'; });
   layers[0].events=[60,64,67].map((n,k)=>({id:900+k,beat:0,dur:1.9,note:n,vel:100,take:1,chord:900}));
@@ -5537,14 +5538,34 @@ async function startApp(){
   if(inApp()) window.webkit.messageHandlers.audio.postMessage({cmd:'route'});
   initMIDI(false);
   frame();
-  if(layers.some(Ly=>Ly.events.length)) toast('Your last session is back');
   await initProjects();
   renderUndo(); HIST.last=histData(sessionData());
   if(autoConnect()) setTimeout(()=>hcConnect({auto:true}), 300);
 }
-$('startBtn').onclick=startApp;
-// the iPhone app may play sound without a tap, so it skips the start screen
-if(inApp()) startApp().then(()=>{ if(ctx.state!=='running'){ ctx.close(); ctx=null; layers.length=0; $('overlay').classList.remove('hidden'); $('overlay').classList.add('force'); } });
+/* the start screen lists your projects: starting a new one, receiving one or opening one of yours starts the app
+   (the tap also lets the browser play sound). The project you had open last is on top, with "continue". */
+const START={ list:[], last:null };
+async function renderStart(){
+  try{ START.list=(await dbDo('projects','readonly',st=>st.getAll()))||[]; }catch(e){ START.list=[]; }
+  try{ START.last=localStorage.getItem('hcl-project'); }catch(e){}
+  START.list.sort((a,b)=>(b.id===START.last)-(a.id===START.last) || (b.updated||0)-(a.updated||0));
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  $('startList').innerHTML = '<div class="pnewrow"><button class="pnew" data-start="new">+ new project</button><button class="pnew" data-start="recv">receive with a code</button></div>'
+    + START.list.map(p=>{ const sm=p.summary||summary(p.data), last=p.id===START.last;
+      return `<div class="proj ${last?'cur':''}" data-start="open" data-id="${p.id}"><div class="pface">
+        <div class="pinfo"><b>${esc(p.name)}</b><small>${sm.layers} layer${sm.layers===1?'':'s'}${sm.parts>1?` · ${sm.parts} parts`:''} · ${sm.notes} notes · ${sm.bpm} bpm<br>${ago(p.updated)}</small></div>
+        <button ${last?'class="primary"':''}>${last?'continue':'open'}</button></div></div>`; }).join('');
+}
+async function startWith(kind, id){
+  if(ctx) return;
+  const had=START.list.length>0;
+  await startApp();
+  if(kind==='new'){ if(had || layers.some(Ly=>Ly.events.length)) await newProject(); }   // the very first project is the one the app just made
+  else if(kind==='recv') xferReceive();
+  else if(id && id!==PRJ.current && PRJ.list.some(x=>x.id===id)) await openProject(id);
+}
+$('startList').onclick=e=>{ const b=e.target.closest('[data-start]'); if(b) startWith(b.dataset.start, b.dataset.id); };
+renderStart();
 </script>
 </body>
 </html>
