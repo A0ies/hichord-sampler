@@ -231,6 +231,9 @@ h2 .it{font-size:1.1em}
 .sblock:hover{transform:translateY(-2px)}
 .sblock.cur{background:var(--c)}
 .sblock.lifted{display:none}
+@media (pointer:coarse){ .sblock{touch-action:pan-x pan-y} .stape{scrollbar-width:none} }   /* a swipe over the blocks scrolls the tape */
+.sblock.arming{animation:sarm .5s ease-out forwards}
+@keyframes sarm{to{transform:scale(1.08);box-shadow:0 0 0 2px #fff}}
 .sblock b{font:600 14px var(--mono);pointer-events:none} .sblock span{font:12px var(--mono);opacity:.9;pointer-events:none}
 .sblock:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .sgap{border:2px dashed rgba(255,255,255,.55);background:rgba(255,255,255,.06)}

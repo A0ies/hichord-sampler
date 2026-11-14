@@ -109,6 +109,7 @@
       // iPhone: play like a music app, so the silent switch doesn't mute it
       try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
       ctx = new AC({ latencyHint: 'interactive' });
+      ctx.addEventListener('statechange', () => { if (ctx.state === 'running' && loud) loud.sched = null; });   // once the sound runs, schedule from now
       master = ctx.createGain(); master.gain.value = 0.85;
       const lim = ctx.createDynamicsCompressor();
       lim.threshold.value = -3; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.15;
@@ -118,7 +119,10 @@
       for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); let lp = 0; for (let i = 0; i < len; i++) { const t = i / len; lp += (Math.random() * 2 - 1 - lp) * (0.6 - 0.45 * t); d[i] = lp * Math.pow(1 - t, 3.2); } }
       conv.buffer = ir; revIn = ctx.createGain(); revIn.connect(conv).connect(out).connect(master);
     }
-    if (ctx.state !== 'running') ctx.resume().catch(() => {});
+    if (ctx.state !== 'running') {
+      ctx.resume().catch(() => {});
+      try { const b = ctx.createBufferSource(); b.buffer = ctx.createBuffer(1, 1, ctx.sampleRate); b.connect(ctx.destination); b.start(0); } catch (e) {}   // iPhone: unlocks the audio from inside the gesture
+    }
     return ctx;
   }
 
@@ -617,24 +621,48 @@
       return clamp(Math.round((x - r.left + tape.scrollLeft - bw / 2) / bw + 0.5), 0, blocks.length);
     }
     const overTape = (x, y) => { const r = view.getBoundingClientRect(); return x >= r.left - 20 && x <= r.right + 20 && y >= r.top - 30 && y <= r.bottom + 30; };
+    box.dragState = () => drag && { kind: drag.kind, on: drag.on, wait: !!drag.wait };   // for testing
+    const HOLD = 500;   // on a touch screen a block on the tape lifts after this long a hold; before that, a swipe scrolls the tape
+    function lift(x, y) {
+      drag.on = true;
+      const P = PARTS[drag.kind === 'part' ? drag.ref : drag.ref.p];
+      drag.ghost = el('div', 'sghost', `<b>${P.letter}</b><span>${P.name}</span>`); drag.ghost.style.setProperty('--c', P.color);
+      drag.ghost.style.transform = `translate(${x}px,${y}px)`;
+      document.body.appendChild(drag.ghost);
+      if (drag.kind === 'block') { drag.node.classList.add('lifted'); tape.classList.add('dragging'); }
+      box.host.classList.add('sdragging');
+    }
     function draggable(node, kind, ref) {
-      node.dataset.grab = '';
+      if (kind === 'part') node.dataset.grab = '';
       node.addEventListener('pointerdown', e => {
         if (drag || e.button > 0 || e.target.closest('.sx')) return;
-        node.setPointerCapture(e.pointerId);
         drag = { id: e.pointerId, kind, ref, node, x0: e.clientX, y0: e.clientY, on: false };
+        if (kind === 'block' && e.pointerType === 'touch') {   // wait: a swipe scrolls the tape, a hold picks the block up
+          const d = drag; node.classList.add('arming');
+          d.wait = setTimeout(() => {
+            if (drag !== d) return; d.wait = null; node.classList.remove('arming');
+            try { node.setPointerCapture(d.id); } catch (err) {}
+            if (navigator.vibrate) navigator.vibrate(12);
+            lift(d.x, d.y == null ? d.y0 : d.y);
+          }, HOLD);
+          d.x = e.clientX; d.y = e.clientY;
+          return;
+        }
+        node.setPointerCapture(e.pointerId);
       });
+      // once a block is lifted, the finger drags it instead of scrolling the page or the tape
+      node.addEventListener('touchmove', e => { if (drag && drag.node === node && drag.on) e.preventDefault(); }, { passive: false });
       node.addEventListener('pointermove', e => {
         if (!drag || drag.id !== e.pointerId) return;
+        if (drag.wait) {   // still waiting for the hold: moving means scrolling
+          drag.x = e.clientX; drag.y = e.clientY;
+          if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 8) { clearTimeout(drag.wait); node.classList.remove('arming'); drag = null; }
+          return;
+        }
         if (!drag.on) {
           if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
           if (kind === 'part' && st.order.length >= MAX) return;
-          drag.on = true;
-          const P = PARTS[kind === 'part' ? ref : ref.p];
-          drag.ghost = el('div', 'sghost', `<b>${P.letter}</b><span>${P.name}</span>`); drag.ghost.style.setProperty('--c', P.color);
-          document.body.appendChild(drag.ghost);
-          if (kind === 'block') { node.classList.add('lifted'); tape.classList.add('dragging'); }
-          box.host.classList.add('sdragging');
+          lift(e.clientX, e.clientY);
         }
         drag.ghost.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
         const inside = overTape(e.clientX, e.clientY);
@@ -649,6 +677,7 @@
       const end = e => {
         if (!drag || drag.id !== e.pointerId) return;
         const d = drag; drag = null; gap.remove();
+        if (d.wait) clearTimeout(d.wait); node.classList.remove('arming');
         box.host.classList.remove('sdragging'); tape.classList.remove('dragging');
         if (d.ghost) d.ghost.remove();
         if (d.node) d.node.classList.remove('lifted');
