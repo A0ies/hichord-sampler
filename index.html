@@ -611,12 +611,37 @@ body:not(.studio) .ownsnd .instdef .lbl{display:inline}
 /* instrument picker */
 .inst{border-radius:12px;text-transform:lowercase;font-size:12px;gap:8px;min-height:88px}
 .inst .ii{width:28px;height:28px}
-@media (max-width:639px){ .instgrid:has(.hcxrow){gap:8px} .instgrid:has(.hcxrow) .inst:not(.hcx){min-height:70px;padding:9px 6px;gap:6px} }
-.instgrid .hcxrow{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-.instgrid .hcxrow>span{width:100%;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
-.instgrid .hcxrow .inst{min-height:36px;padding:6px 11px;border-radius:9px;flex-direction:row;font-size:12px}
-@media (max-width:639px) and (max-height:760px){ .instgrid:has(.hcxrow){grid-template-columns:repeat(4,minmax(0,1fr));gap:6px} .instgrid:has(.hcxrow) .inst:not(.hcx){min-height:58px;padding:6px 3px;gap:4px;font-size:11px} .instgrid .hcxrow .inst{min-height:30px;padding:4px 9px} }
-@media (orientation:landscape) and (max-height:500px){ .instgrid:has(.hcxrow){gap:6px} .instgrid:has(.hcxrow) .inst:not(.hcx){min-height:56px;padding:6px 4px;gap:4px} .instgrid .hcxrow>span{width:auto;margin-right:4px} .instgrid .hcxrow .inst{min-height:30px;padding:4px 9px} }
+/* the new-layer sheet: the sounds in groups of their kind (small keys), your own sound apart, as a row of its own */
+#instGrid{display:flex;flex-direction:column;gap:7px}
+#instGrid .igrp h4{margin:0 0 4px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+#instGrid .igtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
+#instGrid .igtiles .inst{min-height:54px;padding:6px 4px;gap:4px;font-size:11px;border-radius:10px;line-height:1.15}
+#instGrid .igtiles .inst .ii{width:22px;height:22px}
+#instGrid .ownrow{display:flex;align-items:center;gap:8px;margin-top:3px;padding-top:9px;border-top:1px solid var(--line)}
+#instGrid .ownrow>span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);white-space:nowrap}
+#instGrid .ownrow .inst.own{flex:1;flex-direction:row;justify-content:center;min-height:44px;padding:6px 10px;gap:8px;border-radius:999px;
+  background:transparent;box-shadow:none;border:1.5px dashed var(--line);font-size:12px}
+#instGrid .ownrow .inst.own .ii{width:18px;height:18px}
+#instGrid .ownrow .inst.own.micrec{background:var(--rec);border-color:var(--rec)}
+#instGrid .ownrow .inst .micmeter{width:40px}
+/* small phones: no group names (the gaps keep the groups apart) */
+/* small phones (iPhone SE): the keys as chips, icon beside the name */
+@media (max-width:639px) and (max-height:700px){
+  #instGrid{gap:5px} #instGrid .igrp h4{margin-bottom:2px}
+  #instGrid .igtiles{display:flex;flex-wrap:wrap;gap:4px}
+  #instGrid .igtiles .inst{flex-direction:row;min-height:30px;padding:4px 9px 4px 7px;gap:5px;border-radius:8px}
+  #instGrid .igtiles .inst .ii{width:17px;height:17px}
+  #instGrid .ownrow .inst.own{min-height:38px}
+}
+/* phone on its side: the groups side by side, the keys as small chips */
+@media (orientation:landscape) and (max-height:500px){
+  #instGrid{flex-direction:row;flex-wrap:wrap;gap:6px 14px}
+  #instGrid .igtiles{display:flex;flex-wrap:wrap;gap:5px}
+  #instGrid .igtiles .inst{flex-direction:row;min-height:32px;padding:4px 9px 4px 7px;gap:5px;border-radius:8px}
+  #instGrid .igtiles .inst .ii{width:17px;height:17px}
+  #instGrid .igrp h4{margin-bottom:3px}
+  #instGrid .ownrow{margin:0 0 0 auto;align-self:flex-end;padding:0 0 0 14px;border-top:none;border-left:1px solid var(--line)} #instGrid .ownrow .inst.own{min-height:34px;flex:none}
+}
 .ii{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 /* transport: dark keys and a small black display */
 .tbar{background:var(--panel);border-top:none;box-shadow:0 -1px 0 var(--line)}
@@ -1908,7 +1933,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.81';
+const PAGE_VERSION='2026-11-14.82';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3768,7 +3793,9 @@ const ICONS={
   guitar:'<path d="M12 21c-3-3-7-8-7-12 0-3 3-5 7-5s7 2 7 5c0 4-4 9-7 12z"/>',
   horns:'<path d="M3 10h7v4H3zM10 12c4 0 7-3 9-6v12c-2-3-5-6-9-6z"/><path d="M5 14v3M8 14v3"/>',
   square:'<path d="M2.5 15h4V8h5v8h5V8h5"/>',
-  ebass:'<path d="M20 4l-8.5 8.5"/><path d="M18 2.5l3.5 3.5"/><path d="M11 10.5c-2.5-1-5 .5-5 3-2 .5-3 2-2.5 3.5.5 2 3 3.5 5 3 2-.5 3-2 2.5-3.5 1.5-1.5 1.5-4 0-6z"/><circle cx="9" cy="15" r="1"/>',
+  ebass:'<path d="M10.3 13.7 19.6 4.4"/><path d="M18.8 3.6l1.5-1.5 1.6 1.6-1.5 1.5"/><path d="M9.6 12.6c-.9-.9-2.3-.8-2.9.2l-.3.6c-.2.5-.7.7-1.2.7-1.3.1-2.2 1.3-1.9 2.6.5 2 1.9 3.4 3.9 3.9 1.3.3 2.5-.6 2.6-1.9 0-.5.2-1 .7-1.2l.6-.3c1-.6 1.1-2 .2-2.9z"/><path d="M5.8 16.4l1.8 1.8"/>',
+  triangle:'<path d="M2.5 12l3.2-5 6.3 10 6.3-10 3.2 5"/>',
+  sine:'<path d="M2.5 12c1.6-5 3.2-5 4.75 0s3.2 5 4.75 0 3.2-5 4.75 0 3.2 5 4.75 0"/>',
   bell:'<path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4M12 3V2"/>',
   drums:'<ellipse cx="12" cy="10" rx="8" ry="3"/><path d="M4 10v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M6 3l5 5M18 3l-5 5"/>',
   custom:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
@@ -3779,7 +3806,10 @@ const ICONS={
   folder:'<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.2h7.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>',
 };
 const ic=(name,cls='ii')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]||''}</svg>`;
-const INST_ICON=new Proxy({}, { get:(_,k)=>ic(ICONS[k]?k:isHcx(k)?'hichord':'keys') });
+// the icon of a sound: the HiChord's sounds get one that fits them (its Triangle is a triangle wave, not a bass)
+const HC_ICON = { hc0:'sine', hc4:'keys', hc6:'lead', hc10:'horns', hc15:'keys', hc18:'keys', hc19:'guitar', hc21:'pad', hc22:'lead', hc23:'square', hc24:'horns', hc29:'pad', hc33:'keys', hc34:'keys' };
+const instIcon = (k, hc) => ic(hc && k==='ebass' && HCI[hcKeyOf(k)] ? 'triangle' : ICONS[k] ? k : HC_ICON[k] || 'keys');
+const INST_ICON=new Proxy({}, { get:(_,k)=>instIcon(k, S.hcInst) });
 const SLIDERS=ic('faders','');
 function renderLayers(){
   const vis=layers.map((Ly,i)=>[Ly,i]).filter(([Ly,i])=>Ly.shown || i===S.sel);
@@ -3994,13 +4024,24 @@ $('menuList').onclick=e=>{
   else if(k==='clear') clearLayer();
   else if(k==='remove') removeLayer();
 };
+// the sounds by kind; the HiChord's extra sounds join the group they sound like
+const INST_GROUPS = [
+  ['Keys', ['piano','keys','hc4','hc18','hc15','hc34','hc33']],
+  ['Strings & plucked', ['strings','guitar','hc19']],
+  ['Brass & winds', ['horns','hc10','hc24']],
+  ['Synths', ['lead','square','hc0','hc6','hc22','hc23']],
+  ['Pads & voices', ['pad','hc21','hc29']],
+  ['Bass & drums', ['ebass','bass','drums']],
+];
 function renderInstGrid(){
-  // the extra HiChord sounds as one row of small keys under the rest, so the sheet doesn't grow past the screen
-  const ks=instKeys(), hx=ks.filter(isHcx);
-  $('instGrid').innerHTML = ks.filter(k=>!isHcx(k)).map(k=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${instLabel(k,S.hcInst)}</button>`).join('')
-    + `<button class="inst own" data-own="file" aria-label="New layer from an audio file in Files">${ic('upload')}audio file</button>`
-    + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New layer from the microphone">${ic('mic')}<span class="ml">microphone</span><span class="micmeter"><i></i></span></button>`
-    + (hx.length ? `<div class="hcxrow"><span>More HiChord sounds</span>${hx.map(k=>`<button class="inst hcx" data-k="${k}">${escH(instLabel(k,S.hcInst))}</button>`).join('')}</div>` : '');
+  // the sounds grouped by kind (the HiChord's own sounds among them once sampled); your own sound apart, below
+  const ks=new Set(instKeys()), seen=new Set();
+  const groups=INST_GROUPS.map(([t,list])=>[t, list.filter(k=>ks.has(k) && !seen.has(k) && seen.add(k))]);
+  const rest=[...ks].filter(k=>!seen.has(k)); if(rest.length) groups.push(['More', rest]);
+  $('instGrid').innerHTML = groups.filter(g=>g[1].length).map(([t,list])=>`<div class="igrp"><h4>${t}</h4><div class="igtiles">${
+      list.map(k=>`<button class="inst${isHcx(k)?' hcx':''}" data-k="${k}">${instIcon(k,S.hcInst)}<span>${instLabel(k,S.hcInst)}</span></button>`).join('')}</div></div>`).join('')
+    + `<div class="ownrow"><span>your own</span><button class="inst own" data-own="file" aria-label="New layer from an audio file in Files">${ic('upload')}audio file</button>`
+    + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New layer from the microphone">${ic('mic')}<span class="ml">microphone</span><span class="micmeter"><i></i></span></button></div>`;
   renderNewMic();
 }
 renderInstGrid();
