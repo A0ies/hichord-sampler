@@ -1991,7 +1991,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.94';
+const PAGE_VERSION='2026-11-14.95';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2639,7 +2639,7 @@ function packHC(key, h){
   const b=h.buffer, chs=[...Array(b.numberOfChannels)].map((_,c)=>b.getChannelData(c));
   let mono=chs.length===1; if(!mono){ mono=true; const a=chs[0], c=chs[1]; for(let i=0;i<a.length;i+=7) if(Math.abs(a[i]-c[i])>0.002){ mono=false; break; } }
   const use=mono?[chs[0]]:chs, len=b.length;
-  const head=new TextEncoder().encode(JSON.stringify({ v:1, key, name:HC_SOUND[key], sr:b.sampleRate, ch:use.length, len, zones:h.zones, kind:h.kind, at:Date.now() }));
+  const head=new TextEncoder().encode(JSON.stringify({ v:2, key, name:HC_SOUND[key], sr:b.sampleRate, ch:use.length, len, zones:h.zones, kind:h.kind, at:Date.now() }));
   const pad=(4-(8+head.length)%4)%4, out=new Uint8Array(8+head.length+pad+use.length*len*2);
   out.set([72,67,83,49]); new DataView(out.buffer).setUint32(4, head.length+pad, true); out.set(head, 8); out.fill(32, 8+head.length, 8+head.length+pad);
   const pcm=new Int16Array(out.buffer, 8+head.length+pad, use.length*len);
@@ -2653,7 +2653,17 @@ function unpackHC(u8){
   const pcm=new Int16Array(u8.buffer.slice(u8.byteOffset+8+hl, u8.byteOffset+8+hl+h.ch*h.len*2));
   const b=ctx.createBuffer(Math.max(2,h.ch), h.len, h.sr);
   for(let c=0;c<h.ch;c++){ const d=new Float32Array(h.len); for(let i=0;i<h.len;i++) d[i]=pcm[c*h.len+i]/32768; b.copyToChannel(d,c); if(h.ch===1) b.copyToChannel(d,1); }
-  return { key:h.key, buffer:b, zones:h.zones, kind:h.kind||'decay' };
+  return { key:h.key, buffer:b, zones:h.zones, kind:h.kind||'decay', old:!(h.v>=2) };
+}
+// sounds sampled before 2026-11-14.95 may have every note moved by a measured pitch (wrongly, for some): put them back
+// where they were sent. The sent notes are 36, 39 … 96, so the shift is what fits the stored range on that grid.
+function hcUnshift(rec){
+  if(!rec || !rec.old || rec.kind==='kit' || !rec.zones || !rec.zones.length) return false;
+  delete rec.old;
+  const ns=rec.zones.map(z=>z.note), lo=Math.max(...ns)-HCS_NOTES[HCS_NOTES.length-1], hi=Math.min(...ns)-HCS_NOTES[0];
+  let d=null; for(let c=lo;c<=hi;c++) if(ns.every(n=>HCS_NOTES.includes(n-c)) && (d==null || Math.abs(c)<Math.abs(d))) d=c;
+  if(!d) return true;   // nothing moved: only the format is new
+  rec.zones.forEach(z=>{ z.note-=d; }); return true;
 }
 const toB64 = u8 => { let s=''; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null, u8.subarray(i,i+0x8000)); return btoa(s); };
 const fromB64 = b64 => { const s=atob(b64), u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; };
@@ -2671,14 +2681,14 @@ async function loadHCI(){
   try{
     if(nativeStore()){
       const keys=await nsCall({cmd:'list'})||[];
-      for(const k of keys){ if(!HC_SOUND[k] || HCI[k]) continue; const b64=await nsCall({cmd:'get', key:k}); if(b64) try{ HCI[k]=unpackHC(fromB64(b64)); }catch(e){ console.warn('hichord sound', k, e); } }
+      for(const k of keys){ if(!HC_SOUND[k] || HCI[k]) continue; const b64=await nsCall({cmd:'get', key:k}); if(b64) try{ HCI[k]=unpackHC(fromB64(b64)); if(hcUnshift(HCI[k])) await storeHCI(k); }catch(e){ console.warn('hichord sound', k, e); } }
     }
     const r=soundRange('hci');
     const [keys,vals]=await Promise.all([dbDo('sounds','readonly',st=>st.getAllKeys(r)), dbDo('sounds','readonly',st=>st.getAll(r))]);
     for(let n=0;n<(keys||[]).length;n++){
       const key=HC_OLD_KEY(String(keys[n]).slice(4)), v=vals[n]; if(!HC_SOUND[key] || HCI[key] || !v) continue;
-      try{ HCI[key] = v.channels ? { buffer:bufferFrom(v), zones:v.zones, kind:v.kind||'decay' } : unpackHC(v); }catch(e){ continue; }
-      if(nativeStore() || v.channels || String(keys[n])!=='hci:'+key){   // into the app's files, or the compact format
+      try{ HCI[key] = v.channels ? { buffer:bufferFrom(v), zones:v.zones, kind:v.kind||'decay', old:true } : unpackHC(v); }catch(e){ continue; }
+      if(hcUnshift(HCI[key]) || nativeStore() || v.channels || String(keys[n])!=='hci:'+key){   // into the app's files, or the compact format
         await storeHCI(key); if(String(keys[n])!=='hci:'+key) dbDo('sounds','readwrite',st=>st.delete(keys[n])).catch(()=>{});
       }
     }
@@ -3077,6 +3087,8 @@ async function hcsStart(){
   const m=HC.state.mode, want = P.names ? 6 : (m!=null && m!==0 && m!==2 ? 0 : null);
   HCS.modeBack = want!=null && want!==m ? (m ?? 0) : null;
   if(HCS.modeBack!=null) hcCC(HC.CC.MODE, want);
+  // the octave: notes sampled at octave 0, so a sound plays each note the way the HiChord does at its normal octave
+  if(HC.state.octave!=null && HC.state.octave!==1){ if(HCS.octOrig==null) HCS.octOrig=HC.state.octave; hcCC(HC.CC.OCTAVE,1); HC.state.octave=1; renderHCState('octave'); }
   if(P.names) await new Promise(r=>setTimeout(r,300));
   if(qk) hcsRunView(); else $('hcsBox').innerHTML=`<h3>sampling ${escH(hcsName())}</h3>
     <div class="hcsin"><span>input</span><b>${escH(inp.label)}</b></div>
@@ -3180,6 +3192,7 @@ function hcsSyncEnd(){
   $('hcsOk').onclick=hcsClose;
 }
 function hcsRestorePreset(run){
+  if(run && run.octOrig!=null && HC.connected){ hcCC(HC.CC.OCTAVE, run.octOrig); HC.state.octave=run.octOrig; renderHCState('octave'); run.octOrig=null; }
   if(run && run.modeOrig!=null && HC.connected){ hcCC(HC.CC.MODE, run.modeOrig); HC.state.mode=run.modeOrig; renderHCState('mode'); run.modeOrig=null; }
   if(run && run.queue && run.prevPreset!=null && HC.connected && HC.state.preset!==run.prevPreset){ hcCC(HC.CC.PRESET, run.prevPreset); HC.state.preset=run.prevPreset; renderHCState('preset'); }
   if(run) run.prevPreset=null;
@@ -3199,7 +3212,7 @@ function hcsFinish(){
     const name=hcsName();
     if(run.target==='new') addLayer('keys',{buf:res.buffer, name, zones:res.zones, kind:res.kind});
     else { const Ly=layers[run.target]; Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05)); setCustomSound(Ly,res.buffer,name,res.zones,res.kind); applyLayer(Ly); renderLayers(); renderDetail(); save(); storeSound(run.target); }
-    $('hcsBox').innerHTML=`<h3>${escH(name)} is ready</h3><p>${res.zones.length} notes, ${res.kind==='sustain'?'sustained (looped)':'decaying'}${res.missing?`, ${res.missing} note${res.missing>1?'s':''} came in too quiet and were left out`:''}${res.shifted?`. Everything sounded at another pitch than sent (the HiChord's key or octave setting?), so the notes were placed where they sound`:''}.</p>
+    $('hcsBox').innerHTML=`<h3>${escH(name)} is ready</h3><p>${res.zones.length} notes, ${res.kind==='sustain'?'sustained (looped)':'decaying'}${res.missing?`, ${res.missing} note${res.missing>1?'s':''} came in too quiet and were left out`:''}.</p>
       <div class="row"><button id="hcsOk" class="primary">done</button></div>`;
     $('hcsOk').onclick=hcsClose;
   }, 30);
@@ -3256,18 +3269,10 @@ function hcsBuild(run){
     const f=Math.min(seg.l.length, Math.round(0.02*sr)); for(let k=0;k<f;k++){ const g=k/f; seg.l[seg.l.length-1-k]*=g; seg.r[seg.r.length-1-k]*=g; }
     return seg;
   });
-  // the pitch the notes really have: the HiChord's key or octave setting may shift everything it plays. One pitch
-  // reading can be off (octave errors, very high notes), so only a shift most notes agree on is applied, to all
-  let shifted=0; const ds=[];
-  segs.forEach(sg=>{
-    if(sg.note>84) return;   // the pitch finder doesn't reach the top notes reliably
-    const tb=ctx.createBuffer(1,Math.min(sg.l.length,Math.round(1.5*sr)),sr); tb.copyToChannel(sg.l.subarray(0,tb.length),0);
-    const f=detectPitch(tb); if(!f) return; const m=69+12*Math.log2(f/440);
-    if(Math.abs(m-Math.round(m))<0.3) ds.push(Math.round(m)-sg.note);
-  });
-  const cnt=new Map(); ds.forEach(d=>cnt.set(d,(cnt.get(d)||0)+1));
-  const [dTop,nTop]=[...cnt.entries()].sort((x,y)=>y[1]-x[1])[0]||[0,0];
-  if(dTop!==0 && Math.abs(dTop)<=24 && nTop>=Math.max(3,ds.length*0.6)){ segs.forEach(sg=>{ sg.note+=dTop; }); shifted=segs.length; }
+  // each note keeps the number it was sent as: played back, a note sounds the way the HiChord plays that note (some
+  // HiChord instruments sound an octave or two up or down; that is kept). Moving notes to a measured pitch went wrong
+  // on sounds whose pitch is hard to read (guitar, voices) and put whole instruments an octave or more off.
+  const shifted=0;
   segs.sort((x,y)=>x.note-y.note);
   // one gain for the whole set, peaks at -1 dBFS; then one buffer with every note after the other
   let pk=0; segs.forEach(sg=>{ for(let k=0;k<sg.l.length;k++) pk=Math.max(pk,Math.abs(sg.l[k]),Math.abs(sg.r[k])); });
