@@ -1991,7 +1991,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.95';
+const PAGE_VERSION='2026-11-14.96';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2639,7 +2639,7 @@ function packHC(key, h){
   const b=h.buffer, chs=[...Array(b.numberOfChannels)].map((_,c)=>b.getChannelData(c));
   let mono=chs.length===1; if(!mono){ mono=true; const a=chs[0], c=chs[1]; for(let i=0;i<a.length;i+=7) if(Math.abs(a[i]-c[i])>0.002){ mono=false; break; } }
   const use=mono?[chs[0]]:chs, len=b.length;
-  const head=new TextEncoder().encode(JSON.stringify({ v:2, key, name:HC_SOUND[key], sr:b.sampleRate, ch:use.length, len, zones:h.zones, kind:h.kind, at:Date.now() }));
+  const head=new TextEncoder().encode(JSON.stringify({ v:3, key, name:HC_SOUND[key], sr:b.sampleRate, ch:use.length, len, zones:h.zones, kind:h.kind, at:Date.now() }));
   const pad=(4-(8+head.length)%4)%4, out=new Uint8Array(8+head.length+pad+use.length*len*2);
   out.set([72,67,83,49]); new DataView(out.buffer).setUint32(4, head.length+pad, true); out.set(head, 8); out.fill(32, 8+head.length, 8+head.length+pad);
   const pcm=new Int16Array(out.buffer, 8+head.length+pad, use.length*len);
@@ -2653,17 +2653,37 @@ function unpackHC(u8){
   const pcm=new Int16Array(u8.buffer.slice(u8.byteOffset+8+hl, u8.byteOffset+8+hl+h.ch*h.len*2));
   const b=ctx.createBuffer(Math.max(2,h.ch), h.len, h.sr);
   for(let c=0;c<h.ch;c++){ const d=new Float32Array(h.len); for(let i=0;i<h.len;i++) d[i]=pcm[c*h.len+i]/32768; b.copyToChannel(d,c); if(h.ch===1) b.copyToChannel(d,1); }
-  return { key:h.key, buffer:b, zones:h.zones, kind:h.kind||'decay', old:!(h.v>=2) };
+  return { key:h.key, buffer:b, zones:h.zones, kind:h.kind||'decay', ver:h.v||1 };
 }
-// sounds sampled before 2026-11-14.95 may have every note moved by a measured pitch (wrongly, for some): put them back
-// where they were sent. The sent notes are 36, 39 … 96, so the shift is what fits the stored range on that grid.
+// sounds sampled by earlier versions get two repairs (true: changed, store it again)
+//  v1 (before 2026-11-14.95): every note may have been moved by a measured pitch (wrongly, for some): put back where it
+//      was sent. The sent notes are 36, 39 … 96, so the shift is what fits the stored range on that grid.
+//  v2 (before .96): a note could start with ~0.2 s of the previous note still sounding: start it where it really starts
 function hcUnshift(rec){
-  if(!rec || !rec.old || rec.kind==='kit' || !rec.zones || !rec.zones.length) return false;
-  delete rec.old;
-  const ns=rec.zones.map(z=>z.note), lo=Math.max(...ns)-HCS_NOTES[HCS_NOTES.length-1], hi=Math.min(...ns)-HCS_NOTES[0];
-  let d=null; for(let c=lo;c<=hi;c++) if(ns.every(n=>HCS_NOTES.includes(n-c)) && (d==null || Math.abs(c)<Math.abs(d))) d=c;
-  if(!d) return true;   // nothing moved: only the format is new
-  rec.zones.forEach(z=>{ z.note-=d; }); return true;
+  if(!rec || rec.ver==null || rec.ver>=3) return false;
+  const ver=rec.ver; delete rec.ver;
+  if(rec.kind==='kit' || !rec.zones || !rec.zones.length) return true;
+  if(ver<2){
+    const ns=rec.zones.map(z=>z.note), lo=Math.max(...ns)-HCS_NOTES[HCS_NOTES.length-1], hi=Math.min(...ns)-HCS_NOTES[0];
+    let d=null; for(let c=lo;c<=hi;c++) if(ns.every(n=>HCS_NOTES.includes(n-c)) && (d==null || Math.abs(c)<Math.abs(d))) d=c;
+    if(d) rec.zones.forEach(z=>{ z.note-=d; });
+  }
+  hcTrimStarts(rec);
+  return true;
+}
+function hcTrimStarts(rec){
+  const b=rec.buffer, sr=b.sampleRate, L=b.getChannelData(0), R=b.numberOfChannels>1?b.getChannelData(1):L;
+  let n=0;
+  rec.zones.forEach(z=>{
+    const a=Math.round(z.start*sr), e=Math.min(L.length, a+Math.round(z.len*sr));
+    if(e-a<Math.round(0.7*sr)) return;
+    const f=hcsPitchAt(L,R,a+Math.round(0.4*sr),a+Math.round(0.65*sr),sr); if(!f) return;
+    const r=hcsSwitch(L,R,a,Math.min(e,a+Math.round(0.45*sr)),f,sr); if(r<0) return;
+    const t=(r-a)/sr;
+    if(z.loop && z.loop[0]<=z.start+t+0.05) return;
+    z.start+=t; z.len-=t; n++;
+  });
+  return n;
 }
 const toB64 = u8 => { let s=''; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null, u8.subarray(i,i+0x8000)); return btoa(s); };
 const fromB64 = b64 => { const s=atob(b64), u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; };
@@ -2687,7 +2707,7 @@ async function loadHCI(){
     const [keys,vals]=await Promise.all([dbDo('sounds','readonly',st=>st.getAllKeys(r)), dbDo('sounds','readonly',st=>st.getAll(r))]);
     for(let n=0;n<(keys||[]).length;n++){
       const key=HC_OLD_KEY(String(keys[n]).slice(4)), v=vals[n]; if(!HC_SOUND[key] || HCI[key] || !v) continue;
-      try{ HCI[key] = v.channels ? { buffer:bufferFrom(v), zones:v.zones, kind:v.kind||'decay', old:true } : unpackHC(v); }catch(e){ continue; }
+      try{ HCI[key] = v.channels ? { buffer:bufferFrom(v), zones:v.zones, kind:v.kind||'decay', ver:1 } : unpackHC(v); }catch(e){ continue; }
       if(hcUnshift(HCI[key]) || nativeStore() || v.channels || String(keys[n])!=='hci:'+key){   // into the app's files, or the compact format
         await storeHCI(key); if(String(keys[n])!=='hci:'+key) dbDo('sounds','readwrite',st=>st.delete(keys[n])).catch(()=>{});
       }
@@ -3223,6 +3243,38 @@ function hcsFloor(L, R, a, b){
   for(let s=a; s+blk<=b; s+=blk){ let p=0; for(let k=s;k<s+blk;k++){ const x=Math.abs(L[k]), y=Math.abs(R[k]); if(x>p) p=x; if(y>p) p=y; } m.push(p); }
   if(!m.length) return 0; m.sort((x,y)=>x-y); return m[Math.floor(m.length*0.2)];
 }
+// where a note starts in L/R between a and b: the biggest jump in level (20 ms against the 30 ms before). The HiChord
+// can still be sounding the previous note when the next one comes (a long release, the note shape), so the start is
+// a rise, not the first sound above a threshold: that put ~0.2 s of the previous note (3 semitones lower) in front
+// of every note. base: the level that counts as silence. Returns -1 when nothing rises clearly.
+function hcsRise(L, R, a, b, base, sr=ctx.sampleRate){
+  const blk=Math.max(1,Math.round(sr*0.005)), env=[];
+  for(let s=a; s+blk<=b; s+=blk){ let p=0; for(let k=s;k<s+blk;k++){ const x=Math.abs(L[k]), y=Math.abs(R[k]); if(x>p) p=x; if(y>p) p=y; } env.push(p); }
+  let best=-1, bs=1.5;
+  for(let j=1;j+4<=env.length;j++){
+    let pre=0, c=0; for(let q=Math.max(0,j-6);q<j;q++){ pre+=env[q]; c++; } pre/=c;
+    const post=(env[j]+env[j+1]+env[j+2]+env[j+3])/4, sc=post/Math.max(pre,base,1e-6);
+    if(sc>bs*1.02){ bs=sc; best=j; }
+  }
+  return best<0 ? -1 : a+best*blk;
+}
+// the pitch of L/R between s and e (Hz, or null)
+function hcsPitchAt(L, R, s, e, sr){
+  const m=new Float32Array(Math.max(0,e-s)); for(let k=0;k<m.length;k++) m[k]=(L[s+k]+R[s+k])*0.5;
+  return m.length<2600 ? null : detectPitch({ numberOfChannels:1, getChannelData:()=>m, sampleRate:sr });
+}
+// the previous note (3 semitones lower) still sounding at the start: the first point from which the signal repeats at
+// the new note's period rather than the old one (in 5 ms steps, held for 30 ms). -1: no old note at the start.
+function hcsSwitch(L, R, a, b, f, sr){
+  const Pn=sr/f, Po=Pn*Math.pow(2,3/12), W=Math.round(sr*0.01), stp=Math.round(sr*0.005);
+  const at=(x,i)=>{ const j=Math.floor(i), t=i-j; return x[j]*(1-t)+x[j+1]*t; };
+  const err=(s,P)=>{ let d=0,q=0; for(let k=s;k<s+W;k++){ const x=L[k]+R[k], y=at(L,k+P)+at(R,k+P); d+=(x-y)*(x-y); q+=x*x+y*y; } return d/(q||1e-12); };
+  const lim=b-W-Math.ceil(Po)-2; if(lim<=a) return -1;
+  const olds=[]; for(let s=a;s<lim;s+=stp) olds.push(err(s,Po)<err(s,Pn)*0.6);
+  if(!olds[0] || !olds[1]) return -1;
+  for(let j=2;j+6<=olds.length;j++) if(olds.slice(j,j+6).every(o=>!o)) return a+j*stp;
+  return -1;
+}
 const HCS_QUIET = 0.02;   // a recording whose loudest note peaks below -34 dBFS: too quiet at 5%, it comes out gritty; set aside for the pass at ~30%
 // cut the recording into notes: timing first, then the real onset (USB latency) within a window around it
 function hcsBuild(run){
@@ -3232,12 +3284,17 @@ function hcsBuild(run){
   const rs=run.getRecStart(); if(rs==null) return null;
   const at = ms => Math.round((ms-rs)/1000*sr);
   const notes=[]; let missing=0, gpk=0; for(let k=0;k<n;k+=3) gpk=Math.max(gpk,Math.abs(L[k]),Math.abs(R[k]));
+  // the noise before the first note: just before a later note the previous one may still be sounding
+  const t0=at(run.T0), floor0=hcsFloor(L,R,Math.max(0,t0-Math.round(0.6*sr)),Math.max(0,t0-Math.round(0.05*sr)));
   HCS_NOTES.forEach((note,i)=>{
     const nom=at(run.T0+i*HCS_STEP*1000), a=Math.max(0,nom-Math.round(0.15*sr)), b=Math.min(n,nom+Math.round(0.7*sr));
     let pk=0; for(let k=a;k<b;k++) pk=Math.max(pk,Math.abs(L[k]),Math.abs(R[k]));
-    const floor=hcsFloor(L,R,a,Math.max(a,nom-Math.round(0.01*sr)));
+    const floor=Math.min(hcsFloor(L,R,a,Math.max(a,nom-Math.round(0.01*sr))), floor0||Infinity);
     if(pk<Math.max(0.0004, gpk*0.02, floor*4)){ missing++; return; }   // nothing above the noise: not a note
-    const thr=Math.max(pk*0.08, floor*3, 0.0002); let on=a; while(on<b && Math.abs(L[on])<thr && Math.abs(R[on])<thr) on++;
+    let on=-1;
+    if(i>0){ const f=hcsPitchAt(L,R,Math.min(n,nom+Math.round(0.35*sr)),Math.min(n,nom+Math.round(0.6*sr)),sr); if(f) on=hcsSwitch(L,R,a,b,f,sr); }
+    if(on<0) on=hcsRise(L,R,a,b,Math.max(floor*2, pk*0.01, 0.0001));
+    if(on<0){ const thr=Math.max(pk*0.08, floor*3, 0.0002); on=a; while(on<b && Math.abs(L[on])<thr && Math.abs(R[on])<thr) on++; }
     on=Math.max(0,on-Math.round(0.002*sr));
     const end=Math.min(n, at(run.T0+(i+1)*HCS_STEP*1000)-Math.round(0.12*sr), on+Math.round((HCS_STEP-0.2)*sr));
     notes.push({note, on, end, floor});
