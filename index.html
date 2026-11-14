@@ -420,9 +420,11 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .sppad .pn{font-family:var(--sans);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .sppad small{position:absolute;right:6px;top:4px;font-family:var(--mono);font-size:9px;font-weight:600;opacity:.6}
 .sppad.add{background:transparent;box-shadow:inset 0 0 0 2px var(--line);color:var(--dim);justify-content:center;font-size:13px;padding:0 14px;min-width:0;cursor:pointer}
-.sppad.rm{background:transparent;box-shadow:inset 0 0 0 2px var(--rec);color:var(--rec);justify-content:center;text-align:center;font-family:var(--mono);font-size:10px;font-weight:500;
-  padding:0 10px;max-width:150px;white-space:normal;line-height:1.2;cursor:default;border-style:dashed}
-.sppad.rm.over{background:var(--rec);color:#fff}
+.sprm{position:fixed;left:max(16px,calc(var(--sl) + 12px));bottom:calc(16px + var(--sb));z-index:39;display:none;align-items:center;justify-content:center;text-align:center;
+  border:2px dashed var(--rec);border-radius:8px;background:color-mix(in srgb,var(--panel) 92%,transparent);color:var(--rec);font-family:var(--mono);font-size:11px;font-weight:600;
+  padding:8px;box-sizing:border-box;line-height:1.25;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.sprm.show{display:flex}
+.sprm.over{background:var(--rec);border-style:solid;color:#fff}
 .spedit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:min(340px,calc(100% - 32px));background:var(--panel);border-radius:16px;padding:14px;
   box-shadow:0 20px 50px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px}
 .spedit.hidden{display:none}
@@ -439,7 +441,7 @@ body.songopen .fabs,body.songopen .tbar{display:none}
   .sptape{height:96px}
   .sphint{display:none}
   .sppads{flex:0 0 170px;flex-direction:column;flex-wrap:nowrap;align-items:stretch;overflow:auto;gap:6px}
-  .sppad,.sppad.rm{max-width:none;height:44px;min-height:44px} .sptray{flex-basis:auto}
+  .sppad{max-width:none;height:44px;min-height:44px} .sptray{flex-basis:auto}
 }
 /* iPad (and wide windows): more room, bigger type */
 @media (min-width:700px) and (min-height:700px){
@@ -1835,6 +1837,7 @@ body.studio .tbar .pos b{font-size:26px}
     </div>
     <div class="sppads" id="spPads"></div>
   </div>
+  <div class="sprm" id="spRm" aria-hidden="true">drop here to take it off</div>
   <div class="spedit hidden" id="spEdit" role="dialog" aria-label="Part"></div>
 </section>
 <section class="capmode hidden" id="capMode" aria-label="Capture mode">
@@ -2003,7 +2006,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.111';
+const PAGE_VERSION='2026-11-14.112';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5104,8 +5107,7 @@ function renderSongPage(){
   $('spPads').innerHTML = '<span class="sptray">drag a part onto the tape</span>' + SONG.parts.map((p,k)=>{
     const uses=SONG.order.filter(x=>x===k).length;
     return `<button class="sppad" data-k="${k}" style="--pc:var(--p${k})" aria-label="${escH(partName(k))}: drag onto the tape; hold for name, copy and remove"><i class="grip" aria-hidden="true"></i><span class="pk">${PART_L(k)}</span><span class="pn">${escH(p.name||'part '+PART_L(k))}</span><small>${uses}×</small></button>`; }).join('')
-    + (P<8 ? '<button class="sppad add" data-add aria-label="New part">+ part</button>' : '')
-    + '<div class="sppad rm" id="spRm">drop a block here to take it off</div>';
+    + (P<8 ? '<button class="sppad add" data-add aria-label="New part">+ part</button>' : '');
   spNow(); spFrame(true);
 }
 function spNow(){
@@ -5182,7 +5184,8 @@ function spDragStart(kind, k, n, x, y){
   gh.style.cssText=`--pc:var(--p${k});width:${W-4}px;height:${$('spTape').clientHeight-22}px;left:${x}px;top:${y}px`;
   gh.innerHTML=`${PART_L(k)}<span>${escH(SONG.parts[k].name||'')}</span>`; document.body.appendChild(gh);
   SPG.drag={kind,k,n,ghost:gh,x,y,edge:0};
-  if(kind==='blk') $('spTrack').querySelector(`[data-n="${n}"]`)?.classList.add('lifted');
+  if(kind==='blk'){ $('spTrack').querySelector(`[data-n="${n}"]`)?.classList.add('lifted');
+    const rm=$('spRm'); rm.style.width=(W-4)+'px'; rm.style.height=($('spTape').clientHeight-22)+'px'; rm.classList.add('show'); }
   SPG.view = SONG.pos<0 ? SPG.view : SPG.view;   // the tape stops following the playhead while you drag
   if(navigator.vibrate) navigator.vibrate(10);
 }
@@ -5197,7 +5200,7 @@ function spDragMove(x,y){
   else ins.classList.add('hidden');
 }
 function spDragEnd(cancel){
-  const d=SPG.drag; if(!d) return; SPG.drag=null; d.ghost.remove(); $('spIns').classList.add('hidden'); $('spRm')?.classList.remove('over');
+  const d=SPG.drag; if(!d) return; SPG.drag=null; d.ghost.remove(); $('spIns').classList.add('hidden'); $('spRm')?.classList.remove('over','show');
   document.querySelectorAll('#spTrack .lifted').forEach(b=>b.classList.remove('lifted'));
   if(cancel || !d.target) { spFrame(true); return; }
   const o=SONG.order, playing=SONG.pos>=0 ? SONG.pos : null;
@@ -5255,7 +5258,6 @@ $('spTape').addEventListener('click',e=>{ if(SPG.noClick) return; const b=e.targ
 $('spPads').addEventListener('click',e=>{ if(SPG.noClick) return;
   if(e.target.closest('[data-add]')){ addPart(); return; }
   const b=e.target.closest('.sppad[data-k]'); if(b) toast('drag it onto the tape · hold for name, copy or remove');
-  else if(e.target.closest('#spRm')) toast('hold a block on the tape and drag it here to take it off');
 });
 $('spPads').addEventListener('contextmenu',e=>e.preventDefault()); $('spTape').addEventListener('contextmenu',e=>e.preventDefault());
 $('spBack').onclick=closeSongPage;
