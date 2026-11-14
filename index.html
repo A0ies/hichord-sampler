@@ -520,10 +520,6 @@ ol.hcsdo{margin:2px 0 6px;padding-left:18px;line-height:1.8;color:var(--ink)}
 .hcsrun{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px}
 .hcsnow{display:flex;flex-direction:column;justify-content:center;gap:12px}
 .hcskit .hcskitn{font-family:var(--mono);color:var(--dim)} .hcskit ol.hcsdo{font-size:13px} .hcskit .hcsgo{min-height:48px;align-self:flex-start;padding:0 18px}
-.hcskeys{display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:11px}
-.hcskeys>div{display:flex;gap:4px} .hcskeys>div:first-child{padding-left:calc((100% - 12px)/8)}
-.hcskeys .hkk{flex:0 0 calc((100% - 12px)/4);box-sizing:border-box;background:var(--key);border-radius:8px;padding:5px 7px;display:flex;flex-direction:column;gap:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hcskeys .hkk b{font-family:var(--sans);font-size:14px}
 .hcsbig{font-family:var(--sans);font-size:clamp(28px,5.5vw,52px);font-weight:600;line-height:1.05;letter-spacing:-.01em;overflow-wrap:anywhere}
 .hcsstrip{display:grid;grid-template-columns:repeat(21,minmax(0,1fr));gap:3px}
 .hcsstrip i{height:22px;border-radius:3px;background:var(--line)} .hcsstrip i.ok{background:var(--ok)} .hcsstrip i.now{background:var(--acc)}
@@ -595,7 +591,7 @@ ol.hcsdo{margin:2px 0 6px;padding-left:18px;line-height:1.8;color:var(--ink)}
   .hcst{min-height:28px;padding-top:2px;padding-bottom:2px} .hcsgrid{gap:4px} .hcs.full .row button{min-height:36px}
   .hcsrun{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-rows:none;gap:10px}
   .hcsnow{gap:7px} .hcsbig{font-size:28px} .hcsstrip i{height:16px}
-  .hcskeys{gap:3px} .hcskeys>div{gap:3px} .hcskeys .hkk{padding:2px 6px;font-size:10px} .hcskeys .hkk b{font-size:12px} .hcskit .hcsgo{min-height:38px}
+  .hcskit .hcsgo{min-height:38px}
   .hcsfoot .err{font-size:10px;line-height:1.3;margin:0}
   .hcsend{gap:7px}
 }
@@ -1978,7 +1974,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.89';
+const PAGE_VERSION='2026-11-14.90';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2945,12 +2941,6 @@ function hcsSetup(err){
   if($('hcsAll')){ $('hcsAll').onclick=()=>set(HCI_ALL); $('hcsMiss').onclick=()=>set(HCI_ALL.filter(k=>!HCI[k])); $('hcsNone').onclick=()=>set([]); }
   $('hcsBox').querySelectorAll('.hcst').forEach(b=>b.onclick=()=>{ const k=b.dataset.k; H.pick.has(k)?H.pick.delete(k):H.pick.add(k); hcsSetup(err); });
 }
-// where each drum sound is on the seven chord keys (manual Rev 3.0: one layout; on Tight kit 2 and 5 are the kick, 7 the closed hat)
-function hcsKitKeys(k){
-  const lab = k===HC_DRUMS ? ['kick','kick','snare','closed hat','kick','bell','closed hat'] : ['kick','alt kick','snare','closed hat','tom','bell / ride','open hat'];
-  const key = i => `<span class="hkk"><b>${i+1}</b>${lab[i]}</span>`;
-  return `<div class="hcskeys" aria-label="The chord keys in Drum mode"><div>${[1,3,5].map(key).join('')}</div><div>${[0,2,4,6].map(key).join('')}</div></div>`;
-}
 // before each drum kit: the HiChord goes to Drum mode, and you pick the kit on it (no MIDI message does that)
 function hcsKitStep(k){
   const H=HCS, kit=HC_KITS.find(x=>x[0]===k), N=H.queue.length, i=H.qi;
@@ -2965,7 +2955,6 @@ function hcsKitStep(k){
           <li>Hold the ${hk('y','YELLOW')} button and press chord button <b>${kit[2]}</b></li>
           <li>Check that the screen shows <b>${escH(kit[3])}</b> (or move the joystick ${jy('← LEFT')} / ${jy('→ RIGHT')} until it does)</li>
         </ol>
-        ${hcsKitKeys(k)}
         <button class="primary hcsgo" id="hcsKitGo">${escH(kit[3])} is on: sample it</button>
       </div>
       <ul class="hcslist">${H.queue.map((q,j)=>`<li class="${j<i?'ok':j===i?'now':''}">${escH(HC_SOUND[q])}</li>`).join('')}</ul>
@@ -3080,9 +3069,19 @@ async function hcsStart(){
   if(!qk) $('hcsCancel').onclick = hcsCancel;
   // every note scheduled ahead, on the MIDI clock (performance.now)
   const T0=performance.now()+HCS_LEAD*1000; HCS.T0=T0;
-  P.notes.forEach((n,i)=>{ const on=T0+i*P.step*1000, off=on+P.on*1000;
-    try{ HC.out.send([P.st,n,P.vel], on); HC.out.send([P.st-0x10,n,0], off); }catch(e){}
-    qPush(hcSentAt,'on'+n,on); qPush(hcSentAt,'off'+n,off); });
+  // each note goes to the HiChord just before its turn (timed on the MIDI clock), not all at once:
+  // notes already sent can't be taken back, so stopping the sync would leave the HiChord playing on
+  let nx=0; const run=HCS;
+  const feed=()=>{
+    if(HCS!==run || !run.running){ clearInterval(run.feedT); return; }
+    while(nx<P.notes.length && T0+nx*P.step*1000-performance.now() < 250){
+      const n=P.notes[nx], on=T0+nx*P.step*1000, off=on+P.on*1000; nx++;
+      try{ HC.out.send([P.st,n,P.vel], on); HC.out.send([P.st-0x10,n,0], off); }catch(e){}
+      qPush(hcSentAt,'on'+n,on); qPush(hcSentAt,'off'+n,off);
+    }
+    if(nx>=P.notes.length) clearInterval(run.feedT);
+  };
+  run.feedT=setInterval(feed, 50); feed();
   const total=P.notes.length*P.step*1000;
   const tick=()=>{
     if(!HCS || !HCS.running) return;
@@ -3105,7 +3104,9 @@ function hcsStop(){
   if(!HCS) return;
   try{ HCS.proc && (HCS.proc.onaudioprocess=null); HCS.src && HCS.src.disconnect(); HCS.proc && HCS.proc.disconnect(); HCS.sink && HCS.sink.disconnect(); }catch(e){}
   if(HCS.stream) HCS.stream.getTracks().forEach(t=>t.stop());
-  if(HCS.running){ const P=HCS.plan||hcsPlan(null); P.notes.forEach(n=>hcSend([P.st-0x10,n,0])); hcSend([0xB0,123,0]); hcSend([0xB9,123,0]); }
+  clearInterval(HCS.feedT);
+  if(HCS.running){ try{ HC.out && HC.out.clear && HC.out.clear(); }catch(e){}   // drop anything still queued
+    const P=HCS.plan||hcsPlan(null); P.notes.forEach(n=>hcSend([P.st-0x10,n,0])); hcSend([0xB0,123,0]); hcSend([0xB9,123,0]); }
   if(HCS.modeBack!=null) hcCC(HC.CC.MODE,HCS.modeBack);
   HCS.running=false; HCS.modeBack=null;
   if(inApp()) nativeAudio({cmd:'usbInput', on:false});
