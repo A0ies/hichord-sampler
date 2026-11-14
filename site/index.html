@@ -82,7 +82,12 @@ h1 .it{font-size:1.12em;color:var(--acc)}
 }
 
 /* marquee */
-.band{background:var(--acc);color:#fff;overflow:hidden;white-space:nowrap;margin-top:clamp(56px,8vw,110px);transform:rotate(-1.2deg) scale(1.02)}
+.band{--rise:2.1vw;background:var(--acc);color:#fff;overflow:hidden;white-space:nowrap;margin-top:calc(clamp(56px,8vw,110px) - var(--rise) / 2);
+  margin-bottom:calc(var(--rise) / -2);padding:calc(var(--rise) / 2) 0;
+  /* the slant is cut out with a clip path (smooth edges everywhere, iPad included) instead of rotating the band; only the text tilts.
+     --rise = tan(1.2deg) x the band's width */
+  clip-path:polygon(0 var(--rise),100% 0,100% calc(100% - var(--rise)),0 100%)}
+.band .tilt{transform:rotate(-1.2deg)}
 .band .track{display:inline-flex;gap:0;animation:marq 32s linear infinite;padding:16px 0}
 .band span{font:600 clamp(18px,2.2vw,30px) var(--mono);letter-spacing:.04em;text-transform:uppercase;padding-right:1.4em}
 @keyframes marq{to{transform:translateX(-50%)}}
@@ -385,10 +390,10 @@ footer p{margin:0;max-width:52em}
     </div>
   </div>
 
-  <div class="band" aria-hidden="true"><div class="track">
+  <div class="band" aria-hidden="true"><div class="tilt"><div class="track">
     <span>play</span><span>•</span><span>loop</span><span>•</span><span>layer</span><span>•</span><span>change it later</span><span>•</span><span>perform live</span><span>•</span><span>build a song</span><span>•</span>
     <span>play</span><span>•</span><span>loop</span><span>•</span><span>layer</span><span>•</span><span>change it later</span><span>•</span><span>perform live</span><span>•</span><span>build a song</span><span>•</span>
-  </div></div>
+  </div></div></div>
 </div>
 
 <section id="video">
