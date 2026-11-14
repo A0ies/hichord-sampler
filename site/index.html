@@ -355,6 +355,17 @@ footer p{margin:0;max-width:52em}
   .trio > .phone{position:absolute;left:-2%;bottom:-30%;width:27%;z-index:2}
   .trio > .t-land{position:absolute;right:-2%;bottom:-34%;width:38%!important;z-index:2}
 }
+/* Kaffee Kabaal badge, bottom right (like Webflow's) */
+.kk{position:fixed;right:14px;bottom:14px;z-index:90;display:flex;align-items:center;gap:7px;height:30px;padding:0 11px 0 6px;border-radius:6px;
+  background:#F4EEDF;color:#1B1512;font:500 12px/1 var(--sans);letter-spacing:.005em;text-decoration:none;-webkit-tap-highlight-color:transparent;
+  box-shadow:0 0 0 1px rgba(27,21,18,.08),0 4px 14px -4px rgba(0,0,0,.5);transition:transform .2s,box-shadow .2s}
+.kk b{font-weight:700}
+.kk svg{display:block;flex:none}
+.kk .pup{transition:transform .25s ease}
+.kk:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(27,21,18,.08),0 10px 24px -6px rgba(0,0,0,.6)}
+.kk:hover .pup{transform:translateX(2px)}
+@media (max-width:560px){.kk{right:10px;bottom:10px}}
+@media print{.kk{display:none}}
 </style>
 </head>
 <body class="no-js">
@@ -507,6 +518,7 @@ footer p{margin:0;max-width:52em}
     <span><a href="https://a0ies.github.io/hichord-sampler/">open the app</a> · <a href="https://github.com/A0ies/hichord-sampler">github</a></span>
   </div>
 </footer>
+<a class="kk" href="https://kaffeekabaal.com/werk-looper-for-hichord.html" target="_blank" rel="noopener" aria-label="Made by Kaffee Kabaal"><svg width="20" height="20" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="#F7A8D8"/><circle cx="22" cy="32" r="11" fill="#FBF7EC" stroke="#1B1512" stroke-width="3.5"/><circle cx="42" cy="32" r="11" fill="#FBF7EC" stroke="#1B1512" stroke-width="3.5"/><g class="pup"><circle cx="25" cy="32" r="5" fill="#1B1512"/><circle cx="45" cy="32" r="5" fill="#1B1512"/></g></svg><span>Made by <b>Kaffee Kabaal</b></span></a>
 
 <script>
 document.body.classList.remove('no-js');
