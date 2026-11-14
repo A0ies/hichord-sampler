@@ -1994,7 +1994,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.100';
+const PAGE_VERSION='2026-11-14.102';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -4585,10 +4585,11 @@ function studioDock(m){
 function setFull(w){
   if(!document.body.dataset.studio) w='';
   if(sFull()===w) return;
+  if(sFull()==='ed' && ED.open) ED.sel.clear();   // back to the overview: what you selected in the full-screen editor is let go
   document.body.dataset.sfull=w; $('editor').classList.toggle('full', w==='ed');
   $('edDone').innerHTML = w==='ed' ? IC_MIN : IC_MAX;
   $('edMenu').classList.add('hidden'); $('edVelPop').classList.add('hidden');
-  renderDetail();
+  renderDetail(); if(ED.open) edRenderTools();
   requestAnimationFrame(()=>{ if(ED.open){ edResize(); edFit(); edFitPitch(); edDraw(); } drawAll(); });
 }
 // the docked timeline shows every note of the layer, so rows are as high as fit
@@ -4849,13 +4850,17 @@ function showCount(n){
   o.style.setProperty('--lc',`var(--l${S.sel})`);
   o.classList.add('show'); o.classList.remove('pulse'); void o.offsetWidth; o.classList.add('pulse');
 }
-let edLastNotes=-1;
+let edLastNotes=-1, edLastLive='';
+// the keys of the editor's layer played live now (a mono layer plays the note it picked for the chord)
+function edLiveKeys(Ly){ const out=new Set(); if(!Ly || !Ly.live) return out;
+  for(const n of Ly.live.keys()) out.add(Ly.mono && Ly.mono.notes.includes(n) ? Ly.mono.out : n); return out; }
 function frame(){
   tick();
   if(ED.open){
     // redraw while the loop plays (playhead) or when recording adds notes
     const n=edLy().events.length;
-    if(S.playing || n!==edLastNotes){ edLastNotes=n; if(!ED.drag) edDraw(); }
+    const live=[...edLiveKeys(edLy())].join(',');   // keys played live light up, also while stopped
+    if(S.playing || n!==edLastNotes || live!==edLastLive){ edLastNotes=n; edLastLive=live; if(!ED.drag) edDraw(); }
   }
   if((!ED.open || ED.dock) && S.playing){ CAP.open ? drawCaptureRolls() : drawAll(); }
   if(S.playing) drawPos();
@@ -5817,6 +5822,10 @@ function edDraw(){
   const g=edCv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   const C={ bg:cssVar('--screen'), bg2:cssVar('--screen2'), ink:cssVar('--screen-ink'), dim:cssVar('--screen-dim'), line:cssVar('--screen-line'), acc:cssVar('--acc'), col:cssVar('--l'+ED.li) };
   const L=loopLen(), Ly=edLy(), rollBottom=H-VELH;
+  // what sounds now: the notes under the playhead (as heard, with the layer's timing and note length) and the keys played live
+  const pb = S.playing && ctx ? beatAt(ctx.currentTime) : -1, ph = pb>=0 ? mod(pb,L) : -1, sounding=new Set();
+  if(ph>=0) Ly.events.forEach(e=>{ if(e.beat>=L) return; const d=Math.max(0.04,Math.min(L,e.dur*Ly.gate)); if(mod(ph-effPos(Ly,e),L)<d) sounding.add(e.id); });
+  const litKeys=edLiveKeys(Ly); Ly.events.forEach(e=>{ if(sounding.has(e.id)) litKeys.add(e.note); });
   g.fillStyle=C.bg; g.fillRect(0,0,W,H);
   // pitch rows
   g.save(); g.beginPath(); g.rect(KEYW,RULER,W-KEYW,rollBottom-RULER); g.clip();
@@ -5856,13 +5865,24 @@ function edDraw(){
   Ly.events.forEach(e=>{
     const x=xOf(e.beat), w=Math.max(3,e.dur*ED.ppb), y=yOf(e.note);
     if(x>W||x+w<KEYW||y>rollBottom||y+ED.rowH<RULER) return;
-    const s=ED.sel.has(e.id);
-    g.fillStyle=C.col; g.globalAlpha=0.35+0.65*(e.vel/127); g.fillRect(x+0.5,y+1,w-1,ED.rowH-2); g.globalAlpha=1;
-    g.strokeStyle= s && !ED.chordMode ? C.ink : C.col; g.lineWidth= s && !ED.chordMode ? 2 : 1; g.strokeRect(x+0.5,y+1,w-1,ED.rowH-2);
+    const s=ED.sel.has(e.id), on=sounding.has(e.id);
+    if(on){ g.save(); g.shadowColor=C.col; g.shadowBlur=14; g.fillStyle=C.col; g.fillRect(x+0.5,y+1,w-1,ED.rowH-2); g.restore(); }   // sounding now: full colour with a glow
+    else { g.fillStyle=C.col; g.globalAlpha=0.35+0.65*(e.vel/127); g.fillRect(x+0.5,y+1,w-1,ED.rowH-2); g.globalAlpha=1; }
+    g.strokeStyle= on ? '#fff' : s && !ED.chordMode ? C.ink : C.col; g.lineWidth= on || (s && !ED.chordMode) ? 2 : 1; g.strokeRect(x+0.5,y+1,w-1,ED.rowH-2);
     if(w>30 && ED.rowH>=14){ g.fillStyle= s? C.ink : '#fff'; g.fillText(noteName(e.note), x+4, y+ED.rowH/2+0.5); }
   });
+  // the name of each chord that sounds now, in a tag above it (not for drums)
+  if(sounding.size && Ly.mode!=='kit'){
+    const groups=new Map(); Ly.events.forEach(e=>{ if(!sounding.has(e.id)) return; const k=e.chord??('n'+e.beat); const c=groups.get(k)||[]; c.push(e); groups.set(k,c); });
+    g.font='600 12px IBM Plex Mono, monospace'; g.textBaseline='middle';
+    groups.forEach(ns=>{ if(ns.length<2) return;
+      const name=chordName(ns), hi=Math.max(...ns.map(e=>e.note)), tw=g.measureText(name).width+12, th=18;
+      const x=clamp(xOf(Math.min(...ns.map(e=>e.beat))), KEYW+2, W-tw-2), y=clamp(yOf(hi)-th-4, RULER+2, rollBottom-th-2);
+      g.fillStyle=C.col; g.beginPath(); if(g.roundRect) g.roundRect(x,y,tw,th,5); else g.rect(x,y,tw,th); g.fill();
+      g.fillStyle='#fff'; g.fillText(name, x+6, y+th/2+0.5); });
+  }
   // playhead
-  if(S.playing && ctx){ const b=beatAt(ctx.currentTime); if(b>=0){ g.fillStyle=C.ink; g.fillRect(Math.round(xOf(mod(b,L)))-1,RULER,2,rollBottom-RULER); } }
+  if(ph>=0){ g.fillStyle=C.ink; g.fillRect(Math.round(xOf(ph))-1,RULER,2,rollBottom-RULER); }
   // marquee
   const d=ED.drag;
   if(d && d.type==='marquee'){ g.strokeStyle=C.acc; g.fillStyle=C.acc; g.globalAlpha=0.12; g.fillRect(Math.min(d.x0,d.x1),Math.min(d.y0,d.y1),Math.abs(d.x1-d.x0),Math.abs(d.y1-d.y0)); g.globalAlpha=1; g.lineWidth=1; g.strokeRect(Math.min(d.x0,d.x1)+0.5,Math.min(d.y0,d.y1)+0.5,Math.abs(d.x1-d.x0),Math.abs(d.y1-d.y0)); }
@@ -5879,7 +5899,7 @@ function edDraw(){
   // keyboard
   g.save(); g.beginPath(); g.rect(0,RULER,KEYW,rollBottom-RULER); g.clip();
   for(let n=nBot;n<=nTop;n++){ const y=yOf(n);
-    g.fillStyle = isBlack(n) ? '#050505' : '#2e2e2e'; g.fillRect(0,y,KEYW-2,ED.rowH-1);
+    g.fillStyle = litKeys.has(n) ? C.col : isBlack(n) ? '#050505' : '#2e2e2e'; g.fillRect(0,y,KEYW-2,ED.rowH-1);   // sounding keys light up
     if(mod(n,12)===0 && ED.rowH>=11){ g.fillStyle=C.dim; g.font='600 10px IBM Plex Mono, monospace'; g.fillText(noteName(n), 4, y+ED.rowH/2); } }
   g.restore();
   g.fillStyle=C.bg; g.fillRect(0,0,KEYW,RULER);
