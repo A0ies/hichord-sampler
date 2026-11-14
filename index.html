@@ -1016,12 +1016,13 @@ body.projopen .pbar{display:none}
 .ctile .cname{flex:1 1 60px;min-width:60px}
 .ctile .cfxchip{flex:none;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .ctile.off .cstate{background:var(--line);color:var(--dim)}
-/* lock: hold the effect still for 2 s (the ring fills), then the lock key appears over the pad's bottom-right corner; it pulses until you
+/* lock: hold the effect still for 1 s and a ring appears around your finger; it fills in 1 s more, then the lock key appears over the pad's bottom-right corner; it pulses until you
    press it, then stays solid. A locked pad keeps its effect after you let go; press the key again to release it. */
 .ctile .cring{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;display:none;pointer-events:none;transform:rotate(-90deg)}
 .ctile .cring circle{fill:none;stroke:var(--lc);stroke-width:4;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100}
 .ctile.arming .cring{display:block}
-.ctile.arming .cring circle{animation:cring 2s linear forwards}
+.ctile.arming .cring circle{animation:cring 1s linear forwards}
+.ctile.lockring .cring{display:block} .ctile.lockring .cring circle{stroke-dashoffset:0}   /* web app with a mouse: a full ring = locked */
 @keyframes cring{to{stroke-dashoffset:0}}
 .ctile .clock{position:absolute;right:8px;bottom:8px;z-index:2;display:none;pointer-events:auto;touch-action:none;min-height:0;height:44px;min-width:104px;padding:0 16px;gap:6px;align-items:center;
   border-radius:999px;font-size:13px;justify-content:center;box-shadow:inset 0 0 0 2px var(--lc);animation:clockpulse 1s ease-in-out infinite}
@@ -1993,7 +1994,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.99';
+const PAGE_VERSION='2026-11-14.100';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5391,13 +5392,15 @@ function capWire(grid, capEl, rerender){
     t.at={x, y, y0:t.y0, fx:px/r.width, fy:py/r.height, label};
     if(CAP.lock.has(t.i)) CAP.lock.set(t.i, t.at);   // a locked pad you touch again moves its lock
     if(!t.ready && !none){ if(!t.sx || Math.hypot(e.clientX-t.sx[0], e.clientY-t.sx[1])>12) arm(t,e); } };
-  // holding still: the ring fills for 2 s, then the lock key appears (it locks only when you press it).
-  // With a mouse in the web app there is no second hand for the key: a full ring locks at once.
-  const arm=(t,e)=>{ t.sx=[e.clientX,e.clientY]; clearTimeout(t.st);
-    t.el.classList.remove('arming'); void t.el.offsetWidth; t.el.classList.add('arming');
-    t.st=setTimeout(()=>{ t.ready=true; t.el.classList.remove('arming');
-      if(t.mouse && t.at){ CAP.lock.set(t.i, t.at); CAP.lastLock=t.i; t.el.classList.add('locked'); setLockKey(t.el,true); return; }
-      if(!CAP.lock.has(t.i)) setLockKey(t.el,false); t.el.classList.add('lockable'); if(navigator.vibrate) navigator.vibrate(12); }, 2000); };
+  // holding still for 1 s: the ring appears and fills in 1 s more, then the lock key appears (it locks only when you press it).
+  // With a mouse in the web app there is no second hand for the key: after 1 s the effect locks and a full ring shows it.
+  const arm=(t,e)=>{ t.sx=[e.clientX,e.clientY]; clearTimeout(t.st); t.el.classList.remove('arming');
+    t.st=setTimeout(()=>{
+      if(t.mouse){ if(!t.at) return; t.ready=true; CAP.lock.set(t.i, t.at); CAP.lastLock=t.i; t.el.classList.add('locked','lockring'); setLockKey(t.el,true); return; }
+      void t.el.offsetWidth; t.el.classList.add('arming');
+      t.st=setTimeout(()=>{ t.ready=true; t.el.classList.remove('arming');
+        if(!CAP.lock.has(t.i)) setLockKey(t.el,false); t.el.classList.add('lockable'); if(navigator.vibrate) navigator.vibrate(12); }, 1000);
+    }, 1000); };
   const start=(t,e)=>{ if(t.active) return; t.active=true; clearTimeout(t.timer); t.el.classList.add('touch'); if(navigator.vibrate) navigator.vibrate(8); apply(t, t.last||e); };
   // the lock key: press with another finger to lock what you hold, press a locked one to release it
   const lockKey=(i)=>{ const el=grid.querySelector(`.ctile[data-i="${i}"]`), Ly=layers[i]; if(!el) return;
@@ -5450,7 +5453,7 @@ function capWire(grid, capEl, rerender){
     const Ly=layers[t.i];
     if(t.active){
       if(![...CAP.touch.values()].some(o=>o.i===t.i && o.active)){
-        t.el.classList.remove('touch','arming','lockable');
+        t.el.classList.remove('touch','arming','lockable','lockring');
         if(CAP.lock.has(t.i)) t.el.querySelector('.cfx').textContent=CAP.lock.get(t.i).label;   // locked: the effect stays where you left it
         else { fxReset(Ly); t.el.querySelector('.cfx').textContent=capHow(Ly); }   // back to the hint it showed before
       }
