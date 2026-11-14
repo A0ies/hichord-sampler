@@ -60,7 +60,8 @@ h1{font-size:clamp(46px,9.4vw,164px);line-height:.92;letter-spacing:-.045em;font
 h1 .it{font-size:1.12em;color:var(--acc)}
 .lead{font-size:clamp(17px,1.6vw,22px);color:var(--dim);max-width:34em;margin:28px auto 34px}
 .cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
-.need{font:13px var(--mono);color:var(--dim);margin:16px 0 0}
+.need{font:13px var(--mono);color:var(--dim);margin:16px 0 0;white-space:nowrap;
+  font-size:min(13px,calc((100vw - 2 * var(--gut)) / 30))}   /* one line on every phone: the 48 mono characters scale down to fit */
 
 /* device frames */
 /* device mockups: the bezel is the screen's margin (a % of the device's own width, wherever the device sits) */
@@ -174,6 +175,9 @@ h2 .it{font-size:1.1em}
 .epos b{font:600 20px var(--mono);font-variant-numeric:tabular-nums}
 .epos small{font:12px var(--mono);color:#a5a59f}
 .espace{flex:1}
+.esel{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;line-height:1.15;text-align:center}
+.esel b{font:600 16px var(--mono);color:#7aa6ff}
+.esel small{font:11.5px var(--mono);color:#a5a59f;white-space:nowrap}
 .egrid{min-width:64px;height:46px;border-radius:12px;border:0;background:#1d1d1b;color:#f0f0ec!important;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:0 10px}
 .egrid small{font:11px var(--mono);color:#a5a59f}
 .egrid b{font:600 16px var(--mono)}
@@ -270,6 +274,7 @@ h2 .it{font-size:1.1em}
 .card{background:#f2f2ef;border-radius:20px;padding:28px}
 .card h3{margin:0 0 8px;font-size:22px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .card p{margin:0;color:var(--light-dim)}
+.card p a{color:var(--light-ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
 .tag{font:500 12px var(--mono);padding:4px 9px;border-radius:7px;background:var(--light);color:var(--light-dim)}
 .tag.ok{background:#00a651;color:#fff}
 .light .btn.ghost{color:var(--light-ink);box-shadow:inset 0 0 0 1.5px #b8b8b2}
@@ -300,6 +305,18 @@ footer p{margin:0;max-width:52em}
   .stage{grid-template-columns:minmax(0,.55fr) minmax(0,1fr);gap:12px}
   .stage .s-tab{grid-column:1 / -1;order:-1}
   .nav nav{gap:14px}
+}
+
+/* phones: the big screen at the back, the smaller devices in front of its lower corners (hero and "Pick it up anywhere") */
+@media (max-width:560px){
+  .stage{display:block;position:relative;margin-bottom:24%}
+  .stage .s-tab{width:94%;margin:0 auto}
+  .stage .s-phone{position:absolute;left:-2%;bottom:-30%;width:29%;z-index:2}
+  .stage .s-land{position:absolute;right:-2%;bottom:-24%;width:52%;z-index:2}
+  .trio{display:block;position:relative;margin-bottom:30%}
+  .trio > :nth-child(2){width:88%;margin:0 auto}
+  .trio > .phone{position:absolute;left:-2%;bottom:-30%;width:27%;z-index:2}
+  .trio > .t-land{position:absolute;right:-2%;bottom:-34%;width:38%!important;z-index:2}
 }
 </style>
 </head>
@@ -436,7 +453,7 @@ footer p{margin:0;max-width:52em}
     <div class="cards">
       <div class="card rv"><h3>Computer <span class="tag ok">ready</span></h3><p>Chrome or Edge on Mac, Windows or Linux. Connect the HiChord with a USB-C cable and open the app.</p></div>
       <div class="card rv d1"><h3>Android <span class="tag ok">ready</span></h3><p>Chrome, with the HiChord on USB-C. Use an OTG adapter if your phone needs one.</p></div>
-      <div class="card rv d2"><h3>iPhone and iPad <span class="tag">coming</span></h3><p>iOS browsers can't talk to MIDI devices, so this needs a small app. It's built and on its way.</p></div>
+      <div class="card rv d2"><h3>iPhone and iPad <span class="tag">coming</span></h3><p>iOS browsers can't talk to MIDI devices, so this needs a small app. It's built and on its way. Can't wait? Install it on your iPhone or iPad yourself with Xcode on a Mac: <a href="https://github.com/A0ies/hichord-sampler#iphone-app">the steps are on GitHub</a>.</p></div>
     </div>
     <div class="cta rv" style="margin-top:44px">
       <a class="btn primary" href="https://a0ies.github.io/hichord-sampler/">Open the app →</a>

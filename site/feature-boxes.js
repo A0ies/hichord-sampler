@@ -286,7 +286,12 @@
       });
       return [...map.values()];
     };
-    const st = { chords: original(), hover: null };
+    const st = { chords: original(), hover: null, sel: null };
+    // on a phone, as in the app: tap a chord to select it, drag it to move it, and trim it in the lane under the notes
+    const narrow = matchMedia('(max-width:560px)');
+    const hintEl = box.host.querySelector('.fb-hint');
+    const setHint = () => { hintEl.textContent = narrow.matches ? 'tap a chord to select it · drag it to move it · drag the handles in the trim lane to change where it starts and ends' : 'drag a chord to move it · drag its edges to change where it starts and ends'; };
+    (narrow.addEventListener ? narrow.addEventListener('change', setHint) : narrow.addListener(setHint)); setHint();
     const label = c => { const [pc, q] = ROOT[c.name]; return NAMES[mod(pc + c.shift, 12)] + q; };
     const lowest = c => Math.min(...c.notes) + c.shift, highest = c => Math.max(...c.notes) + c.shift;
     const play = c => c.notes.forEach(n => blip(box, 0, 'keys', n + c.shift));
@@ -300,7 +305,8 @@
     const playBtn = button('ebig eplay', '', 'Stop');
     const posEl = el('div', 'epos', '<b>1.1</b><small>playing</small>');
     const gridBtn = button('egrid', '<small>grid</small><b>1/16</b>', 'Grid: 1/16. Tap to change');
-    bar.append(playBtn, posEl, el('span', 'espace'), gridBtn);
+    const selEl = el('div', 'esel', '');
+    bar.append(playBtn, posEl, selEl, gridBtn);
     box.body.appendChild(bar);
     const t = { origin: 0, stopped: false, frozen: 0, grid: 2 };
     const posAt = beat => (t.stopped ? t.frozen : mod(beat - t.origin, LOOP));
@@ -318,7 +324,7 @@
     });
     const snap = v => { const g = GRIDS[t.grid][0]; return Math.round(v / g) * g; };
 
-    function geo() { const d = cv.d || 1, W = cv.width, H = cv.height, kw = 34 * d, top = 18 * d; return { d, W, H, kw, top, bw: (W - kw) / LOOP, rh: (H - top) / ROWS }; }
+    function geo() { const d = cv.d || 1, W = cv.width, H = cv.height, kw = 34 * d, top = 18 * d, lane = narrow.matches ? 50 * d : 0; return { d, W, H, kw, top, lane, ly: H - lane, bw: (W - kw) / LOOP, rh: (H - top - lane) / ROWS }; }
     const rect = (c, G) => ({ x: G.kw + c.beat * G.bw, w: c.dur * G.bw, y: G.top + (HI - highest(c)) * G.rh, h: (highest(c) - lowest(c) + 1) * G.rh });
     function hit(x, y) {
       const G = geo();
@@ -326,17 +332,40 @@
         const c = st.chords[k], r = rect(c, G), pad = 3 * G.d;
         if (x < r.x - pad || x > r.x + r.w + pad || y < r.y - pad || y > r.y + r.h + pad) continue;
         const edge = Math.min(8 * G.d, r.w / 3.5);
-        return { c, zone: x < r.x + edge ? 'start' : x > r.x + r.w - edge ? 'end' : 'move' };
+        return { c, zone: narrow.matches ? 'move' : x < r.x + edge ? 'start' : x > r.x + r.w - edge ? 'end' : 'move' };
       }
       return null;
     }
+    // the trim lane: the selected chord's handles sit just outside its ends (kept on screen at the loop's edges)
+    const HW = 24;
+    const handles = (c, G) => { const r = rect(c, G), hw = HW * G.d; return { x0: r.x, x1: r.x + r.w, hl: Math.max(G.kw, r.x - hw), hr: Math.min(G.W - hw, r.x + r.w), hw }; };
+    function laneHit(x, G) {
+      if (st.sel) {
+        const h = handles(st.sel, G), slop = 6 * G.d;
+        if (x >= h.hl - slop && x <= h.hl + h.hw) return { c: st.sel, zone: 'start' };
+        if (x >= h.hr && x <= h.hr + h.hw + slop) return { c: st.sel, zone: 'end' };
+        if (x > h.x0 && x < h.x1) return { c: st.sel, zone: 'move', timeOnly: true };
+      }
+      const c = st.chords.find(c => { const r = rect(c, G); return x >= r.x - 4 * G.d && x <= r.x + r.w + 4 * G.d; });
+      return c ? { c, zone: 'move', timeOnly: true } : null;
+    }
+    const select = c => { st.sel = c; showSel(); };
+    function showSel() {
+      const c = st.sel;
+      selEl.innerHTML = c ? `<b>${label(c)}</b><small>${Math.floor(c.beat / 4) + 1}.${Math.floor(c.beat % 4) + 1} · ${+c.dur.toFixed(2)} ${c.dur === 1 ? 'beat' : 'beats'}</small>` : '<small>tap a chord</small>';
+    }
+    const first = () => st.chords.find(c => c.beat >= 4) || st.chords[0];   // a chord with room for a handle on each side
+    if (narrow.matches) select(first()); else showSel();
+    narrow.addEventListener && narrow.addEventListener('change', () => { if (narrow.matches && !st.sel) select(first()); });
+    box.st = st;
     const at = e => { const r = cv.getBoundingClientRect(), d = cv.d || 1; return [(e.clientX - r.left) * d, (e.clientY - r.top) * d]; };
     const CURSOR = { move: 'grab', start: 'ew-resize', end: 'ew-resize' };
     let drag = null;
     cv.addEventListener('pointerdown', e => {
-      const [x, y] = at(e), h = hit(x, y); if (!h) return;
+      const [x, y] = at(e), G = geo(), inLane = G.lane && y >= G.ly, h = inLane ? laneHit(x, G) : hit(x, y); if (!h) return;
       cv.setPointerCapture(e.pointerId);
-      drag = { id: e.pointerId, x0: x, y0: y, c: h.c, zone: h.zone, beat0: h.c.beat, dur0: h.c.dur, shift0: h.c.shift };
+      drag = { id: e.pointerId, x0: x, y0: y, c: h.c, zone: h.zone, timeOnly: !!h.timeOnly, beat0: h.c.beat, dur0: h.c.dur, shift0: h.c.shift };
+      if (G.lane) select(h.c);
       st.hover = h; cv.style.cursor = h.zone === 'move' ? 'grabbing' : 'ew-resize';
       if (h.zone === 'move') play(h.c);
     });
@@ -348,11 +377,12 @@
       if (drag.zone === 'move') {
         c.beat = clamp(drag.beat0 + dB, 0, LOOP - c.dur);
         const lo = Math.min(...c.notes), hi = Math.max(...c.notes);
-        const shift = clamp(drag.shift0 - Math.round((y - drag.y0) / G.rh), LO - lo, HI - hi);
+        const shift = drag.timeOnly ? c.shift : clamp(drag.shift0 - Math.round((y - drag.y0) / G.rh), LO - lo, HI - hi);
         if (shift !== c.shift) { c.shift = shift; play(c); }
       } else if (drag.zone === 'start') {
         const end = drag.beat0 + drag.dur0; c.beat = clamp(drag.beat0 + dB, 0, end - Math.min(g0, drag.dur0)); c.dur = end - c.beat;
       } else c.dur = clamp(drag.dur0 + dB, Math.min(g0, drag.dur0), LOOP - c.beat);
+      if (c === st.sel) showSel();
       box.changed();
     });
     const up = e => { if (!drag || drag.id !== e.pointerId) return; drag = null; const [x, y] = at(e), h = e.pointerType === 'mouse' ? hit(x, y) : null; st.hover = h; cv.style.cursor = h ? CURSOR[h.zone] : 'default'; };
@@ -376,13 +406,13 @@
         g.fillStyle = black ? '#0a0a0a' : '#2b2b29'; g.fillRect(0, y + 0.5 * d, kw - 2 * d, rh - d);
         if (n % 12 === 0) { g.fillStyle = '#8d8d87'; g.font = `500 ${9 * d}px "IBM Plex Mono",monospace`; g.textBaseline = 'middle'; g.fillText(noteName(n), 4 * d, y + rh / 2); }
       }
-      for (let b = 0; b <= LOOP; b += 0.5) { const x = Math.round(kw + b * bw); g.fillStyle = b % 4 === 0 ? '#4a4a47' : b % 1 === 0 ? '#262624' : '#1c1c1b'; g.fillRect(x, top, d, H - top); }
+      for (let b = 0; b <= LOOP; b += 0.5) { const x = Math.round(kw + b * bw); g.fillStyle = b % 4 === 0 ? '#4a4a47' : b % 1 === 0 ? '#262624' : '#1c1c1b'; g.fillRect(x, top, d, H - top - G.lane); }
       g.fillStyle = '#0b0b0b'; g.fillRect(0, 0, W, top);
       g.fillStyle = '#d9d9d5'; g.font = `600 ${10 * d}px "IBM Plex Mono",monospace`; g.textBaseline = 'middle';
       for (let k = 0; k < 4; k++) g.fillText(String(k + 1), kw + k * 4 * bw + 4 * d, top / 2);
-      const hv = st.hover && st.hover.c, held = drag && drag.c;
+      const hv = st.hover && st.hover.c, held = drag && drag.c, picked = G.lane ? st.sel : null;
       for (const c of st.chords) {
-        const r = rect(c, G), hot = c === hv || c === held;
+        const r = rect(c, G), hot = c === hv || c === held || c === picked;
         g.fillStyle = hot ? 'rgba(91,143,240,.24)' : 'rgba(47,111,224,.10)'; g.fillRect(r.x, r.y, Math.max(4 * d, r.w - 2 * d), r.h);   // the chord's shading
         for (const n of c.notes) {
           const y = top + (HI - n - c.shift) * rh, w = Math.max(4 * d, r.w - 2 * d);
@@ -396,10 +426,22 @@
         }
         if (r.y - top > 11 * d) { g.fillStyle = hot ? '#fff' : '#8d8d87'; g.font = `500 ${9 * d}px "IBM Plex Mono",monospace`; g.textBaseline = 'bottom'; g.fillText(label(c), r.x + 1 * d, r.y - 2 * d); g.textBaseline = 'middle'; }
       }
-      g.fillStyle = '#fff'; g.fillRect(Math.round(kw + pos * bw), 0, Math.max(1, 1.5 * d), H);
+      if (G.lane) {   // the trim lane, as in the app: every chord as a thin bar, the selected one with a handle at each end
+        const { ly, lane } = G, mid = ly + lane / 2, rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); };
+        g.fillStyle = '#0b0b0b'; g.fillRect(0, ly, W, lane); g.fillStyle = '#2b2b29'; g.fillRect(0, ly, W, d);
+        g.fillStyle = '#8d8d87'; g.font = `600 ${9 * d}px "IBM Plex Mono",monospace`; g.textBaseline = 'middle'; g.fillText('TRIM', 3 * d, mid);
+        for (const c of st.chords) { if (c === st.sel) continue; const r = rect(c, G); g.fillStyle = '#3a3a37'; rr(r.x, mid - 4 * d, Math.max(3 * d, r.w - 2 * d), 8 * d, 4 * d); g.fill(); }
+        if (st.sel) {
+          const h = handles(st.sel, G), hh = lane - 14 * d;
+          g.fillStyle = 'rgba(47,111,224,.45)'; rr(h.x0, mid - 11 * d, h.x1 - h.x0, 22 * d, 6 * d); g.fill();
+          g.strokeStyle = '#fff'; g.lineWidth = 2 * d; rr(h.x0 + d, mid - 10 * d, h.x1 - h.x0 - 2 * d, 20 * d, 6 * d); g.stroke();
+          for (const hx of [h.hl, h.hr]) { g.fillStyle = '#f0f0ec'; rr(hx, mid - hh / 2, h.hw, hh, 7 * d); g.fill(); g.fillStyle = '#131312'; g.fillRect(hx + h.hw / 2 - 3 * d, mid - 7 * d, 2 * d, 14 * d); g.fillRect(hx + h.hw / 2 + d, mid - 7 * d, 2 * d, 14 * d); }
+        }
+      }
+      g.fillStyle = '#fff'; g.fillRect(Math.round(kw + pos * bw), 0, Math.max(1, 1.5 * d), G.lane ? G.ly : H);
     };
     box.isOriginal = () => { const o = original(); return st.chords.every((c, k) => c.beat === o[k].beat && c.dur === o[k].dur && c.shift === 0); };
-    box.reset = () => { st.chords = original(); setPlaying(true); box.changed(); };
+    box.reset = () => { const k = st.sel ? st.chords.indexOf(st.sel) : -1; st.chords = original(); if (st.sel) select(st.chords[k]); setPlaying(true); box.changed(); };
   }
 
   /* ================= 3 · capture mode: tap on / off, hold and drag across the grid for an effect, hold still to lock ================= */
