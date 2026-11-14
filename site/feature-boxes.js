@@ -451,14 +451,14 @@
       const arm = e => { clearTimeout(t.still); t.sx = e.clientX; t.sy = e.clientY; tile.classList.remove('arming'); void tile.offsetWidth; tile.classList.add('arming');
         t.still = setTimeout(() => { if (t && t.active) { st.lock[i] = 1; tile.classList.remove('arming'); apply(); } }, 1200); };
       const start = e => { if (!t || t.active) return; t.active = true; tile.classList.add('touch'); move(e); arm(e); };
-      const move = e => { const a = where(e); st.at[i] = a; cross(a); apply(); if (t && t.active && Math.hypot(e.clientX - t.sx, e.clientY - t.sy) > 6) arm(e); };
+      const move = e => { if (st.lock[i]) return;   /* a locked effect stays put */ const a = where(e); st.at[i] = a; cross(a); apply(); if (t && t.active && Math.hypot(e.clientX - t.sx, e.clientY - t.sy) > 6) arm(e); };
       tile.addEventListener('pointerdown', e => {
         if (t || e.button > 0) return; e.preventDefault(); tile.setPointerCapture(e.pointerId);
         t = { id: e.pointerId, x0: e.clientX, y0: e.clientY, active: false, last: e, sx: e.clientX, sy: e.clientY };
         t.timer = setTimeout(() => start(t.last), 200);   // holding still also starts the effect
       });
       tile.addEventListener('pointermove', e => {
-        if (!t) { if (e.pointerType === 'mouse') cross(where(e), 'hover'); return; }   // the cross follows your mouse over the grid
+        if (!t) { if (e.pointerType === 'mouse' && !st.lock[i]) cross(where(e), 'hover'); return; }   // the cross follows your mouse over the grid
         if (t.id !== e.pointerId) return; t.last = e;
         if (!t.active && Math.hypot(e.clientX - t.x0, e.clientY - t.y0) > 10) start(e);
         if (t.active) move(e);
