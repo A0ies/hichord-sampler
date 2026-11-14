@@ -1841,7 +1841,7 @@ body.studio .tbar .pos b{font-size:26px}
 </section>
 <section class="capmode hidden" id="capMode" aria-label="Capture mode">
   <div class="caphead"><h2>capture mode</h2><span class="hint">tap: on/off · hold and drag: effect · hold still: lock</span>
-    <div class="capsong hidden" id="capSong"><div class="ctl" id="capTl" role="group" aria-label="Song timeline: tap a part to go there after this loop"></div><button class="cauto" id="capAuto" aria-pressed="true">auto</button></div>
+    <div class="capsong hidden" id="capSong"><div class="ctl" id="capTl" role="group" aria-label="Song timeline: tap a part to go there at the end of the bar"></div></div>
     <button class="icon" id="capClose" aria-label="Close capture mode"></button></div>
   <div class="capnext hidden" id="capNext" aria-live="polite"><b id="capNextN"></b><span id="capNextL"></span></div>
   <div class="cgrid" id="cgrid"></div>
@@ -2005,7 +2005,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.107';
+const PAGE_VERSION='2026-11-14.108';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2368,9 +2368,8 @@ function tick(){
   const until = beatAt(ctx.currentTime + 0.2);
   if(until<=schedBeat) return;
   const B=songBoundary(schedBeat, until);   // capture mode moves to the next part on the 1 after the loop
-  if(B!=null){ scheduleRange(schedBeat, B); songAdvance(B); scheduleRange(B, until); }
-  else scheduleRange(schedBeat, until);
-  schedBeat = until;
+  if(B!=null){ scheduleRange(schedBeat, B); const sh=songAdvance(B); scheduleRange(B+sh, until+sh); schedBeat = until+sh; }
+  else { scheduleRange(schedBeat, until); schedBeat = until; }
 }
 setInterval(tick, 25);
 function scheduleRange(a, b){
@@ -5264,11 +5263,15 @@ function spEditClose(){ const ed=$('spEdit'); if(ed.classList.contains('hidden')
 addEventListener('resize',()=>{ if(SPG.open) requestAnimationFrame(renderSongPage); });
 
 /* following the timeline: one block is one pass of the loop */
-const songNext = () => SONG.jump!=null ? SONG.jump : SONG.follow ? (SONG.pos+1)%SONG.order.length : SONG.pos;
-const songActive = () => (CAP.open || SPG.open) && S.playing && (SONG.jump!=null || (SONG.follow && (SONG.order.length>1 || SONG.order[0]!==SONG.cur)));
+// capture mode always plays the tape from part to part (no auto key there); the song page has its own auto
+const songFollow = () => CAP.open || SONG.follow;
+const songNext = () => SONG.jump!=null ? SONG.jump : songFollow() ? (SONG.pos+1)%SONG.order.length : SONG.pos;
+const songActive = () => (CAP.open || SPG.open) && S.playing && (SONG.jump!=null || (songFollow() && (SONG.order.length>1 || SONG.order[0]!==SONG.cur)));
+// capture mode: a part you tap comes in at the end of the bar (from its start); otherwise parts change at the loop's end
+const barJump = () => CAP.open && SONG.jump!=null;
 function songBoundary(a, b){
   if(!songActive()) return null;
-  const L=loopLen(), B=(Math.floor(a/L)+1)*L;
+  const L=loopLen(), step=barJump() ? 4 : L, B=(Math.floor(a/step)+1)*step;
   return B>0 && B<=b && SONG.doneAt!==B ? B : null;
 }
 // what you hear right now: songAdvance runs when the scheduler looks ahead, so until the 1 the previous pass still plays
@@ -5276,12 +5279,15 @@ function songHeard(){
   const ahead = S.playing && ctx && SONG.doneAt!=null && beatAt(ctx.currentTime) < SONG.doneAt && SONG.prevPos!=null;
   return ahead ? {pos:SONG.prevPos, cur:SONG.prevCur, jump:SONG.prevJump, ahead:true} : {pos:SONG.pos, cur:SONG.cur, jump:SONG.jump, ahead:false};
 }
+// returns how many beats the count moved: a jump at the end of a bar starts the new part at its own beat 1,
+// so the beat count skips ahead to the next loop start (whole bars: the grid and the gate stay in step)
 function songAdvance(B){
   SONG.prevPos=SONG.pos; SONG.prevJump=SONG.jump;
   SONG.prevCur=SONG.cur;   // what you hear until the 1 (the scheduler runs a little ahead)
+  const L=loopLen(), sh = mod(B,L) ? Math.ceil(B/L)*L-B : 0;
+  const at=timeAt(B); if(sh) b0+=sh; B+=sh;
   SONG.doneAt=B; const np=songNext(), k=SONG.order[np], changed=k!==SONG.cur;
   SONG.jump=null; SONG.pos=np;
-  const at=timeAt(B);
   if(changed){   // the notes change now (for the scheduler), the layers turn on or off exactly on the 1
     syncPart(); SONG.cur=k; const p=SONG.parts[k];
     layers.forEach((Ly,i)=>{ Ly.events=p.ev[i]||(p.ev[i]=[]); Ly.mute=!!p.mute[i]; ensureChords(Ly);
@@ -5293,18 +5299,17 @@ function songAdvance(B){
     if(changed){ renderCaptureMode(); const g=$('cgrid'); g.classList.remove('slide'); void g.offsetWidth; g.classList.add('slide'); renderParts(); save(); }
     else renderCapSong();
   }, Math.max(0,(at-ctx.currentTime)*1000));
+  return sh;
 }
 function renderCapSong(){
   const show = SONG.parts.length>1 || SONG.order.length>1;
   $('capSong').classList.toggle('hidden',!show); if(!show){ $('capNext').classList.add('hidden'); return; }
   const H=songHeard();
   $('capTl').innerHTML = SONG.order.map((k,n)=>`<button data-tp="${n}" class="${n===H.pos?'now':''} ${k===H.cur?'same':''} ${H.jump===n?'queued':''}" aria-label="${partName(k)}${n===H.pos?', playing':''}">${PART_L(k)}<i></i></button>`).join('');
-  $('capAuto').classList.toggle('on',SONG.follow); $('capAuto').setAttribute('aria-pressed',SONG.follow);
 }
 $('capTl').onclick=e=>{ const b=e.target.closest('[data-tp]'); if(!b) return; const n=+b.dataset.tp;
-  if(S.playing){ SONG.jump = SONG.jump===n ? null : n; renderCapSong(); return; }   // playing: go there after this loop
+  if(S.playing){ if(n===SONG.pos && SONG.jump==null) return; SONG.jump = SONG.jump===n || n===SONG.pos ? null : n; renderCapSong(); return; }   // playing: go there at the end of the bar (tap again to cancel)
   SONG.pos=n; const k=SONG.order[n]; if(k!==SONG.cur){ loadPart(k); const g=$('cgrid'); g.classList.remove('slide'); void g.offsetWidth; g.classList.add('slide'); } else renderCapSong(); };
-$('capAuto').onclick=()=>{ SONG.follow=!SONG.follow; renderCapSong(); save(); toast(SONG.follow?'auto: the timeline plays from part to part':'auto off: this part loops; tap a part to go there'); };
 function capSongFrame(){
   const nx=$('capNext');
   if(!S.playing || !songActive()){ nx.classList.add('hidden'); const i=$('capTl').querySelector('.now i'); if(i && !S.playing) i.style.width='0'; return; }
@@ -5312,7 +5317,7 @@ function capSongFrame(){
   const i=$('capTl').querySelector('.now i'); if(i) i.style.width = b<0 ? '0' : (mod(b,L)/L*100)+'%';
   const ahead = SONG.doneAt!=null && b<SONG.doneAt;   // the switch is scheduled, but not heard yet
   const k = ahead ? SONG.order[SONG.pos] : SONG.order[songNext()], from = ahead ? SONG.prevCur : SONG.cur;
-  const left=(Math.floor(Math.max(b,0)/L)+1)*L-b;
+  const step = !ahead && barJump() ? 4 : L, left = ahead ? SONG.doneAt-b : (Math.floor(Math.max(b,0)/step)+1)*step-b;
   if(b>=0 && k!==from && left<=4){
     const n=String(Math.ceil(left)); if($('capNextN').textContent!==n) $('capNextN').textContent=n;
     const l=`next: ${partName(k)}`; if($('capNextL').textContent!==l) $('capNextL').textContent=l;
