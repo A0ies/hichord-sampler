@@ -383,8 +383,7 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .spkey{min-width:44px;min-height:44px;height:44px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;text-transform:lowercase}
 .spkey::before,.spkey.on::before{display:none}
 .spkey svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-.songpg .spplay{background:var(--dark-key);color:var(--dark-key-ink)} .spplay svg{fill:currentColor;stroke:none;width:16px;height:16px}
-.songpg .spplay.on{background:var(--dark-key);color:var(--enc2)}
+.spclose svg{width:20px;height:20px}
 .spbody{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
 .spscreen{background:var(--screen);color:var(--screen-ink);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0;flex:1 1 auto;box-sizing:border-box}
 .spnow{display:flex;align-items:baseline;gap:8px;font-family:var(--mono);flex:none}
@@ -1823,10 +1822,9 @@ body.studio .tbar .pos b{font-size:26px}
      Drag a pad onto the tape to add it; hold a block on the tape and drag it to move it, or onto "remove" -->
 <section class="songpg hidden" id="songPg" aria-label="Song">
   <div class="sphead">
-    <button class="spkey" id="spBack" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <h2>song <small id="spStats"></small></h2>
     <span class="sptip" id="spTip">drag a part onto the tape · tap a block to go there · hold a part to name, copy or remove</span>
-    <button class="spkey spplay" id="spPlay" aria-label="Play the song"><svg viewBox="0 0 24 24" id="spPlayIcon" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></button>
+    <button class="spkey spclose" id="spClose" aria-label="Close the song page"></button>
   </div>
   <div class="spbody">
     <div class="spscreen">
@@ -2006,7 +2004,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.113';
+const PAGE_VERSION='2026-11-14.114';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -4031,7 +4029,6 @@ function renderTransport(){
   $('playBtn').classList.toggle('on',S.playing);
   $('playIcon').innerHTML = $('capPlayIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1"/>' : '<path d="M7 4l13 8-13 8z"/>';
   $('capPlay').classList.toggle('on',S.playing);
-  if($('spPlayIcon')){ $('spPlayIcon').innerHTML=$('playIcon').innerHTML; $('spPlay').classList.toggle('on',S.playing); }
   $('recBtn').classList.toggle('on',S.rec);
   $('recNum').textContent=S.sel+1; $('recBtn').style.setProperty('--lc',`var(--l${S.sel})`);
   $('recBtn').setAttribute('aria-label',`Record into layer ${S.sel+1} (R)`);
@@ -4964,6 +4961,7 @@ function frame(){
   if(PRJ.pend.size) document.querySelectorAll('.pundo').forEach(b=>{ const z=PRJ.pend.get(b.dataset.undo); if(z) b.firstElementChild.style.transform=`scaleX(${Math.max(0,z.until-Date.now())/UNDO_MS})`; });   // restore badges drain
   if(SPG.open) spFrame();
   if(CAP.open){ drawCapRec(); capSongFrame(); }
+  else if(SPG.open) drawCapRec();
   else if(ctx && layerSheetShown()) drawPreview();
   requestAnimationFrame(frame);
 }
@@ -5087,10 +5085,11 @@ var SPG={ open:false, view:0, drag:null, press:null, noClick:false };
 function openSongPage(){
   closeSheets(); if(ED.open && !ED.dock) closeEditor();
   SPG.open=true; SONG.pos=SONG.order.indexOf(SONG.cur); SONG.jump=null; SPG.view=Math.max(0,SONG.pos);
-  document.body.classList.add('songopen'); $('songPg').classList.remove('hidden'); renderSongPage(); renderTransport();
+  capRecTo('song'); document.body.classList.add('songopen'); $('songPg').classList.remove('hidden'); renderSongPage(); renderTransport();
 }
 function closeSongPage(){
   spDragEnd(true); spEditClose(); SPG.open=false; SONG.jump=null;
+  if(bouncer) bouncer.stop(); capRecTo('cap');   // leaving the song page saves a running output recording
   document.body.classList.remove('songopen'); $('songPg').classList.add('hidden');
   renderParts(); renderLayers(); renderDetail(); drawAll();
 }
@@ -5260,8 +5259,12 @@ $('spPads').addEventListener('click',e=>{ if(SPG.noClick) return;
   const b=e.target.closest('.sppad[data-k]'); if(b) toast('drag it onto the tape · hold for name, copy or remove');
 });
 $('spPads').addEventListener('contextmenu',e=>e.preventDefault()); $('spTape').addEventListener('contextmenu',e=>e.preventDefault());
-$('spBack').onclick=closeSongPage;
-$('spPlay').onclick=()=>{ if(!ctx) return; if(S.playing){ stopTransport(); SONG.jump=null; } else { SONG.pos=SONG.pos<0 ? SONG.order.indexOf(SONG.cur) : SONG.pos; startTransport(false); } spFrame(true); };
+$('spClose').innerHTML=ic('close',''); $('spClose').onclick=closeSongPage;
+// play on the song page: from the pass you are on
+function spPlayToggle(){ if(!ctx) return; if(S.playing){ stopTransport(); SONG.jump=null; } else { SONG.pos=SONG.pos<0 ? SONG.order.indexOf(SONG.cur) : SONG.pos; startTransport(false); } spFrame(true); }
+/* the song page has capture mode's bottom bar (play, rec out, time, level): the one bar moves to whichever is open */
+const CAPREC_HOME={parent:$('capRec').parentElement, next:$('capRec').nextSibling};
+function capRecTo(where){ const b=$('capRec'); if(where==='song') $('songPg').appendChild(b); else CAPREC_HOME.parent.insertBefore(b, CAPREC_HOME.next); }
 // hold a pad: name, copy, remove
 function spEditOpen(k){
   const ed=$('spEdit'), p=SONG.parts[k];
@@ -6210,7 +6213,7 @@ $('doubleBtn').onclick=doubleLoop;
 $('metroChk').onchange=e=>{ S.metro=e.target.checked; save(); };
 $('countChk').onchange=e=>{ S.countIn=e.target.checked; save(); };
 $('capRecBtn').onclick=toggleBounce;
-$('capPlay').onclick=()=>$('playBtn').onclick();
+$('capPlay').onclick=()=>SPG.open ? spPlayToggle() : $('playBtn').onclick();
 $('hcConnect').onclick=hcConnect;
 $('fileIn').onchange=e=>{ const f=e.target.files[0]; if(f) loadFile(f); e.target.value=''; };
 $('themeBtn').onclick=()=>{ const r=document.documentElement, dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
