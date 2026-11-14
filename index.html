@@ -1993,7 +1993,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.98';
+const PAGE_VERSION='2026-11-14.99';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5391,10 +5391,13 @@ function capWire(grid, capEl, rerender){
     t.at={x, y, y0:t.y0, fx:px/r.width, fy:py/r.height, label};
     if(CAP.lock.has(t.i)) CAP.lock.set(t.i, t.at);   // a locked pad you touch again moves its lock
     if(!t.ready && !none){ if(!t.sx || Math.hypot(e.clientX-t.sx[0], e.clientY-t.sx[1])>12) arm(t,e); } };
-  // holding still: the ring fills for 2 s, then the lock key appears (it locks only when you press it)
+  // holding still: the ring fills for 2 s, then the lock key appears (it locks only when you press it).
+  // With a mouse in the web app there is no second hand for the key: a full ring locks at once.
   const arm=(t,e)=>{ t.sx=[e.clientX,e.clientY]; clearTimeout(t.st);
     t.el.classList.remove('arming'); void t.el.offsetWidth; t.el.classList.add('arming');
-    t.st=setTimeout(()=>{ t.ready=true; t.el.classList.remove('arming'); if(!CAP.lock.has(t.i)) setLockKey(t.el,false); t.el.classList.add('lockable'); if(navigator.vibrate) navigator.vibrate(12); }, 2000); };
+    t.st=setTimeout(()=>{ t.ready=true; t.el.classList.remove('arming');
+      if(t.mouse && t.at){ CAP.lock.set(t.i, t.at); CAP.lastLock=t.i; t.el.classList.add('locked'); setLockKey(t.el,true); return; }
+      if(!CAP.lock.has(t.i)) setLockKey(t.el,false); t.el.classList.add('lockable'); if(navigator.vibrate) navigator.vibrate(12); }, 2000); };
   const start=(t,e)=>{ if(t.active) return; t.active=true; clearTimeout(t.timer); t.el.classList.add('touch'); if(navigator.vibrate) navigator.vibrate(8); apply(t, t.last||e); };
   // the lock key: press with another finger to lock what you hold, press a locked one to release it
   const lockKey=(i)=>{ const el=grid.querySelector(`.ctile[data-i="${i}"]`), Ly=layers[i]; if(!el) return;
@@ -5436,7 +5439,7 @@ function capWire(grid, capEl, rerender){
     if(capEl.querySelector('.cfxmenu')){ capEl.querySelector('.cfxmenu').remove(); e.preventDefault(); return; }
     const el=e.target.closest('.ctile'); if(!el) return; e.preventDefault();
     try{ el.setPointerCapture(e.pointerId); }catch(err){}
-    const i=+el.dataset.i, t={el, i, x0:e.clientX, cy0:e.clientY, y0:0, active:false, last:e}; t.y0=where(t,e)[1];
+    const i=+el.dataset.i, t={el, i, x0:e.clientX, cy0:e.clientY, y0:0, active:false, last:e, mouse:e.pointerType==='mouse' && !inApp()}; t.y0=where(t,e)[1];
     t.timer=setTimeout(()=>start(t), 200);   // holding still also starts the effect
     CAP.touch.set(e.pointerId, t);
   });
@@ -6054,7 +6057,8 @@ function renderFabs(){
   const showUndo = !CAP.open && !full, showRedo = !CAP.open && !full && studio && sf!=='st';
   const held=[...CAP.touch.values()].some(t=>t.active && t.ready && t.at && !CAP.lock.has(t.i));
   const tgt=lockTarget(), locked = tgt!=null && CAP.lock.has(tgt) && !held;
-  const lockState = !pads ? 'none' : held ? 'arm' : locked ? 'on' : 'idle';
+  const mouseHold=[...CAP.touch.values()].some(t=>t.mouse && t.active);   // the web app with a mouse: no lock key while you hold
+  const lockState = !pads || mouseHold ? 'none' : held ? 'arm' : locked ? 'on' : 'idle';
   const undoOff = full ? !ED.hist.length : (!HIST.undo.length && !saveT), redoOff = full ? !ED.fut.length : !HIST.redo.length;
   const bottom = full ? ($('editor').querySelector('.edbar').offsetHeight+12)+'px' : (pads && fabLift) || '';
   // iPad landscape, pad in full screen: the pad sits on the right, so the stack moves to its bottom-left corner
