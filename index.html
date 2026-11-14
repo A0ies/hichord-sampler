@@ -611,6 +611,12 @@ body:not(.studio) .ownsnd .instdef .lbl{display:inline}
 /* instrument picker */
 .inst{border-radius:12px;text-transform:lowercase;font-size:12px;gap:8px;min-height:88px}
 .inst .ii{width:28px;height:28px}
+@media (max-width:639px){ .instgrid:has(.hcxrow){gap:8px} .instgrid:has(.hcxrow) .inst:not(.hcx){min-height:70px;padding:9px 6px;gap:6px} }
+.instgrid .hcxrow{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.instgrid .hcxrow>span{width:100%;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+.instgrid .hcxrow .inst{min-height:36px;padding:6px 11px;border-radius:9px;flex-direction:row;font-size:12px}
+@media (max-width:639px) and (max-height:760px){ .instgrid:has(.hcxrow){grid-template-columns:repeat(4,minmax(0,1fr));gap:6px} .instgrid:has(.hcxrow) .inst:not(.hcx){min-height:58px;padding:6px 3px;gap:4px;font-size:11px} .instgrid .hcxrow .inst{min-height:30px;padding:4px 9px} }
+@media (orientation:landscape) and (max-height:500px){ .instgrid:has(.hcxrow){gap:6px} .instgrid:has(.hcxrow) .inst:not(.hcx){min-height:56px;padding:6px 4px;gap:4px} .instgrid .hcxrow>span{width:auto;margin-right:4px} .instgrid .hcxrow .inst{min-height:30px;padding:4px 9px} }
 .ii{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 /* transport: dark keys and a small black display */
 .tbar{background:var(--panel);border-top:none;box-shadow:0 -1px 0 var(--line)}
@@ -1896,7 +1902,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.77';
+const PAGE_VERSION='2026-11-14.78';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3929,9 +3935,12 @@ $('menuList').onclick=e=>{
   else if(k==='remove') removeLayer();
 };
 function renderInstGrid(){
-  $('instGrid').innerHTML = instKeys().map(k=>`<button class="inst${isHcx(k)?' hcx':''}" data-k="${k}">${INST_ICON[k]}${instLabel(k,S.hcInst)}</button>`).join('')
+  // the extra HiChord sounds as one row of small keys under the rest, so the sheet doesn't grow past the screen
+  const ks=instKeys(), hx=ks.filter(isHcx);
+  $('instGrid').innerHTML = ks.filter(k=>!isHcx(k)).map(k=>`<button class="inst" data-k="${k}">${INST_ICON[k]}${instLabel(k,S.hcInst)}</button>`).join('')
     + `<button class="inst own" data-own="file" aria-label="New layer from an audio file in Files">${ic('upload')}audio file</button>`
-    + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New layer from the microphone">${ic('mic')}<span class="ml">microphone</span><span class="micmeter"><i></i></span></button>`;
+    + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New layer from the microphone">${ic('mic')}<span class="ml">microphone</span><span class="micmeter"><i></i></span></button>`
+    + (hx.length ? `<div class="hcxrow"><span>More HiChord sounds</span>${hx.map(k=>`<button class="inst hcx" data-k="${k}">${escH(instLabel(k,S.hcInst))}</button>`).join('')}</div>` : '');
   renderNewMic();
 }
 renderInstGrid();
