@@ -1030,7 +1030,8 @@ body.projopen .pbar{display:none}
 .ctile .cring circle{fill:none;stroke:var(--lc);stroke-width:4;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100}
 .ctile.arming .cring{display:block}
 .ctile.arming .cring circle{animation:cring 1s linear forwards}
-.ctile.lockring .cring{display:block} .ctile.lockring .cring circle{stroke-dashoffset:0}   /* web app with a mouse: a full ring = locked */
+.ctile.lockring .cring,.ctile.lockable .cring,.ctile.locked .cring{display:block}
+.ctile.lockring .cring circle,.ctile.lockable .cring circle,.ctile.locked .cring circle{stroke-dashoffset:0}   /* full ring: the lock key pulses, or the effect is locked */
 @keyframes cring{to{stroke-dashoffset:0}}
 .ctile .clock{position:absolute;right:8px;bottom:8px;z-index:2;display:none;pointer-events:auto;touch-action:none;min-height:0;height:44px;min-width:104px;padding:0 16px;gap:6px;align-items:center;
   border-radius:999px;font-size:13px;justify-content:center;box-shadow:inset 0 0 0 2px var(--lc);animation:clockpulse 1s ease-in-out infinite}
@@ -2004,7 +2005,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.104';
+const PAGE_VERSION='2026-11-14.105';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5452,7 +5453,7 @@ function capTile(Ly,i,roll,extra=''){ return `
       <div class="cfx">${CAP.lock.has(i) ? CAP.lock.get(i).label : capHow(Ly)}</div>
       <i class="cdot" ${CAP.lock.has(i)?`style="left:${CAP.lock.get(i).fx*100}%;top:${CAP.lock.get(i).fy*100}%"`:''}></i>
       <button class="clock" data-lock="${i}">${lockLabel(CAP.lock.has(i))}</button>
-      <svg class="cring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" pathLength="100"/></svg>
+      <svg class="cring" viewBox="0 0 64 64" aria-hidden="true" ${CAP.lock.has(i)?`style="left:${CAP.lock.get(i).fx*100}%;top:${CAP.lock.get(i).fy*100}%"`:''}><circle cx="32" cy="32" r="29" pathLength="100"/></svg>
     </div>`; }
 function lockLabel(on){ return ic('lock','')+(on?'locked ×':'lock'); }
 function setLockKey(el, on){ const b=el.querySelector('.clock'); b.innerHTML=lockLabel(on);
