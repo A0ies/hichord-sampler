@@ -58,7 +58,7 @@ img,video{display:block;max-width:100%}
 @keyframes ping{0%{box-shadow:0 0 0 0 rgba(0,166,81,.55)}80%,100%{box-shadow:0 0 0 10px rgba(0,166,81,0)}}
 h1{font-size:clamp(46px,9.4vw,164px);line-height:.92;letter-spacing:-.045em;font-weight:700;margin:0 auto}
 h1 .it{font-size:1.12em;color:var(--acc)}
-.lead{font-size:clamp(17px,1.6vw,22px);color:var(--dim);max-width:34em;margin:28px auto 34px}
+.lead{font-size:clamp(17px,1.6vw,22px);color:var(--dim);max-width:34em;margin:28px auto 34px;text-wrap:pretty}   /* no word on its own on the last line */
 .cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
 .need{font:13px var(--mono);color:var(--dim);margin:16px 0 0;white-space:nowrap;
   font-size:min(13px,calc((100vw - 2 * var(--gut)) / 30))}   /* one line on every phone: the 48 mono characters scale down to fit */
@@ -351,7 +351,7 @@ footer p{margin:0;max-width:52em}
   <div class="wrap">
     <div class="eyebrow rv"><span class="dot"></span>free · for the HiChord pocket synth</div>
     <h1 class="rv d1">Just turn it on<br>and <span class="it">play</span></h1>
-    <p class="lead rv d2">Play chords on your HiChord and the app loops them. Stack up layers, change any note while it plays, and shape your loops into a song.</p>
+    <p class="lead rv d2">Play chords on your HiChord and the app loops them. Stack up layers, change any note while it plays, and shape your loops into&nbsp;a&nbsp;song.</p>
     <div class="cta rv d3">
       <a class="btn primary" href="https://a0ies.github.io/hichord-sampler/">Open the app →</a>
       <a class="btn ghost" href="#video">Watch the demo</a>
