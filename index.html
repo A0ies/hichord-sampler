@@ -519,6 +519,7 @@ ol.hcsdo{margin:2px 0 6px;padding-left:18px;line-height:1.8;color:var(--ink)}
 .hcsfoot .row button:disabled{opacity:.45}
 .hcsrun{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px}
 .hcsnow{display:flex;flex-direction:column;justify-content:center;gap:12px}
+.hcskit .hcskitn{font-family:var(--mono);color:var(--dim)} .hcskit ol.hcsdo{font-size:13px} .hcskit .hcsgo{min-height:48px;align-self:flex-start;padding:0 18px}
 .hcsbig{font-family:var(--sans);font-size:clamp(28px,5.5vw,52px);font-weight:600;line-height:1.05;letter-spacing:-.01em;overflow-wrap:anywhere}
 .hcsstrip{display:grid;grid-template-columns:repeat(21,minmax(0,1fr));gap:3px}
 .hcsstrip i{height:22px;border-radius:3px;background:var(--line)} .hcsstrip i.ok{background:var(--ok)} .hcsstrip i.now{background:var(--acc)}
@@ -531,6 +532,12 @@ ol.hcsdo{margin:2px 0 6px;padding-left:18px;line-height:1.8;color:var(--ink)}
 .hcskeep{flex:1;color:var(--dim)}
 .hcsend{width:min(640px,100%);margin:auto;display:flex;flex-direction:column;gap:12px;min-height:0}
 .hcsend .hcslist{padding:12px}
+/* phones: the sounds as chips that wrap, so all of them fit */
+@media (max-width:639px), (orientation:landscape) and (max-height:500px){
+  .hcs.full .hcsgrid{display:flex;flex-wrap:wrap;gap:4px}
+  .hcs.full .hcst{flex:0 0 auto;min-height:30px;padding:3px 20px 3px 9px;border-radius:8px} .hcs.full .hcst small{display:none}
+  .hcs.full .hcst.kept::after{top:50%;transform:translateY(-50%);right:6px}
+}
 /* tall and narrow (iPad upright): the steps above the sounds */
 @media (max-width:899px) and (min-height:1000px){
   .hcsetup{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
@@ -547,7 +554,7 @@ ol.hcsdo{margin:2px 0 6px;padding-left:18px;line-height:1.8;color:var(--ink)}
 @media (max-width:520px){
   .hcsteps,.hcsounds,.hcsnow,.hcs.full .hcslist{padding:12px}
   .hcsgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
-  .hcst{min-height:40px;padding:4px 18px 4px 8px} .hcst b{font-size:11px} .hcst small{font-size:9px}
+  .hcst{min-height:36px;padding:3px 18px 3px 8px} .hcst b{font-size:11px} .hcst small{font-size:9px}
   .hcst.kept::after{right:6px}
 }
 /* small phones (iPhone SE) upright: a size smaller */
@@ -619,6 +626,7 @@ body:not(.studio) .ownsnd .instdef .lbl{display:inline}
 #instGrid .igtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
 #instGrid .igtiles .inst{min-height:54px;padding:6px 4px;gap:4px;font-size:11px;border-radius:10px;line-height:1.15}
 #instGrid .igtiles .inst .ii{width:22px;height:22px}
+@media (max-width:639px){ #instGrid .igtiles{gap:5px} #instGrid .igtiles .inst{min-height:48px;padding:5px 3px;gap:3px} #instGrid .igtiles .inst .ii{width:20px;height:20px} }
 #instGrid .ownrow{display:flex;align-items:center;gap:8px;margin-top:3px;padding-top:9px;border-top:1px solid var(--line)}
 #instGrid .ownrow>span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);white-space:nowrap}
 #instGrid .ownrow .inst.own{flex:1;flex-direction:row;justify-content:center;min-height:44px;padding:6px 10px;gap:8px;border-radius:999px;
@@ -629,7 +637,7 @@ body:not(.studio) .ownsnd .instdef .lbl{display:inline}
 /* small phones: no group names (the gaps keep the groups apart) */
 /* small phones (iPhone SE): the keys as chips, icon beside the name */
 @media (max-width:639px) and (max-height:700px){
-  #instGrid{gap:5px} #instGrid .igrp h4{margin-bottom:2px}
+  #instGrid{gap:9px} #instGrid .igrp h4{display:none}
   #instGrid .igtiles{display:flex;flex-wrap:wrap;gap:4px}
   #instGrid .igtiles .inst{flex-direction:row;min-height:30px;padding:4px 9px 4px 7px;gap:5px;border-radius:8px}
   #instGrid .igtiles .inst .ii{width:17px;height:17px}
@@ -637,7 +645,7 @@ body:not(.studio) .ownsnd .instdef .lbl{display:inline}
 }
 /* phone on its side: the groups side by side, the keys as small chips */
 @media (orientation:landscape) and (max-height:500px){
-  #instGrid{flex-direction:row;flex-wrap:wrap;gap:6px 14px}
+  #instGrid{flex-direction:row;flex-wrap:wrap;gap:8px 18px} #instGrid .igrp h4{display:none}
   #instGrid .igtiles{display:flex;flex-wrap:wrap;gap:5px}
   #instGrid .igtiles .inst{flex-direction:row;min-height:32px;padding:4px 9px 4px 7px;gap:5px;border-radius:8px}
   #instGrid .igtiles .inst .ii{width:17px;height:17px}
@@ -1941,7 +1949,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.85';
+const PAGE_VERSION='2026-11-14.86';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2097,17 +2105,19 @@ function updateDelayTime(){ if(ctx) delay.delayTime.setTargetAtTime(clamp(S.dlyD
 
 /* ============ layers ============ */
 const DEFAULT_INST = ['keys','bass','pad','drums','guitar','strings','horns','lead'];
+// the drums and the HiChord's other drum kits (their fallback is the drums)
+const isDrum = k => k==='drums' || !!(typeof LIB!=='undefined' && LIB[k] && LIB[k].fb==='drums');
 function newLayerData(i){
   const inst=DEFAULT_INST[i]||'keys', L=LIB[inst];
   return { inst, customName:null, root:60, snd:SOUND_VERSION, events:[], takes:0,
-    q: inst==='drums'?'1/16':'off', strength:1, swing:0, nudge:0, gate:1, oct:0, semis:0, humanize:0,
+    q: isDrum(inst)?'1/16':'off', strength:1, swing:0, nudge:0, gate:1, oct:0, semis:0, humanize:0,
     a:L.a, d:0.4, s:1, r:L.r, cutoff:1, reso:0.1, vol:0.8, pan:0, rev: inst==='pad'||inst==='strings'?0.35:0.18, dly:0, mute:false, solo:false,
     fx:null, cfx:null,   // capture effects: filled in by capFx (a list of {k, v})
     out:'app',   // 'app' = the app's instrument, 'hc' = the HiChord plays it, 'both'
     hc: undefined,   // HiChord instrument for this layer: true/false, or undefined to follow Settings → Sync
     gateDiv: 4,   // the gate's note: chops per beat (1 = 1/4, 2 = 1/8, 4 = 1/16, 8 = 1/32, 3 = 1/8t, 6 = 1/16t)
     fxs: [],   // effects that stay on: [{k, v}] with v from 0 to 1
-    fx: inst==='drums' ? 'gate' : 'lp',   // what holding and dragging this layer does in capture mode
+    fx: isDrum(inst) ? 'gate' : 'lp',   // what holding and dragging this layer does in capture mode
     shown:false };   // layers appear in the list once you add them
 }
 function attachNodes(Ly){
@@ -2124,7 +2134,7 @@ function attachNodes(Ly){
   applyLayer(Ly);
 }
 function setInstrument(Ly, key, keepEnv){
-  Ly.inst=key; Ly.customName=null; Ly.mode = key==='drums' ? 'kit' : 'melodic'; Ly.slices=null;
+  Ly.inst=key; Ly.customName=null; Ly.mode = isDrum(key) ? 'kit' : 'melodic'; Ly.slices=null;
   const sk=sndKey(key); Ly.buffer = SND[sk] ? SND[sk].buffer : null;
   if(!SND[sk]) loadSound(sk).catch(()=>{});
   if(!keepEnv){ Ly.a=LIB[key].a; Ly.d=0.4; Ly.s=1; Ly.r=LIB[key].r; }
@@ -2375,7 +2385,7 @@ function recBeat(){ const lat=(ctx.outputLatency||0)+(ctx.baseLatency||0); retur
    drums play one drum per chord key: I kick, II snare, III hat, IV open hat, V tom, VI perc, VII crash.
    The HiChord's drum pads (channel 10) are single hits already, and can hit two pads at once. */
 const MONO_INST=new Set(['bass','ebass','drums']);
-const monoLayer = (Ly, ch) => MONO_INST.has(Ly.inst) && !(Ly.inst==='drums' && ch===10);
+const monoLayer = (Ly, ch) => (MONO_INST.has(Ly.inst) || isDrum(Ly.inst)) && !(isDrum(Ly.inst) && ch===10);
 const DRUM_GM=[36,38,42,46,49,45,56];          // kit zone -> GM drum note
 const DEG_ZONE=[0,1,1,2,2,3,3,5,6,6,4,4];      // semitones above the key -> kit zone
 function chordRoot(ns){
@@ -2388,7 +2398,7 @@ function chordRoot(ns){
 }
 function monoTarget(Ly, ns){
   const lo=Math.min(...ns), r=chordRoot(ns);
-  if(Ly.inst==='drums') return DRUM_GM[DEG_ZONE[mod(r-(HC.state.key??0),12)]] - 12*Ly.oct;
+  if(isDrum(Ly.inst)) return DRUM_GM[DEG_ZONE[mod(r-(HC.state.key??0),12)]] - 12*Ly.oct;
   return lo - mod(lo-r,12);
 }
 function swapQ(m,k,old,nw){ const a=m.get(k); if(!a) return; const i=a.lastIndexOf(old); if(i>=0) a[i]=nw; }
@@ -2557,18 +2567,23 @@ const HC_PRESETS=[[0,'Sine'],[1,'Saw'],[2,'Triangle'],[3,'Square'],[4,'FM EPiano
 const HC_SOUND = {};   // 'hc14' -> 'Piano'
 HC_PRESETS.forEach(([p,n])=>{ if(p!==25 && p!==26) HC_SOUND['hc'+p]=n; });
 // the HiChord's drum kit: not a preset but its drum pads (GM notes on channel 10), kept under a number no preset uses
-const HC_DRUMS='hc99'; HC_SOUND[HC_DRUMS]='Drum kit';
+const HC_DRUMS='hc99'; HC_SOUND[HC_DRUMS]='Tight kit';
+// the HiChord's six drum kits (Rev 3.0): no MIDI message picks one, so the app asks you to switch before each.
+// [key, name, chord button that picks it in Drum mode, name on the HiChord's screen]
+const HC_KITS = [['hc99','Tight kit',1,'TIGHTKIT'],['hc94','x0x Box',2,'x0x BOX'],['hc95','x9x Box',3,'x9x BOX'],['hc96','Lynn Kit',4,'LYNN KIT'],['hc97','KR-78',5,'KR-78'],['hc98','Trap Box',6,'TRAP BOX']];
+HC_KITS.forEach(([k,n])=>{ HC_SOUND[k]=n; });
+const isKit = k => HC_KITS.some(x=>x[0]===k);
 const HC_INST = { piano:[14,'Piano'], keys:[35,'Tine EP'], strings:[9,'Strings'], horns:[13,'Brass'], guitar:[12,'Acoustic'],
-  lead:[1,'Saw'], square:[3,'Square'], pad:[17,'Vox Ahh'], ebass:[2,'Triangle'], bass:[27,'SawSquare'], drums:[99,'Drum kit'] };
+  lead:[1,'Saw'], square:[3,'Square'], pad:[17,'Vox Ahh'], ebass:[2,'Triangle'], bass:[27,'SawSquare'], drums:[99,'Tight kit'] };
 // the other HiChord sounds become instruments: key 'hc<preset>', played from the sample; on a device without it, the open-source fallback plays
-const HC_EXTRA = { hc0:'pad', hc4:'keys', hc6:'lead', hc10:'horns', hc15:'keys', hc18:'keys', hc19:'guitar', hc21:'pad',
+const HC_EXTRA = { hc94:'drums', hc95:'drums', hc96:'drums', hc97:'drums', hc98:'drums', hc0:'pad', hc4:'keys', hc6:'lead', hc10:'horns', hc15:'keys', hc18:'keys', hc19:'guitar', hc21:'pad',
   hc22:'lead', hc23:'lead', hc24:'horns', hc29:'pad', hc33:'square', hc34:'horns' };
 Object.entries(HC_EXTRA).forEach(([k,fb])=>{ LIB[k]={ name:HC_SOUND[k], a:0.002, r:LIB[fb].r, hcx:+k.slice(2), fb }; });
 const isHcx = k => !!(LIB[k] && LIB[k].hcx!=null);
 const sndKey = k => (LIB[k] && LIB[k].fb) || k;   // which bundled sound file plays it
 const hcKeyOf = k => HC_INST[k] ? 'hc'+HC_INST[k][0] : isHcx(k) ? k : null;   // which HiChord sound belongs to an instrument
 const HCI = {};   // 'hc14' -> {buffer, zones, kind} once sampled
-const HCI_ALL = [...Object.values(HC_INST).map(v=>'hc'+v[0]), ...Object.keys(HC_EXTRA)];
+const HCI_ALL = [...Object.values(HC_INST).map(v=>'hc'+v[0]), ...Object.keys(HC_EXTRA)].filter(k=>!isKit(k)).concat(HC_KITS.map(x=>x[0]));   // the kits last: they need you at the HiChord
 try{ S.hcInst = localStorage.getItem('hcl-hcinst')==='1'; }catch(e){ S.hcInst=false; }
 const hcWants = Ly => !!(Ly && HC_INST[Ly.inst] && (Ly.hc ?? S.hcInst));
 const hcOn = Ly => !!Ly && (isHcx(Ly.inst) ? !!HCI[Ly.inst] : hcWants(Ly) && !!HCI[hcKeyOf(Ly.inst)]);
@@ -2850,8 +2865,8 @@ const hcsKey = () => HCS && HCS.queue ? HCS.queue[HCS.qi] : null;
 const HCS_PER = HCS_NOTES.length*HCS_STEP + 3;   // seconds per sound, with switching and cutting
 // what to play: a melodic sound note by note on channel 1; the drum kit one hit per kit zone on channel 10
 const DRUM_NAMES=['kick','snare','closed hat','open hat','crash','tom','cowbell'];
-const hcsPlan = k => k===HC_DRUMS ? { notes:DRUM_GM, step:2, on:0.25, st:0x99, vel:110, names:DRUM_NAMES } : { notes:HCS_NOTES, step:HCS_STEP, on:HCS_ON, st:0x90, vel:HCS_VEL, names:null };
-const hcsSecs = k => k===HC_DRUMS ? DRUM_GM.length*2+3 : HCS_PER;
+const hcsPlan = k => isKit(k) ? { notes:DRUM_GM, step:2, on:0.25, st:0x99, vel:110, names:DRUM_NAMES } : { notes:HCS_NOTES, step:HCS_STEP, on:HCS_ON, st:0x90, vel:HCS_VEL, names:null };
+const hcsSecs = k => isKit(k) ? DRUM_GM.length*2+8 : HCS_PER;
 const hcsMins = ks => Math.max(1, Math.round(ks.reduce((a,k)=>a+hcsSecs(k),0)/60));
 const hcsSync = () => !!(HCS && HCS.pick);
 // the HiChord's own keys and joystick, as they look and are named on the device
@@ -2860,7 +2875,7 @@ const hk = (c,t) => `<span class="hk ${c}">${t}</span>`, jy = t => `<span class=
 function hcsSetup(err){
   const H=HCS, picked=HCI_ALL.filter(k=>H.pick.has(k)), n=picked.length;
   const tile = k => `<button class="hcst${H.pick.has(k)?' sel':''}${HCI[k]?' kept':''}" data-k="${k}" aria-pressed="${H.pick.has(k)}"${H.one?' disabled':''}><b>${escH(HC_SOUND[k])}</b>${(()=>{ const e=Object.entries(HC_INST).find(([,v])=>'hc'+v[0]===k); return e?`<small>for ${escH(LIB[e[0]].name)}</small>`:''; })()}</button>`;
-  const inst=Object.values(HC_INST).map(v=>'hc'+v[0]), more=Object.keys(HC_EXTRA);
+  const inst=Object.values(HC_INST).map(v=>'hc'+v[0]).filter(k=>!isKit(k)), more=Object.keys(HC_EXTRA).filter(k=>!isKit(k)), kits=HC_KITS.map(x=>x[0]);
   const group=(t,ks)=>{ ks=ks.filter(k=>!H.one||H.pick.has(k)); return ks.length?`<h4>${t}</h4><div class="hcsgrid">${ks.map(tile).join('')}</div>`:''; };
   $('hcsBox').innerHTML=`<header class="hcshead"><h3>${H.one?`Sample the HiChord's ${escH(HC_SOUND[picked[0]])}`:'Sample the HiChord sounds'}</h3>
       <button id="hcsCancel" class="icon" aria-label="${H.done.length?'Stop here':'Close'}">✕</button></header>
@@ -2884,7 +2899,7 @@ function hcsSetup(err){
       </section>
       <section class="hcsounds" aria-label="Sounds to sample">
         ${H.one?'':`<div class="hcspick"><span>${n} of ${HCI_ALL.length} picked</span><button id="hcsAll">all</button><button id="hcsMiss">missing</button><button id="hcsNone">none</button></div>`}
-        <div class="hcsgroups">${group("For the app's instruments",inst)}${group('More HiChord sounds',more)}</div>
+        <div class="hcsgroups">${group("For the app's instruments",inst)}${group('More HiChord sounds',more)}${group('Drum kits · you switch each on the HiChord',kits)}</div>
         <div class="hcsfoot">
           <p>${n?`<b>${n} sound${n>1?'s':''} · about ${hcsMins(picked)} min</b>`:'<b>Pick the sounds to sample</b>'} · <span class="hcsok">✓</span> already in the app</p>
           <p class="hcsonce">Once per device: the sounds stay in this app, also through updates. A project you share plays them only on a device that has synced its own HiChord too. Elsewhere every note still arrives, and you can pick other instruments or load your own sounds.</p>
@@ -2900,6 +2915,29 @@ function hcsSetup(err){
   const set=ks=>{ H.pick=new Set(ks); hcsSetup(err); };
   if($('hcsAll')){ $('hcsAll').onclick=()=>set(HCI_ALL); $('hcsMiss').onclick=()=>set(HCI_ALL.filter(k=>!HCI[k])); $('hcsNone').onclick=()=>set([]); }
   $('hcsBox').querySelectorAll('.hcst').forEach(b=>b.onclick=()=>{ const k=b.dataset.k; H.pick.has(k)?H.pick.delete(k):H.pick.add(k); hcsSetup(err); });
+}
+// before each drum kit: the HiChord goes to Drum mode, and you pick the kit on it (no MIDI message does that)
+function hcsKitStep(k){
+  const H=HCS, kit=HC_KITS.find(x=>x[0]===k), N=H.queue.length, i=H.qi;
+  if(HC.state.mode!==6){ if(H.modeOrig==null) H.modeOrig=HC.state.mode ?? 0; hcCC(HC.CC.MODE,6); HC.state.mode=6; renderHCState('mode'); }
+  $('hcsBox').innerHTML=`<header class="hcshead"><h3>Sampling ${i+1} of ${N}</h3><span class="hcsleft">about ${hcsMins(H.queue.slice(i))} min left</span></header>
+    <div class="hcsrun hcskit">
+      <div class="hcsnow">
+        <span class="hcskitn">drum kit ${kit[2]} of 6</span>
+        <div class="hcsbig">${escH(kit[1])}</div>
+        <ol class="hcsdo">
+          <li>The HiChord is in Drum mode now</li>
+          <li>Hold the ${hk('y','YELLOW')} button and press chord button <b>${kit[2]}</b></li>
+          <li>Check that the screen shows <b>${escH(kit[3])}</b> (or move the joystick ${jy('← LEFT')} / ${jy('→ RIGHT')} until it does)</li>
+        </ol>
+        <button class="primary hcsgo" id="hcsKitGo">${escH(kit[3])} is on: sample it</button>
+      </div>
+      <ul class="hcslist">${H.queue.map((q,j)=>`<li class="${j<i?'ok':j===i?'now':''}">${escH(HC_SOUND[q])}</li>`).join('')}</ul>
+    </div>
+    <div class="row"><span class="hcskeep">${H.done.length?`${H.done.length} kept in the app`:'Each sound is kept in the app as soon as it is done'}</span>${H.qi<N-1?'<button id="hcsSkip">Skip this kit</button>':''}<button id="hcsCancel">${H.done.length?'Stop here':'Cancel'}</button></div>`;
+  $('hcsKitGo').onclick=()=>{ H.kitReady=k; hcsStart(); };
+  if($('hcsSkip')) $('hcsSkip').onclick=()=>{ H.qi++; hcsStart(); };
+  $('hcsCancel').onclick = H.done.length ? ()=>{ hcsStop(); hcsSyncEnd(); } : hcsCancel;
 }
 // the full screen while sampling: the sound now, its 21 notes, the level, and all the sounds of this run
 function hcsRunView(status){
@@ -2962,7 +3000,8 @@ async function hcsStart(){
     HCS.queue=HCI_ALL.filter(k=>HCS.pick.has(k)); HCS.qi=0; if(!HCS.queue.length){ HCS.queue=null; return; }
   }
   const qk=hcsKey();
-  if(qk && qk!==HC_DRUMS){
+  if(qk && isKit(qk) && HCS.kitReady!==qk){ hcsKitStep(qk); return; }
+  if(qk && !isKit(qk)){
     hcsRunView(`switching the HiChord to ${escH(HC_SOUND[qk])}…`);
     hcCC(HC.CC.PRESET, +qk.slice(2)); HC.state.preset=+qk.slice(2); renderHCState('preset');
     const run=HCS; await new Promise(r=>setTimeout(r,800)); if(HCS!==run) return;
@@ -3065,6 +3104,7 @@ function hcsSyncEnd(){
   $('hcsOk').onclick=hcsClose;
 }
 function hcsRestorePreset(run){
+  if(run && run.modeOrig!=null && HC.connected){ hcCC(HC.CC.MODE, run.modeOrig); HC.state.mode=run.modeOrig; renderHCState('mode'); run.modeOrig=null; }
   if(run && run.queue && run.prevPreset!=null && HC.connected && HC.state.preset!==run.prevPreset){ hcCC(HC.CC.PRESET, run.prevPreset); HC.state.preset=run.prevPreset; renderHCState('preset'); }
   if(run) run.prevPreset=null;
 }
@@ -3846,7 +3886,7 @@ const ICONS={
 };
 const ic=(name,cls='ii')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]||''}</svg>`;
 // the icon of a sound: the HiChord's sounds get one that fits them (its Triangle is a triangle wave, not a bass)
-const HC_ICON = { hc0:'sine', hc4:'keys', hc6:'lead', hc10:'horns', hc15:'keys', hc18:'keys', hc19:'guitar', hc21:'pad', hc22:'lead', hc23:'square', hc24:'horns', hc29:'pad', hc33:'keys', hc34:'keys' };
+const HC_ICON = { hc94:'drums', hc95:'drums', hc96:'drums', hc97:'drums', hc98:'drums', hc0:'sine', hc4:'keys', hc6:'lead', hc10:'horns', hc15:'keys', hc18:'keys', hc19:'guitar', hc21:'pad', hc22:'lead', hc23:'square', hc24:'horns', hc29:'pad', hc33:'keys', hc34:'keys' };
 const instIcon = (k, hc) => ic(hc && k==='ebass' && HCI[hcKeyOf(k)] ? 'triangle' : ICONS[k] ? k : HC_ICON[k] || 'keys');
 const INST_ICON=new Proxy({}, { get:(_,k)=>instIcon(k, S.hcInst) });
 const SLIDERS=ic('faders','');
@@ -4002,7 +4042,7 @@ function addLayer(key, own){
   const Ly=layers[idx];
   Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.02));
   Object.assign(Ly, newLayerData(idx), { inst:key, shown:true });
-  setInstrument(Ly, key); Ly.q = key==='drums' ? '1/16' : 'off';
+  setInstrument(Ly, key); Ly.q = isDrum(key) ? '1/16' : 'off';
   Ly.rev = key==='pad'||key==='strings' ? 0.35 : 0.18;
   if(own) setCustomSound(Ly, own.buf, own.name, own.zones, own.kind);   // a file or a recording: the layer is named after it
   applyLayer(Ly); freshInParts(idx);
@@ -4070,7 +4110,7 @@ const INST_GROUPS = [
   ['Brass & winds', ['horns','hc10','hc24']],
   ['Synths', ['lead','square','hc0','hc6','hc22','hc23']],
   ['Pads & voices', ['pad','hc21','hc29']],
-  ['Bass & drums', ['ebass','bass','drums']],
+  ['Bass & drums', ['ebass','bass','drums','hc94','hc95','hc96','hc97','hc98']],
 ];
 function renderInstGrid(){
   // the sounds grouped by kind (the HiChord's own sounds among them once sampled); your own sound apart, below
@@ -4293,7 +4333,7 @@ $('prevSolo').onclick=()=>{ const Ly=selLayer(); Ly.solo=!Ly.solo; layers.forEac
 $('prevPlay').onclick=()=>{
   if(!ctx) return; if(ctx.state!=='running') ctx.resume();
   const Ly=selLayer(), t0=ctx.currentTime+0.02;
-  if(Ly.inst==='drums') [[36,0],[42,0.18],[38,0.36],[42,0.54]].forEach(([n,d])=>playNote(Ly,n,105,t0+d,0.15));
+  if(isDrum(Ly.inst)) [[36,0],[42,0.18],[38,0.36],[42,0.54]].forEach(([n,d])=>playNote(Ly,n,105,t0+d,0.15));
   else if(MONO_INST.has(Ly.inst)) [[48,0],[55,0.3]].forEach(([n,d])=>playNote(Ly,n,105,t0+d,0.26));
   else [60,64,67].forEach(n=>playNote(Ly,n,100,t0,0.8));
 };
@@ -5034,7 +5074,7 @@ const FX = {
   drive: {name:'Drive',            how:'↑ more distortion'},
   off:   {name:'None',             how:'only on/off'},
 };
-const fxOf = Ly => FX[Ly.fx] ? Ly.fx : (Ly.inst==='drums' ? 'gate' : 'lp');
+const fxOf = Ly => FX[Ly.fx] ? Ly.fx : (isDrum(Ly.inst) ? 'gate' : 'lp');
 /* the capture effects of a layer: a list of {k, v}, v = range (how far it goes at the top of the pad). Older
    projects had one effect in Ly.fx; that becomes a list of one at full range. */
 const capFx = Ly => Array.isArray(Ly.cfx) ? Ly.cfx : (Ly.cfx = (FX[Ly.fx] ? Ly.fx : fxOf(Ly))==='off' ? [] : [{k:fxOf(Ly), v:1}]);
