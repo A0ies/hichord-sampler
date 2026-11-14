@@ -1368,32 +1368,42 @@ body.projopen .tbar{display:none}
 #projSheet .plogo span{font-weight:400}
 #projSheet .plogo .appicon{width:1.15em;height:1.15em;display:inline-block;vertical-align:-0.2em;margin-right:.3em}
 #projSheet .pintro{margin:-4px 0 0;color:var(--dim);font-family:var(--sans);font-size:14px;line-height:1.5;max-width:680px}
-/* before a project is open: no close, no "this project" */
-body.startmode #projSheet .sheethead .close,body.startmode #projSheet>.p.wide{display:none}
+/* before a project is open: no close; the intro only when there are no projects yet */
+body.startmode #projSheet .sheethead .close{display:none}
+#projSheet:not(.noproj) .pintro{display:none}
 @media (orientation:landscape) and (max-height:500px){ #projSheet{gap:8px} #projSheet .plogo{font-size:22px} #projSheet .pintro{font-size:12px;line-height:1.4;margin:-2px 0 0} }
-#projSheet>.p.wide{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;row-gap:6px;min-width:0}
-#projSheet>.p.wide>label{grid-column:1;grid-row:1}
-#projSheet .pnamerow{display:contents}
-#projSheet .pnamerow .textin{grid-column:1;grid-row:2}
-#projSheet .pnamerow button{grid-column:2;grid-row:2}
-#projSheet>.p.wide{grid-template-columns:minmax(0,1fr) auto auto}
-#projSheet>.p.wide>label{grid-column:1/-1}
-#projSheet .pnamerow #projShare{grid-column:3}
-#projSheet>h2{margin:4px 0 0}
-#projSheet .projlist{overflow:auto;align-content:start;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding-bottom:4px}
+/* the list: the current project on top (compact; tap for its keys), new and receive, then the other projects;
+   tapping one opens its full card in place */
+#projSheet .projlist{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:4px}
+#projSheet .pleft,#projSheet .pright{display:flex;flex-direction:column;gap:8px;min-width:0}
+#projSheet .pcap{margin:4px 0 0;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
 #projSheet .proj{flex:none}
-#projSheet .proj .pface{position:relative;padding:12px 74px 12px 14px;min-height:72px;height:100%;align-items:flex-start}
-#projSheet .proj .pface>button{position:absolute;top:50%;right:10px;transform:translateY(-50%)}
-#projSheet .proj.cur .pface{padding-right:14px}
-/* the current project: its badge and "continue" on one row under the details */
-#projSheet .proj .pcur{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
-#projSheet .proj .pcur .curbadge{margin:0}
-#projSheet .proj .pcur button{flex:none}
-#projSheet .proj .curbadge{align-self:flex-start;margin-top:6px}   /* under the details, so nothing is covered */
-#projSheet .pundo{min-height:72px}
-.curbadge{font-family:var(--mono);font-size:11px;font-weight:600;background:var(--ink);color:var(--bg);border-radius:999px;padding:4px 10px;white-space:nowrap}
+#projSheet .proj .pface{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:11px 34px 11px 14px;min-height:0;cursor:pointer;text-align:left}
+#projSheet .proj .pnm{font-family:var(--sans);font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#projSheet .proj small{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.45}
+#projSheet .proj .pchev{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--dim)}
+#projSheet .proj .ptag{font-family:var(--mono);font-size:11px;color:var(--screen-dim)}
+#projSheet .proj .pstr{display:flex;gap:3px;margin-top:4px} #projSheet .proj .pstr i{flex:1;height:4px;border-radius:2px;background:var(--screen-line)}
+/* the current project and every opened card: the dark screen */
+#projSheet .proj.cur .pface,#projSheet .proj.full .pface{background:var(--screen);color:var(--screen-ink);padding:12px 14px;box-shadow:none}
+#projSheet .proj.cur small,#projSheet .proj.full small{color:var(--screen-dim)}
+#projSheet .proj.cur .pnm{font-size:18px}
+#projSheet .proj.cur:not(.full) .pface::after{content:"tap for continue, duplicate, share";font-family:var(--mono);font-size:10px;color:var(--screen-dim);margin-top:4px}
+#projSheet .proj .pname{font-family:var(--sans);font-weight:600;font-size:18px;color:var(--screen-ink);background:var(--screen2);border:1px solid var(--screen-line);border-radius:8px;padding:6px 9px;min-width:0;width:100%;box-sizing:border-box}
+#projSheet .proj .pname:focus{outline:none;border-color:var(--acc)}
+#projSheet .proj .pkeys{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:6px;margin-top:8px}
+#projSheet .proj .pkeys button{min-height:40px;justify-content:center}
+#projSheet .proj .pkeys .primary{background:var(--acc);border-color:var(--acc);color:#fff} #projSheet .proj .pkeys .primary::before{display:none}
+#projSheet .proj .pkeys button:not(.primary){background:var(--screen2);color:var(--screen-ink);border-color:var(--screen-line);box-shadow:none}
+#projSheet .pundo{min-height:60px}
+/* wide screens: the current project and the keys on the left, the other projects on the right (each scrolls) */
+@media (min-width:640px){
+  #projSheet .projlist{flex-direction:row;align-items:stretch;overflow:hidden;gap:16px}
+  #projSheet .pleft{flex:0 0 min(44%,420px);overflow:auto}
+  #projSheet .pright{flex:1;overflow:auto;padding-bottom:4px}
+  #projSheet .pcap{margin-top:0}
+}
 .st-short{display:none}
-@media (min-width:640px){ #projSheet .projlist{grid-template-columns:repeat(3,minmax(0,1fr))} }
 @media (max-width:639px){ .st-long{display:none} .st-short{display:inline} }
 /* advanced timing: XY screen, grid keys, mini steppers — fits without scrolling */
 .advt{display:flex;flex-direction:column;gap:8px;margin-top:6px}
@@ -1790,10 +1800,6 @@ body.studio .tbar .pos b{font-size:26px}
   <div class="grab"></div>
   <div class="row sheethead"><h1 class="plogo"><svg class="appicon" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#1d1d1c"/><rect x="16" y="22" width="46" height="9" rx="4.5" fill="#2f6fe0"/><rect x="30" y="37" width="54" height="9" rx="4.5" fill="#00a651"/><rect x="16" y="52" width="34" height="9" rx="4.5" fill="#ff5000"/><rect x="40" y="67" width="44" height="9" rx="4.5" fill="#ffc400"/><rect x="55" y="15" width="3" height="68" rx="1.5" fill="#f0f0ec"/></svg>Looper <span>for HiChord</span></h1><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
   <p class="pintro">Play on your HiChord, record it in layers, then change timing, instruments and mix while it loops. Connect the HiChord over USB-C and turn its own volume down. Works in Chrome or Edge, and in the iPhone app.</p>
-  <div class="p wide"><label><span>this project</span><b id="projStatus">saves automatically</b></label>
-    <div class="pnamerow"><input id="projNameInput" class="textin" maxlength="60" aria-label="Project name" enterkeyhint="done"><button id="projCopy" title="Duplicate this project and continue in the copy">duplicate</button><button id="projShare" title="Send this project to another device with a code">share</button></div></div>
-  <div style="height:18px"></div>
-  <h2>all projects</h2>
   <div class="projlist" id="projList"></div>
 </section>
 
@@ -1933,7 +1939,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.83';
+const PAGE_VERSION='2026-11-14.84';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3489,6 +3495,20 @@ async function saveAsCopy(){
   for(const [i,rec] of Object.entries(sounds)) await dbDo('sounds','readwrite',st=>st.put(rec, p.id+':'+i));
   setCurrent(p.id); renderProjects(); toast(`saved as "${p.name}" — you are now working in the copy`);
 }
+// a copy of any project (the open one as it is now), shown open in the list; you stay where you are
+async function dupProject(id){
+  if(id===PRJ.current) await projSaveNow().catch(()=>{});
+  const src=PRJ.list.find(x=>x.id===id); if(!src) return;
+  const now=Date.now(), d=JSON.parse(JSON.stringify(src.data));
+  const p={ id:newId(), name:`${src.name} copy`.slice(0,60), named:true, created:now, updated:now, data:d, summary:summary(d) };
+  await dbDo('projects','readwrite',st=>st.put(p));
+  const sounds=await soundsOf(id); for(const [i,rec] of Object.entries(sounds)) await dbDo('sounds','readwrite',st=>st.put(rec, p.id+':'+i));
+  PRJ.list.push(p); PRJ.open=p.id; renderProjects(); toast(`duplicated as "${p.name}"`);
+}
+async function renameProj(id, name){
+  const p=PRJ.list.find(x=>x.id===id); name=(name||'').trim(); if(!p || !name || name===p.name) return;
+  p.name=name.slice(0,60); p.named=true; await dbDo('projects','readwrite',st=>st.put(p)); renderProjName();
+}
 async function renameProject(name){
   const p=PRJ.list.find(x=>x.id===PRJ.current); name=(name||'').trim(); if(!p || !name || name===p.name) return;
   p.name=name.slice(0,60); p.named=true; await dbDo('projects','readwrite',st=>st.put(p)); renderProjName(); renderProjects();
@@ -3528,26 +3548,36 @@ const START={ on:true, last:null, busy:false };   // the start screen (see start
 const curProj = () => PRJ.current || (START.on ? START.last : null);
 function renderProjects(){
   renderProjName(); renderProjStatus();
-  const cur=PRJ.list.find(x=>x.id===PRJ.current);
-  const inp=$('projNameInput'); if(cur && document.activeElement!==inp) inp.value=cur.name;
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   const cid=curProj(); PRJ.list.sort((a,b)=>(b.id===cid)-(a.id===cid) || (b.updated||0)-(a.updated||0));   // the current project on top, then last edited first
-  $('projList').innerHTML = '<div class="pnewrow"><button class="pnew" id="projNewTile">+ new project</button><button class="pnew" id="projRecvTile">receive with a code</button></div>' + PRJ.list.map(p=>{
+  if(PRJ.open && !PRJ.list.some(p=>p.id===PRJ.open && !PRJ.pend.has(p.id))) PRJ.open=null;
+  // one project: its details, its layers as color stripes; the full card adds the name to edit and the keys
+  const card=p=>{
     const z=PRJ.pend.get(p.id);
     if(z){ const left=Math.max(0,z.until-Date.now());
       return `<button class="pundo" data-undo="${p.id}" aria-label="Restore ${esc(p.name)}">
         <i class="pfill" style="transform:scaleX(${left/UNDO_MS})"></i>
         <span class="ptxt">${ic('trash','')}<span><b>${esc(p.name)}</b> deleted</span></span><span class="pact">tap to restore</span></button>`; }
-    const sm=p.summary||summary(p.data); const isCur=p.id===curProj();
-    return `<div class="proj ${isCur?'cur':''}" data-id="${p.id}">
+    const d=p.data, sm=p.summary||summary(d), isCur=p.id===cid, full=PRJ.open===p.id;
+    const parts=d.song&&d.song.parts ? d.song.parts.map((_,k)=>PART_L(k)).join(' · ') : 'A';
+    const stripes=d.layers.map((l,i)=>l.shown ? `<i style="${(l.events&&l.events.length)||(d.song&&d.song.parts||[]).some(pt=>(pt.ev&&pt.ev[i]||[]).length) ? `background:var(--l${i})` : ''}"></i>` : '').join('');
+    const info=`${sm.layers} layer${sm.layers===1?'':'s'} · ${sm.notes} notes · ${sm.bpm} bpm`;
+    return `<div class="proj ${isCur?'cur':''} ${full?'full':''}" data-id="${p.id}">
       <div class="pbg" aria-hidden="true"><span class="pdel">${ic('trash','')}<span class="pword">delete</span></span></div>
-      <div class="pface">
-        <div class="pinfo"><b>${esc(p.name)}</b><small>${sm.layers} layer${sm.layers===1?'':'s'}${sm.parts>1?` · ${sm.parts} parts`:''} · ${sm.notes} notes · ${sm.bpm} bpm<br>${ago(p.updated)}</small>${isCur?'<span class="pcur"><span class="curbadge">current project</span><button data-pa="continue" class="primary">continue</button></span>':''}</div>
-        ${isCur?'':'<button data-pa="open">open</button>'}
+      <div class="pface" role="button" tabindex="0" aria-expanded="${full}" aria-label="${esc(p.name)}: ${full?'fold':'show continue, duplicate and share'}">
+        ${isCur?`<span class="ptag">${PRJ.current?'current project':'last time'}</span>`:''}
+        ${full ? `<input class="pname" value="${esc(p.name)}" maxlength="60" aria-label="Project name" enterkeyhint="done" spellcheck="false">` : `<b class="pnm">${esc(p.name)}</b>`}
+        <small>${full||isCur ? `${parts} · ${info}` : `${info}<br>${ago(p.updated)}`}</small>
+        ${full||isCur ? `<span class="pstr">${stripes}</span>` : ''}
+        ${full ? `<span class="pkeys"><button data-pa="continue" class="primary">continue</button><button data-pa="dup">duplicate</button><button data-pa="share">share</button></span>` : isCur ? '' : '<span class="pchev" aria-hidden="true">›</span>'}
       </div>
-    </div>`; }).join('') || '<p class="hint">No projects yet.</p>';
+    </div>`; };
+  const cur=PRJ.list.find(p=>p.id===cid), rest=PRJ.list.filter(p=>p.id!==cid);
+  $('projSheet').classList.toggle('noproj', !PRJ.list.length);
+  $('projList').innerHTML = `<div class="pleft">${cur?card(cur):''}<div class="pnewrow"><button class="pnew" id="projNewTile">+ new project</button><button class="pnew" id="projRecvTile">receive with a code</button></div></div>`
+    + (rest.length ? `<div class="pright"><h4 class="pcap">${cur?'other projects':'your projects'}</h4>${rest.map(card).join('')}</div>` : '');
 }
-async function openProjects(){ flushSave(); await refreshProjects().catch(()=>{}); renderProjects(); openSheet('projSheet'); }
+async function openProjects(){ flushSave(); await refreshProjects().catch(()=>{}); PRJ.open=null; renderProjects(); openSheet('projSheet'); }
 /* ============ share a project with a code ============
    One file goes through the share relay (relay/worker.js, a Cloudflare Worker): the project as JSON plus
    its own sounds as 16-bit PCM, gzipped. Built-in instruments travel by name only. The relay hands out a
@@ -3568,15 +3598,19 @@ async function gz(blob, dir){
   return new Uint8Array(await new Response(blob.stream().pipeThrough(S2)).arrayBuffer());
 }
 // the current project, as it is now (own sounds straight from the layers)
-async function packProject(){
-  flushSave();
-  const p=PRJ.list.find(x=>x.id===PRJ.current), d=sessionData(), sounds=[], bins=[];
-  layers.forEach((Ly,i)=>{
-    if(Ly.inst!=='custom' || !Ly.buffer || !d.layers[i]) return;
-    const b=Ly.buffer, nch=Math.min(2,b.numberOfChannels), len=b.length, pcm=new Int16Array(nch*len);
-    for(let c=0;c<nch;c++){ const x=b.getChannelData(c), o=c*len; for(let n=0;n<len;n++){ const v=x[n]; pcm[o+n] = v>=1 ? 32767 : v<=-1 ? -32767 : Math.round(v*32767); } }
-    sounds.push({ i, name:Ly.customName||'sample', sampleRate:b.sampleRate, nch, len, zones:Ly.czones||null, kind:Ly.ckind||null }); bins.push(pcm);
-  });
+// a project as one file: the open one as it is now, any other from storage (also on the start screen)
+async function packProject(id){
+  const open = !id || id===PRJ.current;
+  if(open) flushSave();
+  const p=PRJ.list.find(x=>x.id===(open?PRJ.current:id)), d=open ? sessionData() : p.data, sounds=[], bins=[];
+  const add=(i, name, sr, chans, zones, kind)=>{
+    const nch=Math.min(2,chans.length), len=chans[0].length, pcm=new Int16Array(nch*len);
+    for(let c=0;c<nch;c++){ const x=chans[c], o=c*len; for(let n=0;n<len;n++){ const v=x[n]; pcm[o+n] = v>=1 ? 32767 : v<=-1 ? -32767 : Math.round(v*32767); } }
+    sounds.push({ i, name:name||'sample', sampleRate:sr, nch, len, zones:zones||null, kind:kind||null }); bins.push(pcm);
+  };
+  if(open) layers.forEach((Ly,i)=>{ if(Ly.inst!=='custom' || !Ly.buffer || !d.layers[i]) return;
+    const b=Ly.buffer; add(i, Ly.customName, b.sampleRate, [...Array(b.numberOfChannels)].map((_,c)=>b.getChannelData(c)), Ly.czones, Ly.ckind); });
+  else { const st=await soundsOf(id); Object.entries(st).forEach(([i,r])=>{ if(d.layers[i] && d.layers[i].inst==='custom' && r && r.channels) add(+i, r.name, r.sampleRate, r.channels, r.zones, r.kind); }); }
   const head=new TextEncoder().encode(JSON.stringify({ v:1, app:'looper-for-hichord', page:PAGE_VERSION, name:p?p.name:'shared project', named:!!(p&&p.named), data:d, sounds }));
   const pre=new Uint8Array(8); pre.set([76,70,72,49]); new DataView(pre.buffer).setUint32(4, head.length, true);   // 'LFH1', header length
   const raw=new Blob([pre, head, ...bins]);
@@ -3613,7 +3647,7 @@ async function unpackProject(bytes){
 }
 
 /* share: explain, pack, upload, show the code */
-async function xferShare(){
+async function xferShare(id){
   if(!relayUrl()){
     xferShow(`<h3>share this project</h3>
       <p>Sharing isn't set up yet: it needs a small relay server, which isn't running for this app yet (see the README, "Share a project"). Until then, projects stay on this device.</p>
@@ -3622,7 +3656,7 @@ async function xferShare(){
   }
   if(typeof CompressionStream==='undefined'){ xferShow(`<h3>share this project</h3><p class="err">This browser can't pack a project for sharing. Try a newer browser, or the app.</p><div class="row"><button id="xfOk">ok</button></div>`); $('xfOk').onclick=xferClose; return; }
   xferShow(`<h3>share this project</h3><p>packing…</p>`);
-  let pk; try{ pk=await packProject(); }catch(e){ console.warn(e); xferShow(`<h3>share this project</h3><p class="err">Couldn't pack this project.</p><div class="row"><button id="xfOk">ok</button></div>`); $('xfOk').onclick=xferClose; return; }
+  let pk; try{ pk=await packProject(id); }catch(e){ console.warn(e); xferShow(`<h3>share this project</h3><p class="err">Couldn't pack this project.</p><div class="row"><button id="xfOk">ok</button></div>`); $('xfOk').onclick=xferClose; return; }
   if($('xfer').classList.contains('hidden')) return;
   const sm=pk.summary, big=pk.file.length>SHARE_MAX;
   const chips=[`${sm.layers} layer${sm.layers===1?'':'s'}`, sm.parts>1?`${sm.parts} parts`:'', `${sm.bpm} bpm`, ...pk.sounds.map(x=>x.name), fmtMB(pk.file.length)].filter(Boolean);
@@ -3714,7 +3748,6 @@ async function xferFetch(code){
     toast(`received "${p.name}"`);
   }catch(e){ console.warn(e); back("Couldn't store the project on this device (storage full?)."); }
 }
-$('projShare').onclick=xferShare;
 
 
 /* ============ UI ============ */
@@ -4047,18 +4080,22 @@ function renderInstGrid(){
 renderInstGrid();
 $('settingsBtn').innerHTML=ic('cog',''); $('themeBtn').innerHTML=ic('theme',''); $('projIcon').innerHTML=ic('folder','');
 $('projBtn').onclick=openProjects;
-$('projCopy').onclick=saveAsCopy;
 $('projNew').onclick=newProject;
 /* on the projects screen the transport gives way to one wide new-project key */
 new MutationObserver(()=>document.body.classList.toggle('projopen',$('projSheet').classList.contains('open'))).observe($('projSheet'),{attributes:true,attributeFilter:['class']});
-$('projNameInput').addEventListener('change',e=>renameProject(e.target.value));
-$('projNameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') e.target.blur(); e.stopPropagation(); });
+// a project's card: tap it to open or fold its full card; continue, duplicate, share and the name inside
+$('projList').addEventListener('change',e=>{ if(e.target.matches('.pname')) renameProj(e.target.closest('.proj').dataset.id, e.target.value); });
+$('projList').addEventListener('keydown',e=>{ if(e.target.matches('.pname')){ if(e.key==='Enter') e.target.blur(); e.stopPropagation(); } });
 $('projList').onclick=e=>{
   if(e.target.closest('#projNewTile')){ START.on ? startWith('new') : newProject(); return; }
   if(e.target.closest('#projRecvTile')){ START.on ? startWith('recv') : xferReceive(); return; }
   const u=e.target.closest('[data-undo]'); if(u){ restoreProject(u.dataset.undo); return; }
-  const b=e.target.closest('[data-pa]'); if(!b) return; const row=b.closest('.proj'); if(row.dataset.swiped) return;
-  START.on ? startWith('open', row.dataset.id) : openProject(row.dataset.id); };
+  const row=e.target.closest('.proj'); if(!row || row.dataset.swiped || e.target.closest('.pname')) return;
+  const id=row.dataset.id, b=e.target.closest('[data-pa]');
+  if(!b){ PRJ.open = PRJ.open===id ? null : id; renderProjects(); return; }
+  if(b.dataset.pa==='continue') START.on ? startWith('open', id) : openProject(id);
+  else if(b.dataset.pa==='dup') dupProject(id);
+  else if(b.dataset.pa==='share') xferShare(id); };
 /* swipe left on a project: the bin shows, then "delete" grows in, and past the threshold letting go deletes it */
 (()=>{ const list=$('projList'); let sw=null;
   const DONE=0.5;   // part of the row width to pull for a delete
