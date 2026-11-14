@@ -401,7 +401,7 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .spghost{position:fixed;z-index:40;pointer-events:none;border-radius:8px;background:var(--pc);color:#0b0b0b;font-family:var(--mono);font-weight:600;font-size:15px;
   display:flex;flex-direction:column;justify-content:flex-end;padding:6px 8px;box-sizing:border-box;box-shadow:0 14px 30px rgba(0,0,0,.45);transform:translate(-50%,-60%) rotate(-4deg)}
 .spghost span{font-size:10px;font-weight:500}
-.sppads{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--pcols,3),minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:8px}
+.sppads{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--pcols,3),minmax(0,1fr));grid-template-rows:repeat(var(--prows,2),minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:8px;align-content:start}
 .sppad{position:relative;border-radius:14px;background:var(--panel);padding:10px;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;
   min-height:0;min-width:0;box-shadow:none;touch-action:none;text-transform:none;overflow:hidden;container-type:size}
 .sppad::before,.sppad.on::before{display:none}
@@ -1933,7 +1933,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.82';
+const PAGE_VERSION='2026-11-14.83';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -4749,6 +4749,9 @@ function renderSongPage(){
       <span class="pk"><b>${PART_L(k)}</b><small>${uses}×</small></span><span class="ps">${stripes}</span><span class="pn">${escH(p.name||'part '+PART_L(k))}</span></button>`; }).join('')
     + (P<8 ? '<button class="sppad add" data-add aria-label="New part">+ part</button>' : '')
     + '<div class="sppad rm" id="spRm">drop a block here to take it off the tape</div>';
+  // always room for two rows of pads, so one part doesn't stretch over the whole height (the wide iPad strip is one row)
+  const cols=getComputedStyle($('spPads')).gridTemplateColumns.split(' ').length||3;
+  $('spPads').style.setProperty('--prows', Math.max(wide?1:2, Math.ceil(tiles/cols)));
   spNow(); spFrame(true);
 }
 function spNow(){
