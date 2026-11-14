@@ -1413,7 +1413,29 @@ body.startmode #projSheet .sheethead .close{display:none}
 #projSheet .proj .pkeys .primary{background:var(--acc);border-color:var(--acc);color:#fff} #projSheet .proj .pkeys .primary::before{display:none}
 #projSheet .proj .pkeys button:not(.primary){background:var(--screen2);color:var(--screen-ink);border-color:var(--screen-line);box-shadow:none}
 #projSheet .pundo{min-height:60px}
-/* wide screens: the current project and the keys on the left, the other projects on the right (each scrolls) */
+#projSheet .proj .pinf{display:flex;flex-direction:column;gap:3px;min-width:0}
+/* iPad: the current project as a wide banner (keys always out), then a grid of tiles; a tapped tile opens full width */
+#projSheet .projlist.pbig{gap:14px;flex-direction:column;overflow:auto}
+#projSheet .pbanner .pface{flex-direction:row;align-items:center;gap:18px;padding:16px 18px}
+#projSheet .pbanner .pinf{flex:1}
+#projSheet .pbanner .pname{font-size:22px;max-width:560px}
+#projSheet .pbanner .pkeys{margin-top:0;flex:0 0 min(48%,460px);grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr)}
+#projSheet .pbanner .pkeys button{min-height:52px;font-size:14px}
+#projSheet .pbanner .pstr{max-width:560px}
+#projSheet .pgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-content:start}
+#projSheet .pgrid .pnew{min-height:96px}
+#projSheet .pgrid .proj{display:flex} #projSheet .pgrid .proj .pface{flex:1;padding:12px 14px;min-height:96px;justify-content:space-between;box-sizing:border-box}
+#projSheet .pgrid .proj .pstr i{background:var(--line)}
+#projSheet .pgrid .proj .pchev{display:none}
+#projSheet .pgrid .proj.full{grid-column:1/-1}
+#projSheet .pgrid .proj.full .pface{flex-direction:row;align-items:center;gap:18px}
+#projSheet .pgrid .proj.full .pinf{flex:1}
+#projSheet .pgrid .proj.full .pstr i{background:var(--screen-line)}
+#projSheet .pgrid .proj.full .pkeys{margin-top:0;flex:0 0 min(48%,460px)}
+#projSheet .pgrid .pundo{min-height:96px}
+@media (orientation:portrait){ #projSheet .pgrid{grid-template-columns:repeat(3,minmax(0,1fr))} #projSheet .pbanner .pface,#projSheet .pgrid .proj.full .pface{flex-direction:column;align-items:stretch} #projSheet .pbanner .pkeys,#projSheet .pgrid .proj.full .pkeys{flex:none;margin-top:8px} }
+@media (min-width:700px) and (min-height:600px){ #projSheet .plogo{font-size:32px} #projSheet .pgrid .proj .pnm{font-size:16px} }
+/* phones on their side: the current project and the keys on the left, the other projects on the right (each scrolls) */
 @media (min-width:640px){
   #projSheet .projlist{flex-direction:row;align-items:stretch;overflow:hidden;gap:16px}
   #projSheet .pleft{flex:0 0 min(44%,420px);overflow:auto}
@@ -1956,7 +1978,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.88';
+const PAGE_VERSION='2026-11-14.89';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3638,8 +3660,12 @@ function renderProjStatus(){ const el=$('projStatus'); if(el) el.innerHTML = `<s
 const START={ on:true, last:null, busy:false };   // the start screen (see startScreen)
 // the project to continue: the open one, or on the start screen the one open last time
 const curProj = () => PRJ.current || (START.on ? START.last : null);
+// iPad (and big windows): the banner-and-tiles layout
+const PROJ_BIG = matchMedia('(min-width:700px) and (min-height:600px)');
+PROJ_BIG.addEventListener('change',()=>{ if($('projSheet').classList.contains('open')) renderProjects(); });
 function renderProjects(){
   renderProjName(); renderProjStatus();
+  const big=PROJ_BIG.matches;
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   const cid=curProj(); PRJ.list.sort((a,b)=>(b.id===cid)-(a.id===cid) || (b.updated||0)-(a.updated||0));   // the current project on top, then last edited first
   if(PRJ.open && !PRJ.list.some(p=>p.id===PRJ.open && !PRJ.pend.has(p.id))) PRJ.open=null;
@@ -3650,24 +3676,31 @@ function renderProjects(){
       return `<button class="pundo" data-undo="${p.id}" aria-label="Restore ${esc(p.name)}">
         <i class="pfill" style="transform:scaleX(${left/UNDO_MS})"></i>
         <span class="ptxt">${ic('trash','')}<span><b>${esc(p.name)}</b> deleted</span></span><span class="pact">tap to restore</span></button>`; }
-    const d=p.data, sm=p.summary||summary(d), isCur=p.id===cid, full=PRJ.open===p.id;
+    const d=p.data, sm=p.summary||summary(d), isCur=p.id===cid, full=PRJ.open===p.id || (big && isCur);
     const parts=d.song&&d.song.parts ? d.song.parts.map((_,k)=>PART_L(k)).join(' · ') : 'A';
     const stripes=d.layers.map((l,i)=>l.shown ? `<i style="${(l.events&&l.events.length)||(d.song&&d.song.parts||[]).some(pt=>(pt.ev&&pt.ev[i]||[]).length) ? `background:var(--l${i})` : ''}"></i>` : '').join('');
     const info=`${sm.layers} layer${sm.layers===1?'':'s'} · ${sm.notes} notes · ${sm.bpm} bpm`;
     return `<div class="proj ${isCur?'cur':''} ${full?'full':''}" data-id="${p.id}">
       <div class="pbg" aria-hidden="true"><span class="pdel">${ic('trash','')}<span class="pword">delete</span></span></div>
       <div class="pface" role="button" tabindex="0" aria-expanded="${full}" aria-label="${esc(p.name)}: ${full?'fold':'show continue, duplicate and share'}">
+        <span class="pinf">
         ${isCur?`<span class="ptag">${PRJ.current?'current project':'last time'}</span>`:''}
         ${full ? `<input class="pname" value="${esc(p.name)}" maxlength="60" aria-label="Project name" enterkeyhint="done" spellcheck="false">` : `<b class="pnm">${esc(p.name)}</b>`}
-        <small>${full||isCur ? `${parts} · ${info}` : `${info}<br>${ago(p.updated)}`}</small>
-        ${full||isCur ? `<span class="pstr">${stripes}</span>` : ''}
+        <small>${full||isCur ? `${parts} · ${info}` : big ? `${info} · ${ago(p.updated)}` : `${info}<br>${ago(p.updated)}`}</small>
+        ${full||isCur||big ? `<span class="pstr">${stripes}</span>` : ''}
+        </span>
         ${full ? `<span class="pkeys"><button data-pa="continue" class="primary">continue</button><button data-pa="dup">duplicate</button><button data-pa="share">share</button></span>` : isCur ? '' : '<span class="pchev" aria-hidden="true">›</span>'}
       </div>
     </div>`; };
   const cur=PRJ.list.find(p=>p.id===cid), rest=PRJ.list.filter(p=>p.id!==cid);
   $('projSheet').classList.toggle('noproj', !PRJ.list.length);
-  $('projList').innerHTML = `<div class="pleft">${cur?card(cur):''}<div class="pnewrow"><button class="pnew" id="projNewTile">+ new project</button><button class="pnew" id="projRecvTile">receive with a code</button></div></div>`
-    + (rest.length ? `<div class="pright"><h4 class="pcap">${cur?'other projects':'your projects'}</h4>${rest.map(card).join('')}</div>` : '');
+  const tiles='<button class="pnew" id="projNewTile">+ new project</button><button class="pnew" id="projRecvTile">receive with a code</button>';
+  $('projList').classList.toggle('pbig', big);
+  $('projList').innerHTML = big
+    // iPad: the current project as a banner with its keys, then new, receive and every other project as tiles
+    ? `${cur?`<div class="pbanner">${card(cur)}</div>`:''}<div class="pgrid">${tiles}${rest.map(card).join('')}</div>`
+    : `<div class="pleft">${cur?card(cur):''}<div class="pnewrow">${tiles}</div></div>`
+      + (rest.length ? `<div class="pright"><h4 class="pcap">${cur?'other projects':'your projects'}</h4>${rest.map(card).join('')}</div>` : '');
 }
 async function openProjects(){ flushSave(); await refreshProjects().catch(()=>{}); PRJ.open=null; renderProjects(); openSheet('projSheet'); }
 /* ============ share a project with a code ============
@@ -4184,7 +4217,7 @@ $('projList').onclick=e=>{
   const u=e.target.closest('[data-undo]'); if(u){ restoreProject(u.dataset.undo); return; }
   const row=e.target.closest('.proj'); if(!row || row.dataset.swiped || e.target.closest('.pname')) return;
   const id=row.dataset.id, b=e.target.closest('[data-pa]');
-  if(!b){ PRJ.open = PRJ.open===id ? null : id; renderProjects(); return; }
+  if(!b){ if(PROJ_BIG.matches && id===curProj()) return; PRJ.open = PRJ.open===id ? null : id; renderProjects(); return; }
   if(b.dataset.pa==='continue') START.on ? startWith('open', id) : openProject(id);
   else if(b.dataset.pa==='dup') dupProject(id);
   else if(b.dataset.pa==='share') xferShare(id); };
