@@ -781,14 +781,16 @@
     head.append(titles, orig);
     const body = el('div', 'fb-body');
     const foot = el('div', 'fb-foot'), mute = button('fb-mute', ICON_MUTE);
-    foot.append(el('span', 'fb-hint', spec.hint), mute);
+    const tapBtn = button('fb-tap', '<i></i>tap for sound', 'Tap to start the sound');   // iPhone: only a tap can start sound, a drag can't
+    foot.append(el('span', 'fb-hint', spec.hint), tapBtn, mute);
     host.append(head, body, foot);
     const box = { host, name: host.dataset.box, body, info, orig, mute, voices: new Set(), sched: null, ch: null, handMuted: false, seen: false };
     box.changed = () => { orig.disabled = !!(box.isOriginal && box.isOriginal()); };
     spec.build(box);
     box.changed();
     orig.addEventListener('click', () => { box.reset(); box.changed(); });
-    mute.addEventListener('click', () => { audio(); setLoud(box, loud !== box, true); });
+    mute.addEventListener('click', () => { audio(); if (box.host.classList.contains('needtap')) return; setLoud(box, loud !== box, true); });
+    tapBtn.addEventListener('click', () => audio());
     setLoud(box, false);
     // while a finger holds anything in a box, a long press never starts a text selection (on the page around it either)
     host.addEventListener('pointerdown', () => { holding++; const sel = getSelection && getSelection(); if (sel && sel.rangeCount) sel.removeAllRanges(); }, true);
@@ -800,7 +802,7 @@
     if (on) {
       if (loud && loud !== box) setLoud(loud, false);
       boxes.forEach(b => { b.handMuted = false; });   // moving on to this box forgets a hand mute elsewhere
-      loud = box; box.sched = null;
+      loud = box; box.sched = null; box.loudAt = performance.now();
       const demo = document.getElementById('demo'); if (demo && !demo.muted) demo.muted = true;   // one sound at a time
       if (audio() && chain(box)) fade(box, 1);
     } else {
@@ -849,7 +851,12 @@
 
   (function frame() {
     const beat = beatNow();
-    boxes.forEach(b => { if (b.seen) b.draw(beat); });
+    boxes.forEach(b => {
+      if (b.seen) b.draw(beat);
+      // the sound should be on but the phone hasn't let it start yet (after a drag): say so instead of showing it as playing
+      const need = loud === b && (!ctx || ctx.state !== 'running') && performance.now() - b.loudAt > 400;
+      if (need !== b.host.classList.contains('needtap')) b.host.classList.toggle('needtap', need);
+    });
     requestAnimationFrame(frame);
   })();
 
