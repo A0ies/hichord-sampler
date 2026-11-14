@@ -288,6 +288,12 @@ h2 .it{font-size:1.1em}
   .fb-hint{font-size:11.5px}
 }
 
+/* touch screens (iPad too): the editor gets the app's control bar and trim lane, as on a phone */
+@media (pointer:coarse){
+  .ebar{display:flex}
+  .fb-editor .fb-info{display:none}
+}
+
 /* devices row */
 .code{display:inline-flex;align-items:center;gap:10px;margin-top:30px;font:600 clamp(26px,3vw,40px) var(--mono);letter-spacing:.14em;background:var(--card);padding:14px 26px;border-radius:16px;box-shadow:inset 0 0 0 1.5px #2e2e2b}
 .code i{font-style:normal;color:var(--dim)} .code span{color:var(--ink)}

@@ -291,8 +291,8 @@
       return [...map.values()];
     };
     const st = { chords: original(), hover: null, sel: null };
-    // on a phone, as in the app: tap a chord to select it, drag it to move it, and trim it in the lane under the notes
-    const narrow = matchMedia('(max-width:560px)');
+    // on a phone or tablet, as in the app: tap a chord to select it, drag it to move it, and trim it in the lane under the notes
+    const narrow = matchMedia('(max-width:560px), (pointer:coarse)');
     const hintEl = box.host.querySelector('.fb-hint');
     const setHint = () => { hintEl.textContent = narrow.matches ? 'tap a chord to select it · drag it to move it · drag the handles in the trim lane to change where it starts and ends' : 'drag a chord to move it · drag its edges to change where it starts and ends'; };
     (narrow.addEventListener ? narrow.addEventListener('change', setHint) : narrow.addListener(setHint)); setHint();
