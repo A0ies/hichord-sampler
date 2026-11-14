@@ -581,6 +581,31 @@
     vhead.append(badge, pname, pinfo); view.appendChild(vhead);
     const cv = canvas(view, 'sroll', 'Notes of the part that is playing');
     const tape = el('div', 'stape'); view.appendChild(tape);
+    // on a phone the blocks only drag, so a slider under the tape scrolls it
+    const slide = el('div', 'sslide', '<i></i>'), thumb = slide.firstChild; slide.dataset.grab = ''; view.appendChild(slide);
+    slide.setAttribute('role', 'scrollbar'); slide.setAttribute('aria-label', 'Scroll the tape');
+    function syncSlide() {
+      const W = tape.scrollWidth, w = tape.clientWidth, tw = slide.clientWidth; if (!tw) return;
+      const f = W > w + 1 ? w / W : 1, th = Math.max(40, f * tw);
+      thumb.style.width = th + 'px'; thumb.style.left = (W > w ? tape.scrollLeft / (W - w) : 0) * (tw - th) + 'px';
+      slide.classList.toggle('none', f >= 1);
+    }
+    let sl = null;
+    const slideTo = (x, grab) => { const r = slide.getBoundingClientRect(), th = thumb.offsetWidth, room = r.width - th; if (room <= 0) return;
+      tape.scrollLeft = clamp((x - r.left - grab) / room, 0, 1) * (tape.scrollWidth - tape.clientWidth); };
+    slide.addEventListener('pointerdown', e => {
+      e.preventDefault(); slide.setPointerCapture(e.pointerId); slide.classList.add('held');
+      const tr = thumb.getBoundingClientRect(), on = e.clientX >= tr.left && e.clientX <= tr.right;
+      sl = { id: e.pointerId, grab: on ? e.clientX - tr.left : thumb.offsetWidth / 2 }; slideTo(e.clientX, sl.grab);
+    });
+    slide.addEventListener('pointermove', e => { if (sl && sl.id === e.pointerId) slideTo(e.clientX, sl.grab); });
+    const slEnd = e => { if (sl && sl.id === e.pointerId) { sl = null; slide.classList.remove('held'); } };
+    slide.addEventListener('pointerup', slEnd); slide.addEventListener('pointercancel', slEnd);
+    tape.addEventListener('scroll', syncSlide, { passive: true });
+    new ResizeObserver(syncSlide).observe(tape);
+    const narrow = matchMedia('(max-width:560px)'), hintEl = box.host.querySelector('.fb-hint');
+    const setHint = () => { hintEl.textContent = narrow.matches ? 'drag parts onto the tape · drag blocks to move them, or off the tape to remove · use the slider to scroll the tape' : SPEC.song.hint; };
+    narrow.addEventListener && narrow.addEventListener('change', setHint); setHint();
     const shelf = el('div', 'sparts'); box.body.appendChild(shelf);
 
     /* drag and drop: a part from the shelf onto the tape, a block along the tape, or a block off the tape to take it away */
@@ -669,6 +694,7 @@
       });
       if (st.order.length < MAX) tape.appendChild(el('div', 'sdrop', 'drag a part here'));
       const secs = Math.round(total() * SEC);
+      requestAnimationFrame(syncSlide);
       box.info.textContent = `${st.order.length} ${st.order.length === 1 ? 'pass' : 'passes'} · ${st.order.length * 4} bars · ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
     }
     renderTape();
@@ -713,6 +739,10 @@
     song: { title: 'song', hint: 'drag parts onto the tape · drag blocks to move them, or off the tape to remove · tap a block to go there', build: songBox },
   };
   const boxes = [];
+  let holding = 0;
+  const letGo = () => { holding = 0; };
+  addEventListener('pointerup', letGo, true); addEventListener('pointercancel', letGo, true);
+  document.addEventListener('selectstart', e => { if (holding) e.preventDefault(); });
   hosts.forEach(host => {
     const spec = SPEC[host.dataset.box]; if (!spec) return;
     host.innerHTML = ''; host.classList.add('ready', 'fb-' + host.dataset.box);
@@ -731,6 +761,9 @@
     orig.addEventListener('click', () => { box.reset(); box.changed(); });
     mute.addEventListener('click', () => { audio(); setLoud(box, loud !== box, true); });
     setLoud(box, false);
+    // while a finger holds anything in a box, a long press never starts a text selection (on the page around it either)
+    host.addEventListener('pointerdown', () => { holding++; const sel = getSelection && getSelection(); if (sel && sel.rangeCount) sel.removeAllRanges(); }, true);
+    host.addEventListener('contextmenu', e => e.preventDefault());
     boxes.push(box);
   });
 

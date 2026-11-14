@@ -118,7 +118,8 @@ h2 .it{font-size:1.1em}
 
 /* feature boxes: a working piece of the app per feature (feature-boxes.js) */
 .fbox{width:100%;background:var(--light);color:var(--light-ink);border-radius:clamp(18px,2vw,28px);padding:clamp(12px,1.5vw,20px);display:flex;flex-direction:column;gap:clamp(10px,1.2vw,14px);
-  box-shadow:0 40px 90px -30px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.04);transition:box-shadow .4s;-webkit-tap-highlight-color:transparent}
+  box-shadow:0 40px 90px -30px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.04);transition:box-shadow .4s;-webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}   /* holding a handle or a block never selects text */
 .fbox.loud{box-shadow:0 40px 90px -30px rgba(0,0,0,.85),0 0 0 2px var(--acc),0 30px 80px -30px rgba(255,80,0,.45)}
 .fbox > img{border-radius:14px}
 .feat .vis .fb-layers,.feat .vis .fbox[data-box="layers"]{max-width:440px}
@@ -236,6 +237,11 @@ h2 .it{font-size:1.1em}
 .sx:hover{opacity:1;background:rgba(0,0,0,.5)}
 .sprog{position:absolute;left:0;top:0;width:100%;height:3px;background:#fff;transform-origin:0 50%;transform:scaleX(0);display:none;pointer-events:none}
 .sblock.cur .sprog{display:block}
+.sslide{display:none;position:relative;height:24px;touch-action:none;cursor:pointer;margin:-4px 0 -6px}
+.sslide::before{content:"";position:absolute;left:0;right:0;top:50%;height:6px;margin-top:-3px;border-radius:3px;background:#262624}
+.sslide i{position:absolute;top:50%;height:10px;margin-top:-5px;border-radius:5px;background:#a5a59f;min-width:40px;transition:background .15s}
+.sslide.held i{background:#f0f0ec}
+.sslide.none{opacity:.35;pointer-events:none}
 .sparts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .spart{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:14px;border:0;cursor:grab;background:#f2f2ef;box-shadow:0 2px 0 #b9b9b3;text-align:left;
   touch-action:none;user-select:none;-webkit-user-select:none;transition:transform .15s}
@@ -259,6 +265,12 @@ h2 .it{font-size:1.1em}
   .fb-editor .fb-info{display:none}
   .sroll{aspect-ratio:16 / 7}
   .spart b{font-size:24px}
+  .sblock,.sgap{flex-basis:54px;height:46px;border-radius:7px}
+  .sblock{padding:5px 6px}
+  .sblock b{font-size:12px} .sblock span{font-size:9.5px;white-space:nowrap}
+  .sblock .sx{width:18px;height:18px;border-radius:5px;font-size:12px!important;top:2px;right:2px}
+  .sdrop{flex-basis:96px;height:46px;font-size:10.5px}
+  .sslide{display:block}
   .fb-hint{font-size:11.5px}
 }
 
@@ -478,7 +490,7 @@ const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting
 const land = document.querySelector('.stage .s-land');
 const leads = [...document.querySelectorAll('.stage .s-phone, .stage .s-tab')];
 const [trioPhone, trioLap, trioTab] = document.querySelector('.trio').children;
-const custom = [...leads, trioPhone, trioLap, trioTab];
+const custom = [...leads, land, trioPhone, trioLap, trioTab];
 document.querySelectorAll('.rv').forEach(el => { if (custom.includes(el)) return; const r = el.getBoundingClientRect(); if (r.top < innerHeight && r.bottom > 0) requestAnimationFrame(() => el.classList.add('in')); else io.observe(el); });
 // "Pick it up anywhere": iPhone, laptop, iPad cascade left to right around the laptop's own trigger point.
 // Positions are re-measured on every scroll, since lazy images above and inside the row change its height.
@@ -498,23 +510,24 @@ document.querySelectorAll('.rv').forEach(el => { if (custom.includes(el)) return
   addEventListener('resize', check);
   check();
 })();
-// hero devices: the two that are already on screen cascade in on scroll, landing in step with the landscape iPhone's trigger
+// hero devices: they come in left to right, the landscape iPhone last. On scroll the two that are already on screen
+// cascade in ahead of it, landing in step with its own trigger; if it is on screen from the start, all three come in staggered.
 (function cascade() {
-  // scroll position at which the landscape iPhone's observer fires (its top crosses 92% of the viewport)
+  // scroll position at which the landscape iPhone's reveal fires (its top crosses 92% of the viewport)
   const landAt = () => land.getBoundingClientRect().top + scrollY - innerHeight * 0.92;
-  // reveal order follows the layout: left to right, or top first when stacked (the iPad leads on small screens)
-  const ordered = () => leads.map(el => ({ el, r: el.getBoundingClientRect() }))
-    .sort((a, b) => Math.abs(a.r.top - b.r.top) > a.r.height / 2 ? a.r.top - b.r.top : a.r.left - b.r.left).map(o => o.el);
+  const ordered = () => leads.slice().sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+  if (landAt() <= scrollY) {
+    [...ordered(), land].forEach((el, i) => { el.style.transitionDelay = (0.1 + i * 0.14) + 's'; requestAnimationFrame(() => el.classList.add('in')); });
+    return;
+  }
   let steps = [];
-  const plan = () => { const T = landAt(), seq = ordered(); steps = seq.map((el, i) => ({ el, at: T * (i + 1) / (seq.length + 1) })); };
+  const plan = () => { const T = landAt(), seq = ordered(); steps = [...seq.map((el, i) => ({ el, at: T * (i + 1) / (seq.length + 1) })), { el: land, at: T }]; };
   const check = () => {
     steps = steps.filter(s => { if (s.at <= scrollY) { s.el.classList.add('in'); return false; } return true; });
     if (!steps.length) { removeEventListener('scroll', check); removeEventListener('resize', replan); }
   };
   const replan = () => { const left = new Set(steps.map(s => s.el)); plan(); steps = steps.filter(s => left.has(s.el)); check(); };
   plan();
-  // landscape iPhone already visible (short or wide viewport): no scroll needed, keep the staggered entrance
-  if (landAt() <= 0) { leads.forEach(el => requestAnimationFrame(() => el.classList.add('in'))); return; }
   addEventListener('scroll', check, { passive: true });
   addEventListener('resize', replan);
   check();
