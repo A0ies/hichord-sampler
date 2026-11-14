@@ -465,10 +465,6 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .hcsprog{height:6px;border-radius:3px;background:var(--line);overflow:hidden} .hcsprog i{display:block;height:100%;width:0;background:var(--acc)}
 .hcsbox .row{display:flex;gap:8px;justify-content:flex-end} .hcsbox .row button{min-height:44px;padding:0 16px}
 .hcsbox .err{color:var(--rec);line-height:1.5}
-/* syncing the HiChord instruments: which app instrument gets which HiChord sound */
-.hcsbox .hcmap{list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}
-.hcsbox .hcmap li{display:flex;gap:6px;white-space:nowrap;overflow:hidden;color:var(--dim)} .hcsbox .hcmap li b{font-weight:600;color:var(--ink)}
-.hcsbox .hcmap li.ok b::after{content:" ✓";color:var(--ok)} .hcsbox .hcmap li.now b{color:var(--acc)}
 /* phone in landscape: the box goes wide and flat instead of tall, so nothing scrolls */
 @media (orientation:landscape) and (max-height:560px){
   .hcs{padding:calc(8px + var(--st)) calc(12px + var(--sr)) calc(8px + var(--sb)) calc(12px + var(--sl))}
@@ -480,6 +476,112 @@ body.songopen .fabs,body.songopen .tbar{display:none}
   .hcsbox ul:not(.hcmap) li{margin-right:4px}
   .hcsbox .hcsin{padding:5px 10px}
   .hcsbox .row button{min-height:38px}
+}
+/* sampling the HiChord sounds: a full screen, first the steps on the HiChord and the sounds to pick, then the progress */
+.hcs.full{background:var(--bg);align-items:stretch;padding:calc(14px + var(--st)) calc(16px + var(--sr)) calc(14px + var(--sb)) calc(16px + var(--sl))}
+.hcs.full .hcsbox{width:100%;max-width:1120px;margin:0 auto;max-height:none;height:100%;background:none;box-shadow:none;padding:0;border-radius:0;overflow:hidden;gap:12px}
+.hcshead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none}
+.hcs.full .hcshead h3{font-size:22px}
+.hcshead .icon{width:40px;height:40px;min-height:0;padding:0;font-size:16px}
+.hcsleft{color:var(--dim)}
+.hcsetup{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:14px}
+.hcsteps,.hcsounds,.hcsnow,.hcs.full .hcslist{background:var(--panel);border-radius:16px;padding:16px;min-height:0;overflow:hidden;box-sizing:border-box}
+.hcsteps,.hcsounds{display:flex;flex-direction:column;gap:10px}
+ol.hcstep{list-style:none;counter-reset:st;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
+ol.hcstep>li{counter-increment:st;position:relative;padding-left:34px;min-width:0}
+ol.hcstep>li::before{content:counter(st);position:absolute;left:0;top:-2px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--panel);display:grid;place-items:center;font-weight:600}
+ol.hcstep>li>b{display:block;font-family:var(--sans);font-size:14px;font-weight:600;margin-bottom:3px}
+ol.hcstep p{margin:0}
+ol.hcsdo{margin:2px 0 6px;padding-left:18px;line-height:1.8;color:var(--ink)}
+.hk{display:inline-block;padding:0 7px;border-radius:5px;font-weight:700;font-size:11px;letter-spacing:.05em;line-height:19px}
+.hk.y{background:#f5c400;color:#151515} .hk.g{background:#9a9a96;color:#fff} .hk.r{background:#e8332a;color:#fff}
+.jy{display:inline-block;padding:0 6px;border-radius:5px;background:var(--key);box-shadow:inset 0 0 0 1px var(--line);font-weight:700;white-space:nowrap;line-height:19px;color:var(--ink)}
+.hcsrows{display:flex;flex-wrap:wrap;gap:4px}
+.hcsrows span{background:var(--key);border-radius:6px;padding:2px 7px;color:var(--ink);white-space:nowrap}
+.hcsok{color:var(--ok);font-weight:700}
+.hcsrows em{font-style:normal;font-weight:700;color:var(--acc-text)}
+.hcsbox .hcsin.ok{box-shadow:inset 0 0 0 2px var(--ok)}
+.hcsin button{min-height:32px;padding:0 12px}
+.hcsnext,.hcsback{display:none}
+.hcspick{display:flex;align-items:center;gap:6px;flex:none} .hcspick span{flex:1;color:var(--dim)} .hcspick button{min-height:32px;padding:0 10px}
+.hcsgroups{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px}
+.hcsgroups h4{margin:2px 0 0;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+.hcsgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
+.hcst{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;min-height:44px;padding:5px 22px 5px 9px;border-radius:10px;
+  background:var(--key);border:1.5px solid transparent;text-align:left;font-family:var(--mono);color:var(--ink);min-width:0}
+.hcst b{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hcst small{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hcst.sel{border-color:var(--acc);background:var(--acc-soft)}
+.hcst.kept::after{content:"✓";position:absolute;top:4px;right:7px;color:var(--ok);font-weight:700}
+.hcst:disabled{opacity:1}
+.hcsfoot{display:flex;flex-direction:column;gap:8px;flex:none}
+.hcsfoot .row button:disabled{opacity:.45}
+.hcsrun{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px}
+.hcsnow{display:flex;flex-direction:column;justify-content:center;gap:12px}
+.hcsbig{font-family:var(--sans);font-size:clamp(28px,5.5vw,52px);font-weight:600;line-height:1.05;letter-spacing:-.01em;overflow-wrap:anywhere}
+.hcsstrip{display:grid;grid-template-columns:repeat(21,minmax(0,1fr));gap:3px}
+.hcsstrip i{height:22px;border-radius:3px;background:var(--line)} .hcsstrip i.ok{background:var(--ok)} .hcsstrip i.now{background:var(--acc)}
+.hcs.full .hcsmeter{height:10px} .hcs.full .hcsprog{height:8px}
+.hcslist{list-style:none;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:3px 10px;align-content:start}
+.hcslist li{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcslist li.ok{color:var(--ink)} .hcslist li.ok::before{content:"✓ ";color:var(--ok);font-weight:700}
+.hcslist li.now{color:var(--acc-text);font-weight:600} .hcslist li.now::before{content:"● "}
+.hcs.full .row{flex:none;align-items:center}
+.hcskeep{flex:1;color:var(--dim)}
+.hcsend{width:min(640px,100%);margin:auto;display:flex;flex-direction:column;gap:12px;min-height:0}
+.hcsend .hcslist{padding:12px}
+/* tall and narrow (iPad upright): the steps above the sounds */
+@media (max-width:899px) and (min-height:1000px){
+  .hcsetup{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .hcsrun{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+}
+/* not room for both: the steps first, then the sounds */
+@media (max-width:899px) and (max-height:999px), (max-height:640px){
+  .hcsetup{grid-template-columns:minmax(0,1fr)}
+  .hcsetup.pg-steps .hcsounds,.hcsetup.pg-sounds .hcsteps{display:none}
+  .hcsnext,.hcsback{display:inline-flex;align-items:center;justify-content:center}
+  .hcsnext{margin-top:auto;align-self:flex-end;min-height:44px;padding:0 18px}
+  .hcsrun{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+}
+@media (max-width:520px){
+  .hcsteps,.hcsounds,.hcsnow,.hcs.full .hcslist{padding:12px}
+  .hcsgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  .hcst{min-height:40px;padding:4px 18px 4px 8px} .hcst b{font-size:11px} .hcst small{font-size:9px}
+  .hcst.kept::after{right:6px}
+}
+/* small phones (iPhone SE) upright: a size smaller */
+@media (orientation:portrait) and (max-height:760px){
+  .hcs.full{padding-top:calc(10px + var(--st));padding-bottom:calc(10px + var(--sb))}
+  .hcs.full .hcsbox{gap:8px;font-size:11px}
+  .hcs.full .hcshead h3{font-size:18px} .hcshead .icon{width:34px;height:34px}
+  ol.hcstep{gap:8px} ol.hcstep>li>b{font-size:13px;margin-bottom:1px} ol.hcstep p{line-height:1.4}
+  ol.hcsdo{line-height:1.6;margin:0 0 4px} .hcsrows{gap:3px} .hcsrows span{padding:1px 6px}
+  .hcsnext{min-height:40px}
+  .hcsounds{gap:6px} .hcsgroups{gap:4px}
+  .hcst{min-height:34px} .hcst small{display:none}
+  .hcspick button{min-height:30px} .hcs.full .row button{min-height:40px}
+}
+/* phone in landscape: the steps side by side, everything a size smaller */
+@media (orientation:landscape) and (max-height:500px){
+  .hcs.full{padding:calc(8px + var(--st)) calc(12px + var(--sr)) calc(8px + var(--sb)) calc(12px + var(--sl))}
+  .hcs.full .hcsbox{gap:8px;font-size:11px}
+  .hcs.full .hcshead h3{font-size:16px} .hcshead .icon{width:34px;height:34px}
+  .hcsteps,.hcsounds,.hcsnow,.hcs.full .hcslist{padding:10px 12px;border-radius:12px}
+  .hcsteps{gap:6px} .hcsounds{gap:5px}
+  ol.hcstep{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:8px 18px;flex:1;min-height:0}
+  ol.hcstep{align-content:start} .hcsteps{position:relative}
+  ol.hcstep>li:nth-child(1){grid-area:1/2} ol.hcstep>li:nth-child(2){grid-area:1/1/3/2} ol.hcstep>li:nth-child(3){grid-area:2/2} ol.hcstep>li:nth-child(4){grid-area:3/2}
+  ol.hcstep>li{padding-left:28px} ol.hcstep>li::before{width:20px;height:20px}
+  ol.hcstep>li>b{font-size:12px;margin-bottom:1px}
+  ol.hcstep p{line-height:1.35} ol.hcsdo{line-height:1.6;margin:0 0 4px}
+  .hcsnext{margin-top:0;position:absolute;left:12px;bottom:10px;min-height:38px}
+  .hcsgrid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:4px}
+  .hcst{min-height:34px;padding:3px 20px 3px 8px;border-radius:8px} .hcst b{font-size:11px} .hcst small{font-size:9px}
+  .hcspick button,.hcsin button{min-height:28px}
+  .hcsfoot{flex-direction:row;align-items:center;gap:10px} .hcsfoot p{line-height:1.3;flex:1} .hcst small{display:none} .hcs.full .row button{min-height:36px}
+  .hcsrun{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-rows:none;gap:10px}
+  .hcsnow{gap:7px} .hcsbig{font-size:28px} .hcsstrip i{height:16px}
+  .hcsend{gap:7px}
 }
 .params .hcsync{grid-column:1/-1;display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap}
 .params .hcsync button{min-height:40px;flex:none;text-align:left;white-space:normal;max-width:100%;line-height:1.3;padding-top:7px;padding-bottom:7px}
@@ -1794,7 +1896,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-13.76';
+const PAGE_VERSION='2026-11-14.77';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2682,25 +2784,86 @@ function hcsOpen(target){
   if(!ctx){ toast('press start first'); return; }
   if(HCS && HCS.running) return;
   HCS={ target, running:false, input:null, stream:null };
-  if(target && target.sync){ Object.assign(HCS, { queue:target.sync, qi:0, done:[], prevPreset:HC.state.preset }); closeSheets(); }
+  if(target && target.sync){
+    // the sounds to sample: picked on the setup screen (one layer's sound: just that one); done adds up over restarts
+    Object.assign(HCS, { queue:null, qi:0, done:[], pick:new Set(target.sync), one:target.layer!=null, page:'steps', prevPreset:HC.state.preset });
+    closeSheets(); $('hcs').classList.add('full');
+  }
   $('hcs').classList.remove('hidden'); hcsIntro();
 }
 const hcsKey = () => HCS && HCS.queue ? HCS.queue[HCS.qi] : null;
-const hcsMins = n => Math.max(1, Math.round(n*HCS_NOTES.length*HCS_STEP/60));
-function hcsMap(){
-  return `<ul class="hcmap">${HCS.queue.map((k,i)=>`<li class="${HCS.done.includes(k)?'ok':i===HCS.qi&&HCS.running?'now':''}"><b>${HC_SOUND[k]}</b></li>`).join('')}</ul>`;
+const HCS_PER = HCS_NOTES.length*HCS_STEP + 3;   // seconds per sound, with switching and cutting
+const hcsMins = n => Math.max(1, Math.round(n*HCS_PER/60));
+const hcsSync = () => !!(HCS && HCS.pick);
+// the HiChord's own keys and joystick, as they look and are named on the device
+const hk = (c,t) => `<span class="hk ${c}">${t}</span>`, jy = t => `<span class="jy">${t}</span>`;
+// the full screen before sampling: the four steps on the HiChord, and which sounds to sample
+function hcsSetup(err){
+  const H=HCS, picked=HCI_ALL.filter(k=>H.pick.has(k)), n=picked.length;
+  const tile = k => `<button class="hcst${H.pick.has(k)?' sel':''}${HCI[k]?' kept':''}" data-k="${k}" aria-pressed="${H.pick.has(k)}"${H.one?' disabled':''}><b>${escH(HC_SOUND[k])}</b>${(()=>{ const e=Object.entries(HC_INST).find(([,v])=>'hc'+v[0]===k); return e?`<small>for ${escH(LIB[e[0]].name)}</small>`:''; })()}</button>`;
+  const inst=Object.values(HC_INST).map(v=>'hc'+v[0]), more=Object.keys(HC_EXTRA);
+  const group=(t,ks)=>{ ks=ks.filter(k=>!H.one||H.pick.has(k)); return ks.length?`<h4>${t}</h4><div class="hcsgrid">${ks.map(tile).join('')}</div>`:''; };
+  $('hcsBox').innerHTML=`<header class="hcshead"><h3>${H.one?`Sample the HiChord's ${escH(HC_SOUND[picked[0]])}`:'Sample the HiChord sounds'}</h3>
+      <button id="hcsCancel" class="icon" aria-label="${H.done.length?'Stop here':'Close'}">✕</button></header>
+    <div class="hcsetup pg-${H.page}">
+      <section class="hcsteps" aria-label="Set up the HiChord">
+        <ol class="hcstep">
+          <li><b>Firmware 3.0</b><p>The HiChord shows its version under the logo when it starts. Below 3.0? Update it on a computer in Chrome or Edge at updater.hichord.shop (a phone can't). Updating from 2.8 or 2.9 clears the presets and recordings saved on the HiChord.</p></li>
+          <li><b>Settings on the HiChord</b>
+            <ol class="hcsdo">
+              <li>Press the ${hk('y','YELLOW')} button</li>
+              <li>Joystick ${jy('↑ UP')}: the effects open</li>
+              <li>Joystick ${jy('← LEFT')} or ${jy('→ RIGHT')}: go to each row below</li>
+              <li>Joystick ${jy('↑ UP')}: change the row</li>
+              <li>Click the joystick to close</li>
+            </ol>
+            <p class="hcsrows"><span>Reverb <em>OFF</em></span><span>Delay <em>OFF</em></span><span>Chorus <em>OFF</em></span><span>Glide <em>OFF</em></span><span>MIDI Out <em>DAW</em></span><span>MIDI In <em>ON</em></span><span>USB Audio <em>ON</em></span></p></li>
+          <li><b>Volume to 5%</b><p>Turn the volume wheel on the HiChord's top edge down to about 5%. The app records over USB, so the HiChord can play through every sound without disturbing anyone.</p></li>
+          <li><b>Plug in with USB-C</b><div class="hcsin ${HC.connected?'ok':'warn'}"><span class="dot${HC.connected?' ok':''}"></span><b>${HC.connected?'HiChord connected':'Not connected yet'}</b>${HC.connected?'':'<button id="hcsConn">Connect</button>'}</div></li>
+        </ol>
+        <button class="primary hcsnext" id="hcsNext">${H.one?'Next':'Next: pick the sounds'}</button>
+      </section>
+      <section class="hcsounds" aria-label="Sounds to sample">
+        ${H.one?'':`<div class="hcspick"><span>${n} of ${HCI_ALL.length} picked</span><button id="hcsAll">all</button><button id="hcsMiss">missing</button><button id="hcsNone">none</button></div>`}
+        <div class="hcsgroups">${group("For the app's instruments",inst)}${group('More HiChord sounds',more)}</div>
+        <div class="hcsfoot">
+          <p>${n?`<b>${n} sound${n>1?'s':''} · about ${hcsMins(n)} min</b>`:'<b>Pick the sounds to sample</b>'} · <span class="hcsok">✓</span> already in the app · kept for good, also through app updates</p>
+          ${err?`<p class="err">${err}</p>`:''}
+          <div class="row"><button class="hcsback" id="hcsBack">Back</button><button id="hcsStart" class="primary"${n?'':' disabled'}>${H.done.length?'Go on':'Start sampling'}</button></div>
+        </div>
+      </section>
+    </div>`;
+  $('hcsCancel').onclick=H.done.length?hcsSyncEnd:hcsClose; $('hcsStart').onclick=hcsStart;
+  $('hcsNext').onclick=()=>{ H.page='sounds'; hcsSetup(err); };
+  $('hcsBack').onclick=()=>{ H.page='steps'; hcsSetup(err); };
+  if($('hcsConn')) $('hcsConn').onclick=async()=>{ await hcConnect(); if(HCS===H && !H.running) hcsSetup(err); };
+  const set=ks=>{ H.pick=new Set(ks); hcsSetup(err); };
+  if($('hcsAll')){ $('hcsAll').onclick=()=>set(HCI_ALL); $('hcsMiss').onclick=()=>set(HCI_ALL.filter(k=>!HCI[k])); $('hcsNone').onclick=()=>set([]); }
+  $('hcsBox').querySelectorAll('.hcst').forEach(b=>b.onclick=()=>{ const k=b.dataset.k; H.pick.has(k)?H.pick.delete(k):H.pick.add(k); hcsSetup(err); });
+}
+// the full screen while sampling: the sound now, its 21 notes, the level, and all the sounds of this run
+function hcsRunView(status){
+  const H=HCS, k=hcsKey(), N=H.queue.length, i=H.qi;
+  $('hcsBox').innerHTML=`<header class="hcshead"><h3>Sampling ${i+1} of ${N}</h3><span class="hcsleft" id="hcsLeft">about ${hcsMins(N-i)} min left</span></header>
+    <div class="hcsrun">
+      <div class="hcsnow">
+        <div class="hcsbig">${escH(HC_SOUND[k])}</div>
+        <p id="hcsNote">${status||'getting ready…'}</p>
+        <div class="hcsstrip" id="hcsStrip" aria-hidden="true">${HCS_NOTES.map(()=>'<i></i>').join('')}</div>
+        <div class="hcsin"><span>input</span><b id="hcsInLabel">${escH(H.label||'…')}</b></div>
+        <div class="hcsmeter" aria-hidden="true"><i id="hcsMeter"></i></div>
+        <div class="hcsprog" aria-hidden="true"><i id="hcsProg" style="width:${i/N*100}%"></i></div>
+      </div>
+      <ul class="hcslist">${H.queue.map((q,j)=>`<li class="${j<i?'ok':j===i?'now':''}">${escH(HC_SOUND[q])}</li>`).join('')}</ul>
+    </div>
+    <div class="row"><span class="hcskeep">${H.done.length?`${H.done.length} kept in the app`:'Each sound is kept in the app as soon as it is done'}</span><button id="hcsCancel">${H.done.length?'Stop here':'Cancel'}</button></div>`;
+  $('hcsCancel').onclick = H.done.length ? ()=>{ hcsStop(); hcsSyncEnd(); } : hcsCancel;
 }
 function hcsIntro(err){
-  if(HCS && HCS.queue){
-    const left=HCS.queue.length-HCS.qi, one=HCS.queue.length===1;
-    $('hcsBox').innerHTML=`<h3>${one?`sample the HiChord's ${escH(HC_SOUND[HCS.queue[0]])}`:'sync instruments'}</h3>
-      <p>The app switches your HiChord to each sound below, plays it note by note over USB and records it over USB audio: about ${hcsMins(left)} minute${hcsMins(left)>1?'s':''}. Drums stay as they are. The sounds stay on this device; afterwards the HiChord goes back to its own sound.</p>
-      ${hcsMap()}
-      <ul><li>turn reverb, delay, chorus and glide off</li><li>USB AUD on, MIDI OUT on DAW (the defaults)</li></ul>
-      <div class="hcsin ${HC.connected?'':'warn'}"><span>midi</span><b>${HC.connected?'HiChord connected':'not connected: start connects it'}</b></div>
-      ${err?`<p class="err">${err}</p>`:''}
-      <div class="row"><button id="hcsCancel">${HCS.done.length?'stop here':'cancel'}</button><button id="hcsStart" class="primary">${HCS.qi?'go on':'start'}</button></div>`;
-    $('hcsCancel').onclick=HCS.done.length?hcsSyncEnd:hcsClose; $('hcsStart').onclick=hcsStart; return;
+  if(hcsSync()){
+    // stopped partway (an error): the sounds not done yet stay picked
+    if(HCS.queue){ HCS.pick=new Set(HCS.queue.slice(HCS.qi)); HCS.queue=null; HCS.qi=0; if(err) HCS.page='sounds'; }
+    hcsSetup(err); return;
   }
   const mins=Math.round(HCS_NOTES.length*HCS_STEP/6)/10;
   $('hcsBox').innerHTML=`<h3>sample your HiChord</h3>
@@ -2735,9 +2898,12 @@ async function hcsOpenInput(){
 async function hcsStart(){
   if(!HC.connected) await hcConnect();
   if(!HC.connected){ hcsIntro('No HiChord over USB MIDI. Plug it in with USB-C and try again.'); return; }
+  if(hcsSync() && !HCS.queue){
+    HCS.queue=HCI_ALL.filter(k=>HCS.pick.has(k)); HCS.qi=0; if(!HCS.queue.length){ HCS.queue=null; return; }
+  }
   const qk=hcsKey();
   if(qk){
-    $('hcsBox').innerHTML=`<h3>switching to ${escH(HC_SOUND[qk])}…</h3>`;
+    hcsRunView(`switching the HiChord to ${escH(HC_SOUND[qk])}…`);
     hcCC(HC.CC.PRESET, +qk.slice(2)); HC.state.preset=+qk.slice(2); renderHCState('preset');
     const run=HCS; await new Promise(r=>setTimeout(r,800)); if(HCS!==run) return;
   }
@@ -2749,7 +2915,7 @@ async function hcsStart(){
     inp.stream.getTracks().forEach(t=>t.stop());
     $('hcsBox').innerHTML=`<h3>no HiChord input</h3><p>There is no audio input called "HiChord". Check that USB AUD is on, and that the HiChord is plugged in over USB-C. The input in use is "${escH(inp.label)}"${inp.inputs&&inp.inputs.length>1?`; inputs found: ${inp.inputs.map(escH).join(', ')}`:''}.</p>
       <div class="row"><button id="hcsCancel">cancel</button>${HCS_BUILTIN.test(inp.label)?'':`<button id="hcsAny">use "${escH(inp.label.slice(0,24))}"</button>`}</div>`;
-    $('hcsCancel').onclick=hcsClose; $('hcsAny').onclick=()=>{ HCS.anyInput=true; hcsStart(); }; return;
+    $('hcsCancel').onclick=hcsSync()?()=>hcsIntro():hcsClose; if($('hcsAny')) $('hcsAny').onclick=()=>{ HCS.anyInput=true; hcsStart(); }; return;
   }
   HCS.stream=inp.stream; HCS.label=inp.label;
   // record raw samples (no codec): a script processor gives the input as it arrives
@@ -2765,13 +2931,12 @@ async function hcsStart(){
   // the mode: incoming notes should simply sound (no strum, arp, repeat or drone); put the mode back afterwards
   const m=HC.state.mode; HCS.prevMode=m;
   if(m!=null && m!==0 && m!==2) hcCC(HC.CC.MODE,0);
-  $('hcsBox').innerHTML=`<h3>${qk?`${HCS.queue.length>1?`${HCS.qi+1} of ${HCS.queue.length} · `:''}${escH(HC_SOUND[qk])}`:`sampling ${escH(hcsName())}`}</h3>
-    ${qk&&HCS.queue.length>1?hcsMap():''}
+  if(qk) hcsRunView(); else $('hcsBox').innerHTML=`<h3>sampling ${escH(hcsName())}</h3>
     <div class="hcsin"><span>input</span><b>${escH(inp.label)}</b></div>
     <div class="hcsmeter" aria-hidden="true"><i id="hcsMeter"></i></div>
     <p id="hcsNote">getting ready…</p><div class="hcsprog" aria-hidden="true"><i id="hcsProg"></i></div>
     <div class="row"><button id="hcsCancel">cancel</button></div>`;
-  $('hcsCancel').onclick = qk && HCS.done.length ? ()=>{ hcsStop(); hcsSyncEnd(); } : hcsCancel;
+  if(!qk) $('hcsCancel').onclick = hcsCancel;
   // every note scheduled ahead, on the MIDI clock (performance.now)
   const T0=performance.now()+HCS_LEAD*1000; HCS.T0=T0;
   HCS_NOTES.forEach((n,i)=>{ const on=T0+i*HCS_STEP*1000, off=on+HCS_ON*1000;
@@ -2782,12 +2947,15 @@ async function hcsStart(){
     if(!HCS || !HCS.running) return;
     const t=performance.now()-T0, i=clamp(Math.floor(t/(HCS_STEP*1000)),0,HCS_NOTES.length-1);
     HCS.maxPeak=Math.max(HCS.maxPeak, HCS.level||0);
-    const m=$('hcsMeter'); if(m) m.style.width=Math.min(100,(HCS.level||0)*120)+'%';
-    const pr=$('hcsProg'); if(pr) pr.style.width=clamp(t/total*100,0,100)+'%';
+    const m=$('hcsMeter'); if(m) m.style.width=clamp((20*Math.log10(Math.max(1e-5,HCS.level||0))+60)/60*100,0,100)+'%';   // in dB: a quiet HiChord shows too
+    const f=clamp(t/total,0,1), N=HCS.queue?HCS.queue.length:1, qi=HCS.queue?HCS.qi:0;
+    const pr=$('hcsProg'); if(pr) pr.style.width=((qi+f)/N*100)+'%';
     const nt=$('hcsNote'); if(nt) nt.textContent = t<0 ? 'getting ready…' : `note ${i+1} of ${HCS_NOTES.length} · ${noteName(HCS_NOTES[i])}`;
+    const st=$('hcsStrip'); if(st && t>=0) [...st.children].forEach((c,j)=>c.className = j<i?'ok':j===i?'now':'');
+    const lf=$('hcsLeft'); if(lf && HCS.queue){ const sec=Math.max(0,(N-qi-f)*HCS_PER); lf.textContent = sec<60 ? 'under a minute left' : `about ${Math.round(sec/60)} min left`; }
     // two notes in and nothing came in: stop and say what to check
-    if(t>2*HCS_STEP*1000+600 && HCS.maxPeak<0.0006){ hcsFail('No sound came in from the HiChord. Check that USB Audio is on, that the volume isn\'t all the way down (1 is enough), that MIDI IN is on (the Companion App switches it on), and that the input is the HiChord.'); return; }
-    if(t>total+400){ hcsFinish(); return; }
+    if(t>2*HCS_STEP*1000+600 && HCS.maxPeak<0.0006){ hcsFail('No sound came in from the HiChord. Check that USB Audio is on, that the volume isn\'t all the way down (5% is enough), that MIDI In is on (step 2), and that the input is the HiChord.'); return; }
+    if(t>total+900){ hcsFinish(); return; }   // a little longer: the input arrives in blocks, after a delay
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -2822,23 +2990,27 @@ function hcsSyncEnd(){
     if(run.target.layer!=null){ const Ly=layers[run.target.layer]; if(Ly && run.done.includes(hcKeyOf(Ly.inst))) Ly.hc=true; renderLayers(); renderDetail(); renderHcSync(); save(); }
     else setHcInst(true);
   }
-  const n=run.done.length;
-  $('hcsBox').innerHTML=`<h3>${n===run.queue.length?(n===1?`${escH(HC_SOUND[run.done[0]])} is ready`:'instruments synced'):`${n} of ${run.queue.length} synced`}</h3>
-    <p>${run.target.layer!=null?`Layer ${run.target.layer+1} plays it now. The HiChord key on its instrument page switches back.`:`Your layers play the HiChord instruments now. Switch back under Settings → Sync, or per layer with the HiChord key on its instrument page.`}${n<run.queue.length?' Sync again for the rest.':''}</p>
+  const n=run.done.length, total=n+(run.queue?run.queue.length-run.qi:0);
+  if(!n){ hcsClose(); return; }
+  $('hcsBox').innerHTML=`<div class="hcsend"><div class="hcsbig">${n===1?`${escH(HC_SOUND[run.done[0]])} is in the app`:`${n} HiChord sounds in the app`}</div>
+    <p>${run.target.layer!=null?`Layer ${run.target.layer+1} plays it now. The HiChord key on its instrument page switches back.`:`Your layers play the HiChord instruments now, and the new ones are in the instrument list. Switch back to the app's own instruments under Settings → Sync, or per layer with the HiChord key on its instrument page.`}${n<total?` ${total-n} not done: sample them again any time.`:''}</p>
+    <p>They stay in the app for good, also after updates. Turn the HiChord's volume back up.</p>
     ${(run.notes||[]).map(t=>`<p>${escH(t)}</p>`).join('')}
-    <div class="row"><button id="hcsOk" class="primary">done</button></div>`;
+    <ul class="hcslist">${run.done.map(k=>`<li class="ok">${escH(HC_SOUND[k])}</li>`).join('')}</ul>
+    <div class="row"><button id="hcsOk" class="primary">Done</button></div></div>`;
   $('hcsOk').onclick=hcsClose;
 }
 function hcsRestorePreset(run){
   if(run && run.queue && run.prevPreset!=null && HC.connected && HC.state.preset!==run.prevPreset){ hcCC(HC.CC.PRESET, run.prevPreset); HC.state.preset=run.prevPreset; renderHCState('preset'); }
   if(run) run.prevPreset=null;
 }
-function hcsClose(){ hcsStop(); hcsRestorePreset(HCS); HCS=null; $('hcs').classList.add('hidden'); $('hcsBox').innerHTML=''; }
+function hcsClose(){ hcsStop(); hcsRestorePreset(HCS); HCS=null; $('hcs').classList.add('hidden'); $('hcs').classList.remove('full'); $('hcsBox').innerHTML=''; }
 function hcsCancel(){ hcsClose(); toast('sampling cancelled'); }
 function hcsFail(msg){ hcsStop(); hcsIntro(msg); }
 function hcsFinish(){
   const run=HCS; hcsStop();
-  $('hcsBox').innerHTML='<h3>cutting the notes…</h3><p>finding where each note starts and where it can loop</p>';
+  if(run.queue){ const nt=$('hcsNote'); if(nt) nt.textContent='cutting the notes and finding the loops…'; const st=$('hcsStrip'); if(st) [...st.children].forEach(c=>c.className='ok'); }
+  else $('hcsBox').innerHTML='<h3>cutting the notes…</h3><p>finding where each note starts and where it can loop</p>';
   setTimeout(()=>{
     let res; try{ res=hcsBuild(run); }catch(e){ console.warn(e); hcsIntro('Something went wrong while cutting the notes. Try again.'); return; }
     if(!res){ hcsIntro('Too few notes came in to make an instrument. Check the HiChord\'s volume and that it plays incoming MIDI (MIDI IN on), then try again.'); return; }
@@ -2872,14 +3044,15 @@ function hcsBuild(run){
   const rms=(s,e)=>{ let q=0; for(let k=s;k<e;k++) q+=L[k]*L[k]+R[k]*R[k]; return Math.sqrt(q/Math.max(1,(e-s)*2)); };
   const ratios=notes.map(z=>rms(z.on+Math.round(1.15*sr),z.on+Math.round(1.45*sr))/Math.max(1e-6,rms(z.on+Math.round(0.03*sr),z.on+Math.round(0.33*sr)))).sort((x,y)=>x-y);
   const kind = ratios[Math.floor(ratios.length/2)]>0.3 ? 'sustain' : 'decay';
-  const segs=notes.map(z=>{
+  const segs=notes.filter(z=>z.end-z.on>Math.round(0.1*sr)).map(z=>{
     let len;
     if(kind==='sustain') len=Math.min(z.end-z.on, Math.round((HCS_ON-0.05)*sr));   // up to the note-off
     else { let pk=0; for(let k=z.on;k<z.end;k++) pk=Math.max(pk,Math.abs(L[k])); let last=z.end-1; const fl=pk*0.001; while(last>z.on && Math.abs(L[last])<fl && Math.abs(R[last])<fl) last--; len=Math.min(z.end-z.on,last-z.on+Math.round(0.02*sr)); }
     const l=L.slice(z.on,z.on+len), r=R.slice(z.on,z.on+len), seg={note:z.note, l, r};
-    if(kind==='sustain'){
+    const ls=Math.round(0.55*sr), win=Math.round(0.06*sr), xf=Math.round(0.12*sr);
+    // a note cut short (the end of the recording) gets no loop: it plays once
+    if(kind==='sustain' && len > ls+Math.round(0.35*sr)+win+16){
       const m=new Float32Array(len); for(let k=0;k<len;k++) m[k]=(l[k]+r[k])*0.5;
-      const ls=Math.round(0.55*sr), win=Math.round(0.06*sr), xf=Math.round(0.12*sr);
       let best=-2, le=len-win-1;
       const ref=m.subarray(ls,ls+win); let rn=0; for(let k=0;k<win;k++) rn+=ref[k]*ref[k];
       for(let c=ls+Math.round(0.35*sr); c<len-win; c+=16){ let d=0,cn=0; for(let k=0;k<win;k++){ d+=ref[k]*m[c+k]; cn+=m[c+k]*m[c+k]; } const sc=d/Math.sqrt(rn*cn+1e-12); if(sc>best){ best=sc; le=c; } }
@@ -4197,7 +4370,7 @@ function renderHcSync(){
       left===all ? `Sample the HiChord's sounds` : left ? `Sample the ${left} missing HiChord sounds` : `HiChord sounds sampled`}</button>`;
   const use = !n ? '' : `<button id="hcInstBtn" class="hcb${S.hcInst?' done':''}" aria-pressed="${S.hcInst}">${S.hcInst?'Playing HiChord instruments':'Play HiChord instruments'}</button>`;
   const hint = !HC.connected ? '' : `<span class="hcsynchint">${
-      !n ? `the closest HiChord sound for each instrument · about ${mins(all)} minutes`
+      !n ? `${all} HiChord sounds to pick from, kept in the app · about a minute each`
       : left ? `${n} of ${all} sampled · about ${mins(left)} min for the rest`
       : `tap to sample again · about ${mins(all)} minutes`}</span>`;
   d.innerHTML=sample+use+hint;
@@ -4229,6 +4402,7 @@ function renderHC(){
   $('hcDot').className='dot'+(HC.connected?' ok':'');
   $('hcStatus').innerHTML = HC.connected?`connected to ${String(HC.out.name).replace(/&/g,'&amp;').replace(/</g,'&lt;')}`:'not connected<span class="hcsub"><i> · </i>notes still come in</span>';
   renderHCState(); renderHCControls(); renderHcSync();
+  if(hcsSync() && !HCS.queue && !HCS.running && ($('hcsConn')!=null) === HC.connected) hcsSetup();   // the setup screen's connection step
 }
 
 /* drawing */
