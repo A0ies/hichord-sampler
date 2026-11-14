@@ -1423,13 +1423,16 @@ body.startmode #projSheet .sheethead .close{display:none}
 #projSheet .pgrid .proj{display:flex} #projSheet .pgrid .proj .pface{flex:1;padding:12px 14px;min-height:96px;justify-content:space-between;box-sizing:border-box}
 #projSheet .pgrid .proj .pstr i{background:var(--line)}
 #projSheet .pgrid .proj .pchev{display:none}
-#projSheet .pgrid .proj.full{grid-column:1/-1}
-#projSheet .pgrid .proj.full .pface{flex-direction:row;align-items:center;gap:18px}
+#projSheet .pgrid .proj.full{grid-column:span 2}
+#projSheet .pgrid .proj.full .pface{flex-direction:row;align-items:center;gap:16px;background:var(--panel);color:var(--ink);box-shadow:inset 0 0 0 2px var(--acc)}
+#projSheet .pgrid .proj.full small{color:var(--dim)}
+#projSheet .pgrid .proj.full .pname{background:var(--key);color:var(--ink);border-color:var(--line);font-size:16px;padding:4px 8px}
+#projSheet .pgrid .proj.full .pkeys button:not(.primary){background:var(--key);color:var(--ink);border-color:var(--line)}
 #projSheet .pgrid .proj.full .pinf{flex:1}
-#projSheet .pgrid .proj.full .pstr i{background:var(--screen-line)}
-#projSheet .pgrid .proj.full .pkeys{margin-top:0;flex:0 0 min(48%,460px)}
+#projSheet .pgrid .proj.full .pstr i{background:var(--line)}
+#projSheet .pgrid .proj.full .pkeys{margin-top:0;flex:0 0 auto;display:flex;gap:6px} #projSheet .pgrid .proj.full .pkeys button{min-height:44px;padding:0 14px}
 #projSheet .pgrid .pundo{min-height:96px}
-@media (orientation:portrait){ #projSheet .pgrid{grid-template-columns:repeat(3,minmax(0,1fr))} #projSheet .pbanner .pface,#projSheet .pgrid .proj.full .pface{flex-direction:column;align-items:stretch} #projSheet .pbanner .pkeys,#projSheet .pgrid .proj.full .pkeys{flex:none;margin-top:8px} }
+@media (orientation:portrait){ #projSheet .pgrid{grid-template-columns:repeat(3,minmax(0,1fr))} #projSheet .pbanner .pface{flex-direction:column;align-items:stretch} #projSheet .pbanner .pkeys{flex:none;margin-top:8px} }
 @media (min-width:700px) and (min-height:600px){
   #projSheet .plogo{font-size:32px} #projSheet .pgrid .proj .pnm{font-size:16px}
   /* iPad: room to breathe between the header, the banner and the tiles, and inside each */
@@ -1443,7 +1446,7 @@ body.startmode #projSheet .sheethead .close{display:none}
   #projSheet .pgrid .pnew,#projSheet .pgrid .proj .pface,#projSheet .pgrid .pundo{min-height:128px}
   #projSheet .pgrid .proj .pface{padding:18px 20px}
   #projSheet .pgrid .proj .pinf{gap:6px}
-  #projSheet .pgrid .proj.full .pface{padding:20px 22px}
+  #projSheet .pgrid .proj.full .pface{padding:16px 18px}
 }
 /* phones on their side: the current project and the keys on the left, the other projects on the right (each scrolls) */
 @media (min-width:640px){
@@ -1988,7 +1991,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.93';
+const PAGE_VERSION='2026-11-14.94';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3716,6 +3719,11 @@ function renderProjects(){
     ? `${cur?`<div class="pbanner">${card(cur)}</div>`:''}<div class="pgrid">${tiles}${rest.map(card).join('')}</div>`
     : `<div class="pleft">${cur?card(cur):''}<div class="pnewrow">${tiles}</div></div>`
       + (rest.length ? `<div class="pright"><h4 class="pcap">${cur?'other projects':'your projects'}</h4>${rest.map(card).join('')}</div>` : '');
+  // iPad: an opened tile is two tiles wide; when it's the last in its row it grows to the left, and its left
+  // neighbour moves on one place, so the card stays where you tapped
+  const g=document.querySelector('#projList .pgrid'), op=g && g.querySelector('.proj.full');
+  if(op){ const cols=getComputedStyle(g).gridTemplateColumns.split(' ').length, i=[...g.children].indexOf(op);
+    if(cols>1 && i>0 && i%cols===cols-1) g.insertBefore(op, op.previousElementSibling); }
 }
 async function openProjects(){ flushSave(); await refreshProjects().catch(()=>{}); PRJ.open=null; renderProjects(); openSheet('projSheet'); }
 /* ============ share a project with a code ============
