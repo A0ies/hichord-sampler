@@ -1908,7 +1908,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.80';
+const PAGE_VERSION='2026-11-14.81';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2523,8 +2523,10 @@ const HC_PRESETS=[[0,'Sine'],[1,'Saw'],[2,'Triangle'],[3,'Square'],[4,'FM EPiano
    per layer with the HiChord key); the other 14 are instruments of their own once sampled. */
 const HC_SOUND = {};   // 'hc14' -> 'Piano'
 HC_PRESETS.forEach(([p,n])=>{ if(p!==25 && p!==26) HC_SOUND['hc'+p]=n; });
+// the HiChord's drum kit: not a preset but its drum pads (GM notes on channel 10), kept under a number no preset uses
+const HC_DRUMS='hc99'; HC_SOUND[HC_DRUMS]='Drum kit';
 const HC_INST = { piano:[14,'Piano'], keys:[35,'Tine EP'], strings:[9,'Strings'], horns:[13,'Brass'], guitar:[12,'Acoustic'],
-  lead:[1,'Saw'], square:[3,'Square'], pad:[17,'Vox Ahh'], ebass:[2,'Triangle'], bass:[27,'SawSquare'] };
+  lead:[1,'Saw'], square:[3,'Square'], pad:[17,'Vox Ahh'], ebass:[2,'Triangle'], bass:[27,'SawSquare'], drums:[99,'Drum kit'] };
 // the other HiChord sounds become instruments: key 'hc<preset>', played from the sample; on a device without it, the open-source fallback plays
 const HC_EXTRA = { hc0:'pad', hc4:'keys', hc6:'lead', hc10:'horns', hc15:'keys', hc18:'keys', hc19:'guitar', hc21:'pad',
   hc22:'lead', hc23:'lead', hc24:'horns', hc29:'pad', hc33:'square', hc34:'horns' };
@@ -2813,7 +2815,11 @@ function hcsOpen(target){
 }
 const hcsKey = () => HCS && HCS.queue ? HCS.queue[HCS.qi] : null;
 const HCS_PER = HCS_NOTES.length*HCS_STEP + 3;   // seconds per sound, with switching and cutting
-const hcsMins = n => Math.max(1, Math.round(n*HCS_PER/60));
+// what to play: a melodic sound note by note on channel 1; the drum kit one hit per kit zone on channel 10
+const DRUM_NAMES=['kick','snare','closed hat','open hat','crash','tom','cowbell'];
+const hcsPlan = k => k===HC_DRUMS ? { notes:DRUM_GM, step:2, on:0.25, st:0x99, vel:110, names:DRUM_NAMES } : { notes:HCS_NOTES, step:HCS_STEP, on:HCS_ON, st:0x90, vel:HCS_VEL, names:null };
+const hcsSecs = k => k===HC_DRUMS ? DRUM_GM.length*2+3 : HCS_PER;
+const hcsMins = ks => Math.max(1, Math.round(ks.reduce((a,k)=>a+hcsSecs(k),0)/60));
 const hcsSync = () => !!(HCS && HCS.pick);
 // the HiChord's own keys and joystick, as they look and are named on the device
 const hk = (c,t) => `<span class="hk ${c}">${t}</span>`, jy = t => `<span class="jy">${t}</span>`;
@@ -2847,7 +2853,7 @@ function hcsSetup(err){
         ${H.one?'':`<div class="hcspick"><span>${n} of ${HCI_ALL.length} picked</span><button id="hcsAll">all</button><button id="hcsMiss">missing</button><button id="hcsNone">none</button></div>`}
         <div class="hcsgroups">${group("For the app's instruments",inst)}${group('More HiChord sounds',more)}</div>
         <div class="hcsfoot">
-          <p>${n?`<b>${n} sound${n>1?'s':''} · about ${hcsMins(n)} min</b>`:'<b>Pick the sounds to sample</b>'} · <span class="hcsok">✓</span> already in the app · kept for good, also through app updates</p>
+          <p>${n?`<b>${n} sound${n>1?'s':''} · about ${hcsMins(picked)} min</b>`:'<b>Pick the sounds to sample</b>'} · <span class="hcsok">✓</span> already in the app · kept for good, also through app updates</p>
           ${err?`<p class="err">${err}</p>`:''}
           <div class="row"><button class="hcsback" id="hcsBack">Back</button><button id="hcsStart" class="primary"${n?'':' disabled'}>${H.done.length?'Go on':'Start sampling'}</button></div>
         </div>
@@ -2864,12 +2870,12 @@ function hcsSetup(err){
 // the full screen while sampling: the sound now, its 21 notes, the level, and all the sounds of this run
 function hcsRunView(status){
   const H=HCS, k=hcsKey(), N=H.queue.length, i=H.qi;
-  $('hcsBox').innerHTML=`<header class="hcshead"><h3>Sampling ${i+1} of ${N}</h3><span class="hcsleft" id="hcsLeft">about ${hcsMins(N-i)} min left</span></header>
+  $('hcsBox').innerHTML=`<header class="hcshead"><h3>Sampling ${i+1} of ${N}</h3><span class="hcsleft" id="hcsLeft">about ${hcsMins(H.queue.slice(i))} min left</span></header>
     <div class="hcsrun">
       <div class="hcsnow">
         <div class="hcsbig">${escH(HC_SOUND[k])}</div>
         <p id="hcsNote">${status||'getting ready…'}</p>
-        <div class="hcsstrip" id="hcsStrip" aria-hidden="true">${HCS_NOTES.map(()=>'<i></i>').join('')}</div>
+        <div class="hcsstrip" id="hcsStrip" aria-hidden="true" style="grid-template-columns:repeat(${hcsPlan(k).notes.length},minmax(0,1fr))">${hcsPlan(k).notes.map(()=>'<i></i>').join('')}</div>
         <div class="hcsin"><span>input</span><b id="hcsInLabel">${escH(H.label||'…')}</b></div>
         <div class="hcsmeter" aria-hidden="true"><i id="hcsMeter"></i></div>
         <div class="hcsprog" aria-hidden="true"><i id="hcsProg" style="width:${i/N*100}%"></i></div>
@@ -2922,11 +2928,12 @@ async function hcsStart(){
     HCS.queue=HCI_ALL.filter(k=>HCS.pick.has(k)); HCS.qi=0; if(!HCS.queue.length){ HCS.queue=null; return; }
   }
   const qk=hcsKey();
-  if(qk){
+  if(qk && qk!==HC_DRUMS){
     hcsRunView(`switching the HiChord to ${escH(HC_SOUND[qk])}…`);
     hcCC(HC.CC.PRESET, +qk.slice(2)); HC.state.preset=+qk.slice(2); renderHCState('preset');
     const run=HCS; await new Promise(r=>setTimeout(r,800)); if(HCS!==run) return;
-  }
+  } else if(qk) hcsRunView();
+  const P=HCS.plan=hcsPlan(qk);
   if(S.playing) stopTransport(); if(S.rec) setRec(false); stopAllVoices(true);
   setAudioSessionType('play-and-record');
   let inp;
@@ -2959,22 +2966,22 @@ async function hcsStart(){
   if(!qk) $('hcsCancel').onclick = hcsCancel;
   // every note scheduled ahead, on the MIDI clock (performance.now)
   const T0=performance.now()+HCS_LEAD*1000; HCS.T0=T0;
-  HCS_NOTES.forEach((n,i)=>{ const on=T0+i*HCS_STEP*1000, off=on+HCS_ON*1000;
-    try{ HC.out.send([0x90,n,HCS_VEL], on); HC.out.send([0x80,n,0], off); }catch(e){}
+  P.notes.forEach((n,i)=>{ const on=T0+i*P.step*1000, off=on+P.on*1000;
+    try{ HC.out.send([P.st,n,P.vel], on); HC.out.send([P.st-0x10,n,0], off); }catch(e){}
     qPush(hcSentAt,'on'+n,on); qPush(hcSentAt,'off'+n,off); });
-  const total=HCS_NOTES.length*HCS_STEP*1000;
+  const total=P.notes.length*P.step*1000;
   const tick=()=>{
     if(!HCS || !HCS.running) return;
-    const t=performance.now()-T0, i=clamp(Math.floor(t/(HCS_STEP*1000)),0,HCS_NOTES.length-1);
+    const t=performance.now()-T0, i=clamp(Math.floor(t/(P.step*1000)),0,P.notes.length-1);
     HCS.maxPeak=Math.max(HCS.maxPeak, HCS.level||0);
     const m=$('hcsMeter'); if(m) m.style.width=clamp((20*Math.log10(Math.max(1e-5,HCS.level||0))+60)/60*100,0,100)+'%';   // in dB: a quiet HiChord shows too
     const f=clamp(t/total,0,1), N=HCS.queue?HCS.queue.length:1, qi=HCS.queue?HCS.qi:0;
     const pr=$('hcsProg'); if(pr) pr.style.width=((qi+f)/N*100)+'%';
-    const nt=$('hcsNote'); if(nt) nt.textContent = t<0 ? 'getting ready…' : `note ${i+1} of ${HCS_NOTES.length} · ${noteName(HCS_NOTES[i])}`;
+    const nt=$('hcsNote'); if(nt) nt.textContent = t<0 ? 'getting ready…' : P.names ? `hit ${i+1} of ${P.notes.length} · ${P.names[i]}` : `note ${i+1} of ${P.notes.length} · ${noteName(P.notes[i])}`;
     const st=$('hcsStrip'); if(st && t>=0) [...st.children].forEach((c,j)=>c.className = j<i?'ok':j===i?'now':'');
-    const lf=$('hcsLeft'); if(lf && HCS.queue){ const sec=Math.max(0,(N-qi-f)*HCS_PER); lf.textContent = sec<60 ? 'under a minute left' : `about ${Math.round(sec/60)} min left`; }
+    const lf=$('hcsLeft'); if(lf && HCS.queue){ const sec=Math.max(0,HCS.queue.slice(qi+1).reduce((a,k)=>a+hcsSecs(k),0)+(1-f)*hcsSecs(HCS.queue[qi])); lf.textContent = sec<60 ? 'under a minute left' : `about ${Math.round(sec/60)} min left`; }
     // two notes in and nothing came in: stop and say what to check
-    if(t>2*HCS_STEP*1000+600 && HCS.maxPeak<0.0006){ hcsFail('No sound came in from the HiChord. Check that USB Audio is on, that the volume isn\'t all the way down (5% is enough), that MIDI In is on (step 2), and that the input is the HiChord.'); return; }
+    if(t>2*P.step*1000+600 && HCS.maxPeak<0.0006){ hcsFail(P.names ? 'No drum sound came in from the HiChord. The app plays its drum pads over MIDI channel 10: check that MIDI In is on (step 2), that USB Audio is on and the volume isn\'t all the way down.' : 'No sound came in from the HiChord. Check that USB Audio is on, that the volume isn\'t all the way down (5% is enough), that MIDI In is on (step 2), and that the input is the HiChord.'); return; }
     if(t>total+900){ hcsFinish(); return; }   // a little longer: the input arrives in blocks, after a delay
     requestAnimationFrame(tick);
   };
@@ -2984,7 +2991,7 @@ function hcsStop(){
   if(!HCS) return;
   try{ HCS.proc && (HCS.proc.onaudioprocess=null); HCS.src && HCS.src.disconnect(); HCS.proc && HCS.proc.disconnect(); HCS.sink && HCS.sink.disconnect(); }catch(e){}
   if(HCS.stream) HCS.stream.getTracks().forEach(t=>t.stop());
-  if(HCS.running){ HCS_NOTES.forEach(n=>hcSend([0x80,n,0])); hcSend([0xB0,123,0]); }
+  if(HCS.running){ const P=HCS.plan||hcsPlan(null); P.notes.forEach(n=>hcSend([P.st-0x10,n,0])); hcSend([0xB0,123,0]); hcSend([0xB9,123,0]); }
   if(HCS.prevMode!=null && HCS.prevMode!==0 && HCS.prevMode!==2) hcCC(HC.CC.MODE,HCS.prevMode);
   HCS.running=false; HCS.prevMode=null;
   if(inApp()) nativeAudio({cmd:'usbInput', on:false});
@@ -2997,7 +3004,7 @@ function hcsKeep(run, res){
   HCI[k]={ buffer:res.buffer, zones:res.zones, kind:res.kind }; storeHCI(k); run.done.push(k);
   layers.forEach(Ly=>{ if(hcKeyOf(Ly.inst)===k) Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05)); });
   renderInstGrid(); renderHcSync();
-  if(res.missing>4) run.notes=(run.notes||[]).concat(`${HC_SOUND[k]}: ${res.missing} notes came in too quiet`);
+  if(res.kind==='kit' ? res.missing : res.missing>4) run.notes=(run.notes||[]).concat(res.kind==='kit' ? `${HC_SOUND[k]}: ${res.missing} hit${res.missing>1?'s':''} came in too quiet; the closest hit stands in` : `${HC_SOUND[k]}: ${res.missing} notes came in too quiet`);
   run.qi++;
   if(run.qi<run.queue.length){ setTimeout(()=>{ if(HCS===run) hcsStart(); }, 400); return; }
   hcsSyncEnd();
@@ -3045,6 +3052,7 @@ function hcsFinish(){
 }
 // cut the recording into notes: timing first, then the real onset (USB latency) within a window around it
 function hcsBuild(run){
+  if(run.plan && run.plan.names) return hcsBuildKit(run);
   const sr=ctx.sampleRate, n=run.L.reduce((a,b)=>a+b.length,0), L=new Float32Array(n), R=new Float32Array(n);
   let o=0; run.L.forEach((c,i)=>{ L.set(c,o); R.set(run.R[i],o); o+=c.length; });
   const rs=run.getRecStart(); if(rs==null) return null;
@@ -3106,6 +3114,37 @@ function hcsBuild(run){
   segs.forEach(sg=>{ p+=pre; for(let k=0;k<sg.l.length;k++){ oL[p+k]=sg.l[k]*g; oR[p+k]=sg.r[k]*g; }
     const z={note:sg.note, start:p/sr, len:sg.l.length/sr}; if(sg.loop) z.loop=[p/sr+sg.loop[0], p/sr+sg.loop[1]]; zones.push(z); p+=sg.l.length; });
   return { buffer:out, zones, kind, missing, shifted };
+}
+
+// the drum kit: one hit per kit zone, cut from its onset to where it has died away; a hit that didn't come in
+// gets the closest one that did (crash -> open hat, cowbell -> tom ...)
+function hcsBuildKit(run){
+  const P=run.plan, sr=ctx.sampleRate, n=run.L.reduce((a,b)=>a+b.length,0), L=new Float32Array(n), R=new Float32Array(n);
+  let o=0; run.L.forEach((c,i)=>{ L.set(c,o); R.set(run.R[i],o); o+=c.length; });
+  const rs=run.getRecStart(); if(rs==null) return null;
+  const at = ms => Math.round((ms-rs)/1000*sr);
+  let gpk=0; for(let k=0;k<n;k+=3) gpk=Math.max(gpk,Math.abs(L[k]),Math.abs(R[k]));
+  let missing=0; const segs=P.notes.map((note,i)=>{
+    const nom=at(run.T0+i*P.step*1000), a=Math.max(0,nom-Math.round(0.15*sr)), b=Math.min(n,nom+Math.round(0.7*sr));
+    let pk=0; for(let k=a;k<b;k++) pk=Math.max(pk,Math.abs(L[k]),Math.abs(R[k]));
+    if(pk<Math.max(0.0004, gpk*0.02)){ missing++; return null; }
+    const thr=Math.max(pk*0.08,0.0002); let on=a; while(on<b && Math.abs(L[on])<thr && Math.abs(R[on])<thr) on++;
+    on=Math.max(0,on-Math.round(0.002*sr));
+    const end=Math.min(n, at(run.T0+(i+1)*P.step*1000)-Math.round(0.1*sr)); if(end-on<Math.round(0.03*sr)){ missing++; return null; }
+    let last=end-1; const fl=pk*0.001; while(last>on && Math.abs(L[last])<fl && Math.abs(R[last])<fl) last--;
+    const len=Math.min(end-on, last-on+Math.round(0.02*sr)), l=L.slice(on,on+len), r=R.slice(on,on+len);
+    const f=Math.min(len, Math.round(0.02*sr)); for(let k=0;k<f;k++){ const g=k/f; l[len-1-k]*=g; r[len-1-k]*=g; }
+    return { l, r };
+  });
+  if(missing>3 || (!segs[0] && !segs[1])) return null;
+  const FB=[1,0,3,2,3,6,5];
+  segs.forEach((sg,i)=>{ if(!sg) segs[i] = segs[FB[i]] || segs.find(Boolean); });
+  let pk=0; segs.forEach(sg=>{ for(let k=0;k<sg.l.length;k++) pk=Math.max(pk,Math.abs(sg.l[k]),Math.abs(sg.r[k])); });
+  const g=0.89/Math.max(pk,1e-6), pre=Math.round(0.05*sr), total=segs.reduce((a,sg)=>a+pre+sg.l.length,0)+pre;
+  const out=ctx.createBuffer(2,total,sr), oL=out.getChannelData(0), oR=out.getChannelData(1), zones=[]; let p=0;
+  segs.forEach((sg,i)=>{ p+=pre; for(let k=0;k<sg.l.length;k++){ oL[p+k]=sg.l[k]*g; oR[p+k]=sg.r[k]*g; }
+    zones.push({ note:P.notes[i], start:p/sr, len:sg.l.length/sr }); p+=sg.l.length; });
+  return { buffer:out, zones, kind:'kit', missing, shifted:0 };
 }
 
 /* ============ record output ============ */
