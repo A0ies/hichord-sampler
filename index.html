@@ -383,7 +383,6 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .spkey svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .songpg .spplay{background:var(--dark-key);color:var(--dark-key-ink)} .spplay svg{fill:currentColor;stroke:none;width:16px;height:16px}
 .songpg .spplay.on{background:var(--dark-key);color:var(--enc2)}
-.songpg .spauto{color:var(--dim);background:var(--key)} .songpg .spauto.on{color:var(--ink);background:var(--key);box-shadow:inset 0 0 0 2px var(--acc)}
 .spbody{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
 .spscreen{background:var(--screen);color:var(--screen-ink);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0;flex:0 0 auto;height:min(46%,420px);box-sizing:border-box}
 .spnow{display:flex;align-items:baseline;gap:8px;font-family:var(--mono);flex:none}
@@ -952,7 +951,6 @@ body.projopen .pbar{display:none}
 .ctl button i{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--acc)}
 .ctl button.queued{color:var(--acc);box-shadow:inset 0 0 0 2px var(--acc);animation:qblink 1s steps(2) infinite}
 @keyframes qblink{50%{box-shadow:inset 0 0 0 2px transparent}}
-.cauto{height:34px;min-height:34px;padding:0 12px;border-radius:8px;font-size:12px;flex:none}
 .capnext{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;display:flex;gap:12px;align-items:center;background:var(--screen);color:var(--screen-ink);
   border-radius:14px;padding:10px 18px 10px 14px;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.35);white-space:nowrap}
 .capnext.hidden{display:none}
@@ -1825,7 +1823,6 @@ body.studio .tbar .pos b{font-size:26px}
     <button class="spkey" id="spBack" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <h2>song <small id="spStats"></small></h2>
     <span class="sptip" id="spTip">drag a pad onto the tape · tap to go there · hold to name, copy or remove</span>
-    <button class="spkey spauto" id="spAuto" aria-pressed="true" title="auto: the song plays the tape from part to part. Off: the part you are on loops">auto</button>
     <button class="spkey spplay" id="spPlay" aria-label="Play the song"><svg viewBox="0 0 24 24" id="spPlayIcon" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></button>
   </div>
   <div class="spbody">
@@ -2005,7 +2002,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.108';
+const PAGE_VERSION='2026-11-14.109';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5058,7 +5055,7 @@ function songChanged(){ SONG.pos=SONG.order.indexOf(SONG.cur); SONG.jump=null; r
 /* ============ the song page ============
    The whole song is one tape: a block per pass of the loop, under a playhead that stays in the middle. While it
    plays, the tape moves; stopped, swipe it to go to another pass. The parts are pads: tap one to go there (playing:
-   after this loop), hold for its name, copy and remove, drag it onto the tape to add a pass. Hold a block on the
+   at the end of the bar), hold for its name, copy and remove, drag it onto the tape to add a pass. Hold a block on the
    tape and drag it to move it, or onto "remove". */
 var SPG={ open:false, view:0, drag:null, press:null, noClick:false };
 function openSongPage(){
@@ -5078,7 +5075,6 @@ function renderSongPage(){
   if(!SPG.open) return;
   const n=SONG.order.length, W=spW();
   $('spStats').innerHTML = `· ${n} pass${n===1?'':'es'}<span class="spx"> · ${n*S.bars} bars · ${mmss(n*loopSecs())}</span>`;
-  $('spAuto').classList.toggle('on',SONG.follow); $('spAuto').setAttribute('aria-pressed',SONG.follow);
   $('spTrack').style.width=(n*W)+'px';
   $('spTrack').innerHTML = SONG.order.map((k,i)=>`<button class="spblk" data-n="${i}" style="--pc:var(--p${k});left:${i*W+2}px;width:${W-4}px" aria-label="Pass ${i+1}: ${escH(partName(k))}">${PART_L(k)}<span>${escH(SONG.parts[k].name||'')}</span></button>`).join('');
   const P=SONG.parts.length, tiles=P+(P<8?1:0)+1, wide=matchMedia('(min-width:1000px) and (min-height:700px) and (orientation:landscape)').matches;
@@ -5140,17 +5136,19 @@ function spDrawRoll(frac, heardPart){
   g.globalAlpha=1;
   if(S.playing){ g.fillStyle=cssVar('--acc'); g.fillRect(frac*W-1,0,2,H); }
 }
-// go to pass n: stopped, now; playing, after this loop
+// go to pass n: stopped, now; playing, at the end of the bar (tap it again to cancel; the pass that plays: nothing)
 function spGoPass(n){
   if(n<0 || n>=SONG.order.length) return;
-  if(S.playing){ SONG.jump = SONG.jump===n ? null : n; spNow(); return; }
+  if(S.playing){ if(n===SONG.pos && SONG.jump==null) return; SONG.jump = SONG.jump===n || n===SONG.pos ? null : n; spNow(); return; }
   SONG.pos=n; SPG.view=n; const k=SONG.order[n]; if(k!==SONG.cur) loadPart(k,true);
   renderParts(); spFrame(true); renderSongPage();
 }
 function spGoPart(k){
   const o=SONG.order, n=o.length;
   if(S.playing){
-    for(let d=1; d<=n; d++){ const i=(Math.max(0,SONG.pos)+d)%n; if(o[i]===k){ SONG.jump=i; spNow(); return; } }
+    if(SONG.jump!=null && o[SONG.jump]===k){ SONG.jump=null; spNow(); return; }   // tapped again: cancel
+    for(let d=1; d<n; d++){ const i=(Math.max(0,SONG.pos)+d)%n; if(o[i]===k){ SONG.jump=i; spNow(); return; } }
+    if(o[SONG.pos]===k){ SONG.jump=null; spNow(); return; }   // the part that plays: nothing to do
     toast(`${partName(k)} isn't on the tape yet: drag its pad onto it`); return;
   }
   if(k!==SONG.cur) loadPart(k,true);
@@ -5246,7 +5244,6 @@ $('spPads').addEventListener('click',e=>{ if(SPG.noClick) return;
 $('spPads').addEventListener('contextmenu',e=>e.preventDefault()); $('spTape').addEventListener('contextmenu',e=>e.preventDefault());
 $('spBack').onclick=closeSongPage;
 $('spPlay').onclick=()=>{ if(!ctx) return; if(S.playing){ stopTransport(); SONG.jump=null; } else { SONG.pos=SONG.pos<0 ? SONG.order.indexOf(SONG.cur) : SONG.pos; startTransport(false); } spFrame(true); };
-$('spAuto').onclick=()=>{ SONG.follow=!SONG.follow; renderSongPage(); save(); toast(SONG.follow?'auto: the song plays the tape from part to part':'auto off: the part you are on loops; tap a pad or a block to go somewhere else'); };
 // hold a pad: name, copy, remove
 function spEditOpen(k){
   const ed=$('spEdit'), p=SONG.parts[k];
@@ -5263,12 +5260,12 @@ function spEditClose(){ const ed=$('spEdit'); if(ed.classList.contains('hidden')
 addEventListener('resize',()=>{ if(SPG.open) requestAnimationFrame(renderSongPage); });
 
 /* following the timeline: one block is one pass of the loop */
-// capture mode always plays the tape from part to part (no auto key there); the song page has its own auto
-const songFollow = () => CAP.open || SONG.follow;
+// the song page and capture mode always play the tape from part to part (there is no auto key)
+const songFollow = () => true;
 const songNext = () => SONG.jump!=null ? SONG.jump : songFollow() ? (SONG.pos+1)%SONG.order.length : SONG.pos;
 const songActive = () => (CAP.open || SPG.open) && S.playing && (SONG.jump!=null || (songFollow() && (SONG.order.length>1 || SONG.order[0]!==SONG.cur)));
-// capture mode: a part you tap comes in at the end of the bar (from its start); otherwise parts change at the loop's end
-const barJump = () => CAP.open && SONG.jump!=null;
+// a part you tap comes in at the end of the bar (from its start); otherwise each part plays out to the loop's end
+const barJump = () => SONG.jump!=null;
 function songBoundary(a, b){
   if(!songActive()) return null;
   const L=loopLen(), step=barJump() ? 4 : L, B=(Math.floor(a/step)+1)*step;
