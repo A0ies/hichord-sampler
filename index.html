@@ -311,6 +311,8 @@ select{background:var(--key);border:none;border-radius:8px;box-shadow:0 1px 0 va
   background-repeat:no-repeat;background-position:right 10px center;background-size:14px}
 .instpick{align-self:end}
 .params .ownsnd{grid-column:1/-1;margin-top:4px;gap:8px}
+.ownsnd .sndname{flex:1 1 120px;min-width:0;height:40px;border:none;border-radius:9px;background:var(--key);color:var(--ink);padding:0 12px;font-family:var(--sans);font-weight:600;font-size:15px;box-shadow:inset 0 0 0 1px var(--line)}
+.ownsnd .sndname:focus{outline:none;box-shadow:inset 0 0 0 2px var(--acc)}
 .instsel{position:relative;display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px 0 10px;border-radius:9px;background:var(--key);box-shadow:0 1px 0 var(--key-edge),inset 0 -2px 0 rgba(0,0,0,.07);min-width:0}
 .instsel .ii{width:20px;height:20px;flex:none}
 .instsel>span{flex:1;min-width:0;font-family:var(--sans);font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -384,20 +386,20 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .songpg .spplay{background:var(--dark-key);color:var(--dark-key-ink)} .spplay svg{fill:currentColor;stroke:none;width:16px;height:16px}
 .songpg .spplay.on{background:var(--dark-key);color:var(--enc2)}
 .spbody{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
-.spscreen{background:var(--screen);color:var(--screen-ink);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0;flex:0 0 auto;height:min(46%,420px);box-sizing:border-box}
+.spscreen{background:var(--screen);color:var(--screen-ink);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0;flex:1 1 auto;box-sizing:border-box}
 .spnow{display:flex;align-items:baseline;gap:8px;font-family:var(--mono);flex:none}
 .spnow b{background:var(--pc,var(--acc));color:#0b0b0b;border-radius:6px;padding:1px 7px;font-weight:600}
 .spnow span{flex:1;font-family:var(--sans);font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .spnow em{font-style:normal;color:var(--screen-dim);font-size:12px;white-space:nowrap}
 #spRoll{flex:1;min-height:0;width:100%;background:var(--screen2);border-radius:8px}
 .sphint{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--screen-dim);flex:none}
-.sptape{position:relative;height:86px;flex:none;border-radius:8px;background:var(--screen2);overflow:hidden;touch-action:none;cursor:grab}
+.sptape{position:relative;height:124px;flex:none;border-radius:8px;background:var(--screen2);overflow:hidden;touch-action:none;cursor:grab}
 .sptape::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background-image:linear-gradient(90deg,var(--screen-line) 1px,transparent 1px);background-size:10px 100%;z-index:1}
 .sptrack{position:absolute;left:0;top:12px;bottom:10px;will-change:transform}
-.spblk{position:absolute;top:0;bottom:0;border-radius:6px;background:var(--pc);color:#0b0b0b;opacity:.55;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;
-  padding:4px 7px;box-sizing:border-box;font-family:var(--mono);font-weight:600;font-size:13px;min-height:0;box-shadow:none;text-transform:none;overflow:hidden}
+.spblk{position:absolute;top:0;bottom:0;border-radius:8px;background:var(--pc);color:#0b0b0b;opacity:.55;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;
+  padding:6px 9px;box-sizing:border-box;font-family:var(--mono);font-weight:700;font-size:18px;min-height:0;box-shadow:none;text-transform:none;overflow:hidden}
 .spblk::before,.spblk.on::before{display:none}
-.spblk span{font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.spblk span{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .spblk.now{opacity:1}
 .spblk.queued{opacity:1;box-shadow:inset 0 0 0 2px var(--screen-ink)}
 .spblk.lifted{opacity:.15}
@@ -407,20 +409,19 @@ body.songopen .fabs,body.songopen .tbar{display:none}
 .spghost{position:fixed;z-index:40;pointer-events:none;border-radius:8px;background:var(--pc);color:#0b0b0b;font-family:var(--mono);font-weight:600;font-size:15px;
   display:flex;flex-direction:column;justify-content:flex-end;padding:6px 8px;box-sizing:border-box;box-shadow:0 14px 30px rgba(0,0,0,.45);transform:translate(-50%,-60%) rotate(-4deg)}
 .spghost span{font-size:10px;font-weight:500}
-.sppads{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--pcols,3),minmax(0,1fr));grid-template-rows:repeat(var(--prows,2),minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:8px;align-content:start}
-.sppad{position:relative;border-radius:14px;background:var(--panel);padding:10px;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;
-  min-height:0;min-width:0;box-shadow:none;touch-action:none;text-transform:none;overflow:hidden;container-type:size}
+.sppads{flex:none;display:flex;flex-wrap:wrap;gap:8px;align-items:center;align-content:flex-start;padding:2px 0}
+.sptray{flex-basis:100%;font-family:var(--mono);font-size:11px;color:var(--dim)}
+/* a part is a block like the ones on the tape, with a grip: you pick it up and drop it on the tape */
+.sppad{position:relative;height:52px;min-height:52px;min-width:96px;max-width:170px;flex:0 1 auto;border-radius:8px;background:var(--pc);color:#0b0b0b;padding:0 12px 0 6px;
+  display:inline-flex;align-items:center;gap:6px;text-align:left;box-shadow:0 2px 0 rgba(0,0,0,.25);touch-action:none;text-transform:none;overflow:hidden;cursor:grab}
 .sppad::before,.sppad.on::before{display:none}
-.songpg .sppad.on{background:var(--panel);color:var(--ink);box-shadow:inset 0 0 0 2px var(--acc)}
-.sppad .pk{display:flex;justify-content:space-between;align-items:flex-start;gap:4px}
-.sppad .pk b{font-family:var(--sans);font-weight:700;font-size:26px;line-height:1;color:var(--pc)}
-.sppad .pk small{font-family:var(--mono);font-size:11px;color:var(--dim)}
-.sppad .ps{display:flex;flex-direction:column;gap:3px}
-.sppad .ps i{height:4px;border-radius:2px;background:var(--line)}
-.sppad .pn{font-family:var(--sans);font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@container (max-height:96px){ .sppad .ps{display:none} .sppad .pk b{font-size:20px} }
-.sppad.add{background:transparent;box-shadow:inset 0 0 0 2px var(--line);color:var(--dim);align-items:center;justify-content:center;font-size:14px}
-.sppad.rm{background:transparent;box-shadow:inset 0 0 0 2px var(--rec);color:var(--rec);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:11px;font-weight:500}
+.sppad .grip{width:12px;height:22px;flex:none;opacity:.55;background-image:radial-gradient(circle,#0b0b0b 1.3px,transparent 1.6px);background-size:6px 6px}
+.sppad .pk{font-family:var(--mono);font-weight:700;font-size:18px;line-height:1;flex:none}
+.sppad .pn{font-family:var(--sans);font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sppad small{position:absolute;right:6px;top:4px;font-family:var(--mono);font-size:9px;font-weight:600;opacity:.6}
+.sppad.add{background:transparent;box-shadow:inset 0 0 0 2px var(--line);color:var(--dim);justify-content:center;font-size:13px;padding:0 14px;min-width:0;cursor:pointer}
+.sppad.rm{background:transparent;box-shadow:inset 0 0 0 2px var(--rec);color:var(--rec);justify-content:center;text-align:center;font-family:var(--mono);font-size:10px;font-weight:500;
+  padding:0 10px;max-width:150px;white-space:normal;line-height:1.2;cursor:default;border-style:dashed}
 .sppad.rm.over{background:var(--rec);color:#fff}
 .spedit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:min(340px,calc(100% - 32px));background:var(--panel);border-radius:16px;padding:14px;
   box-shadow:0 20px 50px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px}
@@ -435,10 +436,10 @@ body.songopen .fabs,body.songopen .tbar{display:none}
   .sptip{display:inline} .sphead .spx{display:none}
   .spbody{flex-direction:row}
   .spscreen{flex:1;height:auto;min-width:0;padding:10px;gap:6px}
-  .sptape{height:70px}
+  .sptape{height:96px}
   .sphint{display:none}
-  .sppads{flex:0 0 230px;--pcols:2}
-  .sppad{padding:8px;border-radius:12px}
+  .sppads{flex:0 0 170px;flex-direction:column;flex-wrap:nowrap;align-items:stretch;overflow:auto;gap:6px}
+  .sppad,.sppad.rm{max-width:none;height:44px;min-height:44px} .sptray{flex-basis:auto}
 }
 /* iPad (and wide windows): more room, bigger type */
 @media (min-width:700px) and (min-height:700px){
@@ -448,14 +449,14 @@ body.songopen .fabs,body.songopen .tbar{display:none}
   .spkey{min-height:48px;height:48px;min-width:48px}
   .spscreen{padding:16px;gap:12px;border-radius:18px}
   .spnow span{font-size:20px}
-  .sptape{height:118px}
-  .spblk{font-size:15px;padding:6px 9px} .spblk span{font-size:11px}
-  .sppads{gap:12px}
-  .sppad{padding:14px;border-radius:16px}
-  .sppad .pk b{font-size:38px} .sppad .pn{font-size:17px} .sppad .ps i{height:5px}
+  .sptape{height:168px}
+  .spblk{font-size:24px;padding:8px 12px} .spblk span{font-size:13px}
+  .sppads{gap:10px}
+  .sppad{height:64px;min-height:64px;min-width:130px;max-width:220px;padding:0 16px 0 8px}
+  .sppad .pk{font-size:22px} .sppad .pn{font-size:14px} .sptray{font-size:12px}
 }
-@media (min-width:700px) and (min-height:700px) and (orientation:portrait){ .spscreen{height:min(50%,560px)} .sptip{display:none} }
-@media (min-width:1000px) and (min-height:700px) and (orientation:landscape){ .spscreen{height:auto;flex:1} .sppads{flex:0 0 auto;height:clamp(140px,22vh,190px)} }
+@media (min-width:700px) and (min-height:700px) and (orientation:portrait){ .sptip{display:none} }
+
 /* sampling the HiChord: a card over everything, with the steps, a level meter and progress */
 .hcs{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px}
 .hcs.hidden{display:none}
@@ -1822,7 +1823,7 @@ body.studio .tbar .pos b{font-size:26px}
   <div class="sphead">
     <button class="spkey" id="spBack" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <h2>song <small id="spStats"></small></h2>
-    <span class="sptip" id="spTip">drag a pad onto the tape · tap to go there · hold to name, copy or remove</span>
+    <span class="sptip" id="spTip">drag a part onto the tape · tap a block to go there · hold a part to name, copy or remove</span>
     <button class="spkey spplay" id="spPlay" aria-label="Play the song"><svg viewBox="0 0 24 24" id="spPlayIcon" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></button>
   </div>
   <div class="spbody">
@@ -2002,7 +2003,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.109';
+const PAGE_VERSION='2026-11-14.111';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2842,6 +2843,7 @@ function testSound(){
 
 /* ============ own sounds: microphone or audio file as a layer's instrument ============ */
 let mic=null;
+const MIC_DUCK=0.3;   // how loud the song plays while the microphone records
 async function toggleMic(onBuf){
   if(mic){ mic.rec.stop(); return; }
   setAudioSessionType('play-and-record');
@@ -2850,10 +2852,16 @@ async function toggleMic(onBuf){
     const srcN=ctx.createMediaStreamSource(stream), an=ctx.createAnalyser(); an.fftSize=1024; srcN.connect(an);
     const rec=new MediaRecorder(stream), chunks=[]; rec.ondataavailable=e=>chunks.push(e.data);
     mic={rec,Ly:selLayer(),started:performance.now(),onBuf}; renderDetail(); renderNewMic();
+    // the song plays along while you record, quieter, so you can sample in time without it filling the recording
+    if(!S.playing){ mic.autoPlay=true; const m=mic; startTransport(false).then(()=>{ if(mic!==m && S.playing) stopTransport(); }); }   // stopped before the song got going: stop it too
+    master.gain.setTargetAtTime(S.volume*MIC_DUCK, ctx.currentTime, 0.08);
     rec.onstop=async()=>{
-      stream.getTracks().forEach(x=>x.stop()); srcN.disconnect(); const target=mic.Ly, done=mic.onBuf, cancel=mic.cancel; mic=null; renderNewMic(); setAudioSessionType(playbackSession());
+      stream.getTracks().forEach(x=>x.stop()); srcN.disconnect(); const target=mic.Ly, done=mic.onBuf, cancel=mic.cancel, auto=mic.autoPlay; mic=null; renderNewMic(); setAudioSessionType(playbackSession());
+      master.gain.setTargetAtTime(S.volume, ctx.currentTime, 0.08); if(auto && S.playing) stopTransport();
+      // a sample layer (or one still empty) keeps its name; any other layer gets the next sample number
+      const keep = target.inst==='custom' && target.customName && (!target.buffer || /^sample \d+$/.test(target.customName));
       try{ const b=await ctx.decodeAudioData(await new Blob(chunks).arrayBuffer()); const tr=trimSilence(b);
-        if(cancel) {} else if(!tr) toast('No sound was recorded'); else if(done) done(tr); else setCustom(target, tr, sampleName()); }
+        if(cancel) {} else if(!tr) toast('No sound was recorded'); else if(done) done(tr); else setCustom(target, tr, keep ? target.customName : sampleName()); }
       catch(e){ toast('Could not read the recording'); }
       renderDetail();
     };
@@ -2862,11 +2870,11 @@ async function toggleMic(onBuf){
       document.querySelectorAll('#micMeter i,.micmeter i').forEach(m=>m.style.width=Math.min(100,p*140)+'%');
       if(performance.now()-mic.started>8000) mic.rec.stop(); else requestAnimationFrame(meter); };
     meter();
-  }catch(e){ setAudioSessionType(playbackSession()); toast('No access to the microphone'); }
+  }catch(e){ setAudioSessionType(playbackSession()); if(mic){ if(mic.autoPlay && S.playing) stopTransport(); mic=null; } master.gain.setTargetAtTime(S.volume, ctx.currentTime, 0.05); toast('No access to the microphone'); }
 }
 // a recording is called sample 1, sample 2, … (the next number free among the layers)
 function sampleName(){
-  const n=layers.map(Ly=>Ly.inst==='custom' ? +(((Ly.customName||'').match(/^sample (\d+)$/)||[])[1]||0) : 0);
+  const n=layers.map(Ly=>Ly.shown && Ly.inst==='custom' ? +(((Ly.customName||'').match(/^sample (\d+)$/)||[])[1]||0) : 0);
   return 'sample '+(Math.max(0,...n)+1);
 }
 const fileSoundName = f => f.name.replace(/\.[^.]+$/,'').slice(0,40);
@@ -2891,6 +2899,13 @@ function setCustomSound(Ly, buf, name, zones, kind){
   if(zones){ Ly.buffer=buf; Ly.czones=zones; Ly.ckind=kind||'decay'; Ly.root=60; return; }   // a multisample (sampled from the HiChord)
   Ly.buffer=normalize(buf); Ly.czones=null; Ly.ckind=null;
   const f=detectPitch(Ly.buffer); Ly.root = f ? Math.round(69+12*Math.log2(f/440)) : 60;
+}
+// your own sound (a recording or a file) gets a new name; undo finds the sound under either name
+function renameSound(Ly, name){
+  name=String(name||'').trim().slice(0,40); if(!name || Ly.inst!=='custom' || name===Ly.customName){ renderDetail(); return; }
+  if(Ly.buffer) keepSound(Ly);
+  Ly.customName=name; if(Ly.buffer) keepSound(Ly);
+  storeSound(layers.indexOf(Ly)); renderLayers(); renderDetail(); save(); toast(`renamed to ${name}`);
 }
 function setCustom(Ly, buf, name){
   setCustomSound(Ly, buf, name);
@@ -3486,7 +3501,9 @@ function applySnapshot(json){
     Object.assign(Ly, nd);
     if(Ly.inst==='custom' && (before!=='custom' || beforeName!==Ly.customName)){
       const k=SOUNDS_KEPT.get(Ly.customName);
-      if(k){ Ly.buffer=k.buffer; Ly.mode=k.mode; Ly.slices=null; Ly.czones=k.zones; Ly.ckind=k.kind; storeSound(i); } else Ly.inst=DEFAULT_INST[i];
+      if(k){ Ly.buffer=k.buffer; Ly.mode=k.mode; Ly.slices=null; Ly.czones=k.zones; Ly.ckind=k.kind; storeSound(i); }
+      else if(Ly.customName){ Ly.buffer=null; Ly.czones=null; Ly.ckind=null; Ly.mode='melodic'; Ly.slices=null; }   // your own sound without its audio (a sample layer not recorded yet): stays, empty, under its name
+      else Ly.inst=DEFAULT_INST[i];
     }
     if(Ly.inst!=='custom' && (Ly.inst!==before || !Ly.buffer)) setInstrument(Ly, Ly.inst, true);
     applyLayer(Ly);
@@ -3636,6 +3653,7 @@ function applySession(d, sounds){
     Object.assign(Ly, newLayerData(i), JSON.parse(JSON.stringify(nd))); capFx(Ly);   // older projects: one effect becomes a list
     const snd=sounds && sounds[i];
     if(Ly.inst==='custom' && snd){ Ly.buffer=bufferFrom(snd); Ly.customName=snd.name; Ly.mode='melodic'; Ly.slices=null; Ly.czones=snd.zones||null; Ly.ckind=snd.kind||null; }
+    else if(Ly.inst==='custom' && Ly.customName){ Ly.buffer=null; Ly.czones=null; Ly.ckind=null; Ly.mode='melodic'; Ly.slices=null; }   // your own sound without its audio (a sample layer not recorded yet): stays, empty, under its name
     else { Ly.inst = Ly.inst==='custom' ? DEFAULT_INST[i] : instKey(Ly.inst,i); newSounds(Ly, nd); setInstrument(Ly, Ly.inst, true); }
     Ly.events.forEach(e=>{ if(!e.id) e.id=evId++; evId=Math.max(evId,e.id+1); if(e.chord!=null) chordSeq=Math.max(chordSeq,e.chord+1); });
     applyLayer(Ly);
@@ -3670,7 +3688,8 @@ async function initProjects(){
     }
     setCurrent(p.id);
     const sounds=await soundsOf(p.id);
-    layers.forEach((Ly,i)=>{ if(Ly.wantCustom && sounds[i]){ Ly.inst='custom'; Ly.buffer=bufferFrom(sounds[i]); Ly.customName=sounds[i].name; Ly.mode='melodic'; Ly.slices=null; Ly.czones=sounds[i].zones||null; Ly.ckind=sounds[i].kind||null; } delete Ly.wantCustom; });
+    layers.forEach((Ly,i)=>{ if(Ly.wantCustom && !sounds[i] && Ly.wantName){ Ly.inst='custom'; Ly.customName=Ly.wantName; Ly.buffer=null; Ly.czones=null; Ly.mode='melodic'; Ly.slices=null; }   // your own sound without its audio (a sample layer not recorded yet): stays, empty, under its name
+      if(Ly.wantCustom && sounds[i]){ Ly.inst='custom'; Ly.buffer=bufferFrom(sounds[i]); Ly.customName=sounds[i].name; Ly.mode='melodic'; Ly.slices=null; Ly.czones=sounds[i].zones||null; Ly.ckind=sounds[i].kind||null; } delete Ly.wantCustom; delete Ly.wantName; });
     renderLayers(); renderDetail();
   }catch(e){ console.warn('projects unavailable', e); setAlert('proj','projects are not available in this browser (private mode?)'); }
 }
@@ -4274,11 +4293,14 @@ function addLayer(key, own){
   Object.assign(Ly, newLayerData(idx), { inst:key, shown:true });
   setInstrument(Ly, key); Ly.q = isDrum(key) ? '1/16' : 'off';
   Ly.rev = key==='pad'||key==='strings' ? 0.35 : 0.18;
-  if(own) setCustomSound(Ly, own.buf, own.name, own.zones, own.kind);   // a file or a recording: the layer is named after it
+  if(own && own.empty){ Ly.inst='custom'; Ly.customName=own.name; Ly.buffer=null; Ly.czones=null; Ly.ckind=null; Ly.mode='melodic'; Ly.slices=null; }
+  else if(own) setCustomSound(Ly, own.buf, own.name, own.zones, own.kind);   // a file or a recording: the layer is named after it
   applyLayer(Ly); freshInParts(idx);
   closeSheets();
   selectLayer(idx); renderLayers(); save();
-  if(own) storeSound(idx);
+  if(own && !own.empty) storeSound(idx);
+  if(own && own.empty){ S.tab='sound'; renderDetail(); openSheet('layerSheet');
+    toast(`Layer ${idx+1} · ${own.name}: tap the microphone to record (the song plays along, quieter)`); return; }
   toast(`Layer ${idx+1} · ${instName(Ly)} is ready — tap ● to record into it`);
 }
 function removeLayer(){
@@ -4422,7 +4444,7 @@ document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close
 $('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(!b) return;
   if(b.dataset.own==='file'){ $('newFileIn').click(); return; }
   if(b.dataset.own==='hc'){ closeSheets(); hcsOpen('new'); return; }
-  if(b.dataset.own==='mic'){ if(mic && !mic.onBuf) return; toggleMic(buf=>addLayer('keys',{buf,name:sampleName()})); return; }
+  if(b.dataset.own==='mic'){ if(mic) return; addLayer('keys',{empty:true, name:sampleName()}); return; }   // an empty sample layer: you record into it from its instrument page
   addLayer(b.dataset.k); };
 $('newFileIn').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return;
   try{ addLayer('keys',{buf:await decodeFile(f), name:fileSoundName(f)}); }catch(err){ toast('This file cannot be read as audio'); } };
@@ -4747,9 +4769,10 @@ function renderPage(host,tab,Ly){
     fp.classList.add('pwide');
     param(grid,'Resonance',()=>Ly.reso,v=>{Ly.reso=v;applyLayer(Ly);},0,1,0.01,pct);
     const row=document.createElement('div'); row.className='row ownsnd';
-    row.innerHTML=`<span class="sub">Your own sound</span><button id="fileBtn" class="icon" aria-label="Load your own sound from an audio file" title="Audio file">${ic('upload','')}</button>${HC_INST[Ly.inst]?`<button id="hcsBtn" class="icon${hcOn(Ly)?' hcon':''}" aria-pressed="${hcOn(Ly)}" aria-label="${hcOn(Ly)?`Plays the HiChord's ${HC_INST[Ly.inst][1]}: tap for the ${LIB[Ly.inst].name}`:HCI[hcKeyOf(Ly.inst)]?`Play the HiChord's ${HC_INST[Ly.inst][1]} instead`:`Sample the HiChord's ${HC_INST[Ly.inst][1]} for this layer`}" title="HiChord instrument">${ic('hichord','')}</button>`:''}<button id="micBtn" class="icon${mic?' on micrec':''}" aria-label="${mic?'Stop recording':'Record your own sound with the microphone'}" title="${mic?'Stop recording':'Microphone'}">${ic('mic','')}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
+    row.innerHTML=`${Ly.inst==='custom' ? `<input class="sndname" id="sndName" maxlength="40" value="${escH(Ly.customName||'')}" aria-label="Name of your sound" title="Rename your sound" enterkeyhint="done">` : '<span class="sub">Your own sound</span>'}<button id="fileBtn" class="icon" aria-label="Load your own sound from an audio file" title="Audio file">${ic('upload','')}</button>${HC_INST[Ly.inst]?`<button id="hcsBtn" class="icon${hcOn(Ly)?' hcon':''}" aria-pressed="${hcOn(Ly)}" aria-label="${hcOn(Ly)?`Plays the HiChord's ${HC_INST[Ly.inst][1]}: tap for the ${LIB[Ly.inst].name}`:HCI[hcKeyOf(Ly.inst)]?`Play the HiChord's ${HC_INST[Ly.inst][1]} instead`:`Sample the HiChord's ${HC_INST[Ly.inst][1]} for this layer`}" title="HiChord instrument">${ic('hichord','')}</button>`:''}<button id="micBtn" class="icon${mic?' on micrec':''}" aria-label="${mic?'Stop recording':'Record your own sound with the microphone'}" title="${mic?'Stop recording':'Microphone'}">${ic('mic','')}</button><span class="meter ${mic?'':'hidden'}" id="micMeter"><i></i></span>`;
     grid.appendChild(row);   // in the grid: under the sliders on a phone, next to the instrument in landscape
-    $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=()=>toggleMic(); if($('hcsBtn')) $('hcsBtn').onclick=()=>hcLayerKey(S.sel);
+    $('fileBtn').onclick=()=>$('fileIn').click(); $('micBtn').onclick=()=>toggleMic();
+    const sn=$('sndName'); if(sn){ sn.onchange=()=>renameSound(Ly, sn.value); sn.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') sn.blur(); }; } if($('hcsBtn')) $('hcsBtn').onclick=()=>hcLayerKey(S.sel);
     // phone and iPad in portrait (docked): the picker's column is narrow, so back to default joins the own-sound keys
     const st=document.body.dataset.studio;
     if((st==='port' && sFull()!=='st') || (!st && !isShortWide())) row.appendChild($('instDefBtn'));
@@ -5068,7 +5091,7 @@ function closeSongPage(){
   document.body.classList.remove('songopen'); $('songPg').classList.add('hidden');
   renderParts(); renderLayers(); renderDetail(); drawAll();
 }
-const spW = () => { const t=$('spTape'); return clamp(Math.round((t.clientWidth||360)/4.6), 64, 170); };
+const spW = () => { const t=$('spTape'); return clamp(Math.round((t.clientWidth||360)/3.4), 90, 240); };
 const loopSecs = () => loopLen()*60/S.bpm;
 const mmss = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 function renderSongPage(){
@@ -5077,18 +5100,12 @@ function renderSongPage(){
   $('spStats').innerHTML = `· ${n} pass${n===1?'':'es'}<span class="spx"> · ${n*S.bars} bars · ${mmss(n*loopSecs())}</span>`;
   $('spTrack').style.width=(n*W)+'px';
   $('spTrack').innerHTML = SONG.order.map((k,i)=>`<button class="spblk" data-n="${i}" style="--pc:var(--p${k});left:${i*W+2}px;width:${W-4}px" aria-label="Pass ${i+1}: ${escH(partName(k))}">${PART_L(k)}<span>${escH(SONG.parts[k].name||'')}</span></button>`).join('');
-  const P=SONG.parts.length, tiles=P+(P<8?1:0)+1, wide=matchMedia('(min-width:1000px) and (min-height:700px) and (orientation:landscape)').matches;
-  if(wide) $('spPads').style.setProperty('--pcols', tiles<=6 ? 6 : Math.ceil(tiles/2)); else $('spPads').style.removeProperty('--pcols');
-  $('spPads').innerHTML = SONG.parts.map((p,k)=>{
+  const P=SONG.parts.length;
+  $('spPads').innerHTML = '<span class="sptray">drag a part onto the tape</span>' + SONG.parts.map((p,k)=>{
     const uses=SONG.order.filter(x=>x===k).length;
-    const stripes=layers.map((Ly,i)=>Ly.shown ? `<i style="${!p.mute[i] && (p.ev[i]||[]).length ? `background:var(--l${i})` : ''}"></i>` : '').join('');
-    return `<button class="sppad ${k===SONG.cur?'on':''}" data-k="${k}" style="--pc:var(--p${k})" aria-label="${escH(partName(k))}: tap to go there, hold for name, copy and remove, drag onto the tape">
-      <span class="pk"><b>${PART_L(k)}</b><small>${uses}×</small></span><span class="ps">${stripes}</span><span class="pn">${escH(p.name||'part '+PART_L(k))}</span></button>`; }).join('')
+    return `<button class="sppad" data-k="${k}" style="--pc:var(--p${k})" aria-label="${escH(partName(k))}: drag onto the tape; hold for name, copy and remove"><i class="grip" aria-hidden="true"></i><span class="pk">${PART_L(k)}</span><span class="pn">${escH(p.name||'part '+PART_L(k))}</span><small>${uses}×</small></button>`; }).join('')
     + (P<8 ? '<button class="sppad add" data-add aria-label="New part">+ part</button>' : '')
-    + '<div class="sppad rm" id="spRm">drop a block here to take it off the tape</div>';
-  // always room for two rows of pads, so one part doesn't stretch over the whole height (the wide iPad strip is one row)
-  const cols=getComputedStyle($('spPads')).gridTemplateColumns.split(' ').length||3;
-  $('spPads').style.setProperty('--prows', Math.max(wide?1:2, Math.ceil(tiles/cols)));
+    + '<div class="sppad rm" id="spRm">drop a block here to take it off</div>';
   spNow(); spFrame(true);
 }
 function spNow(){
@@ -5097,7 +5114,6 @@ function spNow(){
   $('spName').textContent = SONG.parts[k].name || `part ${PART_L(k)}`;
   $('spHint').textContent = S.playing ? 'tap a block to play it next' : 'tap a block to go there';
   document.querySelectorAll('#spTrack .spblk').forEach(b=>{ const i=+b.dataset.n; b.classList.toggle('now',i===H.pos); b.classList.toggle('queued',i===H.jump); });
-  document.querySelectorAll('#spPads .sppad[data-k]').forEach(b=>b.classList.toggle('on',+b.dataset.k===k));
 }
 // where the tape is: playing, the pass and how far into it; stopped, the pass you are on (or where you swiped to)
 let spLastKey='';
@@ -5238,7 +5254,7 @@ addEventListener('pointerup',spUp); addEventListener('pointercancel',spUp);
 $('spTape').addEventListener('click',e=>{ if(SPG.noClick) return; const b=e.target.closest('.spblk'); if(b) spGoPass(+b.dataset.n); });
 $('spPads').addEventListener('click',e=>{ if(SPG.noClick) return;
   if(e.target.closest('[data-add]')){ addPart(); return; }
-  const b=e.target.closest('.sppad[data-k]'); if(b) spGoPart(+b.dataset.k);
+  const b=e.target.closest('.sppad[data-k]'); if(b) toast('drag it onto the tape · hold for name, copy or remove');
   else if(e.target.closest('#spRm')) toast('hold a block on the tape and drag it here to take it off');
 });
 $('spPads').addEventListener('contextmenu',e=>e.preventDefault()); $('spTape').addEventListener('contextmenu',e=>e.preventDefault());
@@ -6225,7 +6241,7 @@ async function startApp(){
   if(saved && saved.S) Object.assign(S, saved.S, {playing:false, rec:false});
   for(let i=0;i<8;i++){
     const Ly = Object.assign(newLayerData(i), saved && saved.layers && saved.layers[i] ? saved.layers[i] : {}); capFx(Ly);
-    Ly.wantCustom = Ly.inst==='custom';   // its audio comes back from the project store
+    Ly.wantCustom = Ly.inst==='custom'; Ly.wantName = Ly.wantCustom ? Ly.customName : null;   // its audio (and name) come back from the project store
     Ly.inst = Ly.inst==='custom' ? DEFAULT_INST[i] : instKey(Ly.inst,i);
     if(!Ly.wantCustom) newSounds(Ly, saved && saved.layers && saved.layers[i]);
     if(Math.abs(Ly.nudge||0)<5) Ly.nudge=0;   // tiny nudges were accidental slider touches
