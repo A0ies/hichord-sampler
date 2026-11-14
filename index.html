@@ -2005,7 +2005,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.106';
+const PAGE_VERSION='2026-11-14.107';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2305,7 +2305,7 @@ function setTempo(bpm, fromClock){
   bpm=clamp(Math.round(bpm*10)/10, 40, 240);
   if(Math.abs(bpm-S.bpm)<0.05) return;
   if(S.playing){ const now=ctx.currentTime; b0=beatAt(now); t0=now; }
-  S.bpm=bpm; updateDelayTime(); renderTempo();
+  S.bpm=bpm; updateDelayTime(); renderTempo(); gateResync();
   if(!fromClock && S.sendTempo && HC.connected && !clockLive()) hcSendTempo();
   save();
 }
@@ -2323,7 +2323,7 @@ async function startTransport(withCountIn){
   console.log(`[diag] start: state ${ctx.state} t ${ctx.currentTime.toFixed(3)} base ${(ctx.baseLatency||0).toFixed(3)} out ${(ctx.outputLatency||0).toFixed(3)}`);
   ctx.resume();
   t0=ctx.currentTime+0.1; b0 = withCountIn ? -4 : -earlyLead(); schedBeat=b0; S.cin=!!withCountIn; SONG.doneAt=null;
-  S.playing=true; tick(); renderTransport();
+  S.playing=true; gateResync(); tick(); renderTransport();
 }
 function stopTransport(){
   if(!S.playing) return;
@@ -5391,10 +5391,13 @@ function gateOn(Ly, perBeat, depth){
     let t=now+0.005; if(S.playing){ const b=beatAt(now); t=Math.max(t, timeAt(Math.ceil(b*perBeat+1e-6)/perBeat)); }
     osc.start(t); Ly.gateFx={osc,amt,perBeat,t};
   }
-  const t=Math.max(now, Ly.gateFx.t);
+  const t=Math.max(now, Ly.gateFx.t); Ly.gateFx.depth=depth;
   Ly.gateFx.amt.gain.setTargetAtTime(depth/2, t, 0.004);
   g.setTargetAtTime(1-depth/2, t, 0.004);
 }
+// the gate runs on its own oscillator, lined up with the beat only when it starts: start it again on the beat
+// whenever the beat moves (play, a new tempo, the HiChord's clock), or it drifts between the beats
+function gateResync(){ if(!ctx) return; layers.forEach(Ly=>{ const G=Ly.gateFx; if(!G) return; gateOff(Ly); gateOn(Ly, G.perBeat, G.depth??0.65); }); }
 function gateOff(Ly){
   const G=Ly.gateFx; if(!G) return; Ly.gateFx=null;
   try{ G.osc.stop(); }catch(e){} G.osc.disconnect(); G.amt.disconnect();
