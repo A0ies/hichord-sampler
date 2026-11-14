@@ -837,9 +837,6 @@ body.projopen .pbar{display:none}
 .overlay h1{text-transform:none}
 .overlay h1 .appicon{width:1.15em;height:1.15em;display:inline-block;vertical-align:-0.2em;margin-right:.3em}
 /* the start screen is also where you pick a project: new, receive, or one of yours */
-#startList{margin-top:14px;overflow:auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:2px 2px 4px;align-content:start}
-#startList .proj{flex:none;cursor:pointer}
-#startList .pface button{flex:none}
 /* song parts: a row of keys above the layers */
 .partbar{display:flex;gap:6px;align-items:center;margin:0 0 10px;min-width:0}
 .partbar button{flex:0 1 auto;min-width:0;max-width:150px;height:38px;min-height:38px;padding:0 11px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;
@@ -1339,6 +1336,16 @@ body.projopen .tbar{display:none}
 #projSheet .grab,#projSheet>div[style*="height:18px"]{display:none}
 #projSheet .sheethead{margin:0;align-items:center}
 #projSheet .sheethead h2{font-size:13px}
+/* the projects screen is also the start screen: the app's name and what it does on top */
+#projSheet{display:flex;flex-direction:column;gap:12px}
+#projSheet .projlist{flex:1}
+#projSheet .plogo{margin:0;font-family:var(--sans);font-size:28px;font-weight:700;letter-spacing:-.04em;line-height:1.1;text-transform:none;white-space:nowrap}
+#projSheet .plogo span{font-weight:400}
+#projSheet .plogo .appicon{width:1.15em;height:1.15em;display:inline-block;vertical-align:-0.2em;margin-right:.3em}
+#projSheet .pintro{margin:-4px 0 0;color:var(--dim);font-family:var(--sans);font-size:14px;line-height:1.5;max-width:680px}
+/* before a project is open: no close, no "this project" */
+body.startmode #projSheet .sheethead .close,body.startmode #projSheet>.p.wide{display:none}
+@media (orientation:landscape) and (max-height:500px){ #projSheet{gap:8px} #projSheet .plogo{font-size:22px} #projSheet .pintro{font-size:12px;line-height:1.4;margin:-2px 0 0} }
 #projSheet>.p.wide{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;row-gap:6px;min-width:0}
 #projSheet>.p.wide>label{grid-column:1;grid-row:1}
 #projSheet .pnamerow{display:contents}
@@ -1352,8 +1359,12 @@ body.projopen .tbar{display:none}
 #projSheet .proj{flex:none}
 #projSheet .proj .pface{position:relative;padding:12px 74px 12px 14px;min-height:72px;height:100%;align-items:flex-start}
 #projSheet .proj .pface>button{position:absolute;top:50%;right:10px;transform:translateY(-50%)}
-#projSheet .proj .curbadge{align-self:flex-start;margin-top:6px}   /* under the details, so nothing is covered */
 #projSheet .proj.cur .pface{padding-right:14px}
+/* the current project: its badge and "continue" on one row under the details */
+#projSheet .proj .pcur{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+#projSheet .proj .pcur .curbadge{margin:0}
+#projSheet .proj .pcur button{flex:none}
+#projSheet .proj .curbadge{align-self:flex-start;margin-top:6px}   /* under the details, so nothing is covered */
 #projSheet .pundo{min-height:72px}
 .curbadge{font-family:var(--mono);font-size:11px;font-weight:600;background:var(--ink);color:var(--bg);border-radius:999px;padding:4px 10px;white-space:nowrap}
 .st-short{display:none}
@@ -1485,6 +1496,7 @@ body.studio #tabs button{flex:1 0 auto;padding:8px 8px 6px;letter-spacing:.04em}
 body.studio #detail{grid-column:1/-1;grid-row:2;min-height:0;gap:10px}
 /* docked: the tabs take the title's place (the sidebar and the pad name the layer); full screen shows the title */
 body.studio:not([data-sfull=st]) .sheethead{display:none}
+body.studio #projSheet .sheethead{display:flex}   /* the projects screen keeps its name and close */
 body.studio .layersheet .lsbody{grid-template-rows:auto minmax(0,1fr)}
 /* docked instrument page: three sliders a row, own sound next to the instrument */
 body.studio:not([data-sfull=st]) #detail[data-tab=sound] .params{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -1635,13 +1647,6 @@ body.studio .tbar .pos b{font-size:26px}
 </head>
 <body>
 <script>if(window.__isHiChordApp) document.documentElement.classList.add('in-app');</script>
-<div class="overlay" id="overlay">
-  <div class="box">
-    <h1><svg class="appicon" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#1d1d1c"/><rect x="16" y="22" width="46" height="9" rx="4.5" fill="#2f6fe0"/><rect x="30" y="37" width="54" height="9" rx="4.5" fill="#00a651"/><rect x="16" y="52" width="34" height="9" rx="4.5" fill="#ff5000"/><rect x="40" y="67" width="44" height="9" rx="4.5" fill="#ffc400"/><rect x="55" y="15" width="3" height="68" rx="1.5" fill="#f0f0ec"/></svg>Looper <span>for HiChord</span></h1>
-    <p>Play on your HiChord, record it in layers, then change timing, instruments and mix while it loops. Connect the HiChord over USB-C and turn its own volume down. Works in Chrome or Edge, and in the iPhone app.</p>
-    <div class="projlist" id="startList" aria-label="Projects"></div>
-  </div>
-</div>
 
 <div class="shell">
   <header class="top">
@@ -1758,7 +1763,8 @@ body.studio .tbar .pos b{font-size:26px}
 <!-- projects -->
 <section class="sheet tall" id="projSheet" aria-label="Projects">
   <div class="grab"></div>
-  <div class="row sheethead"><h2 style="margin:0">projects</h2><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
+  <div class="row sheethead"><h1 class="plogo"><svg class="appicon" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#1d1d1c"/><rect x="16" y="22" width="46" height="9" rx="4.5" fill="#2f6fe0"/><rect x="30" y="37" width="54" height="9" rx="4.5" fill="#00a651"/><rect x="16" y="52" width="34" height="9" rx="4.5" fill="#ff5000"/><rect x="40" y="67" width="44" height="9" rx="4.5" fill="#ffc400"/><rect x="55" y="15" width="3" height="68" rx="1.5" fill="#f0f0ec"/></svg>Looper <span>for HiChord</span></h1><div class="spacer"></div><button class="icon close" data-close aria-label="Close"></button></div>
+  <p class="pintro">Play on your HiChord, record it in layers, then change timing, instruments and mix while it loops. Connect the HiChord over USB-C and turn its own volume down. Works in Chrome or Edge, and in the iPhone app.</p>
   <div class="p wide"><label><span>this project</span><b id="projStatus">saves automatically</b></label>
     <div class="pnamerow"><input id="projNameInput" class="textin" maxlength="60" aria-label="Project name" enterkeyhint="done"><button id="projCopy" title="Duplicate this project and continue in the copy">duplicate</button><button id="projShare" title="Send this project to another device with a code">share</button></div></div>
   <div style="height:18px"></div>
@@ -1902,7 +1908,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.78';
+const PAGE_VERSION='2026-11-14.80';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2206,7 +2212,15 @@ function setTempo(bpm, fromClock){
 }
 async function startTransport(withCountIn){
   if(S.playing || S.starting) return;
-  if(ctx.state!=='running'){ S.starting=true; try{ await ctx.resume(); }catch(e){} await new Promise(r=>setTimeout(r,150)); S.starting=false; if(S.playing) return; }
+  if(ctx.state!=='running'){
+    // iOS can leave resume() pending while the audio is interrupted: never wait on it for good (play would stay
+    // locked until the app restarts); in the app, have the audio session switched on again and try once more
+    S.starting=true;
+    const tryResume = ()=>Promise.race([ctx.resume().catch(()=>{}), new Promise(r=>setTimeout(r,700))]);
+    try{ await tryResume(); if(ctx.state!=='running' && inApp()){ nativeAudio({cmd:'wake'}); await new Promise(r=>setTimeout(r,200)); await tryResume(); } }
+    finally{ S.starting=false; }
+    renderAudioStatus(); if(S.playing) return;
+  }
   console.log(`[diag] start: state ${ctx.state} t ${ctx.currentTime.toFixed(3)} base ${(ctx.baseLatency||0).toFixed(3)} out ${(ctx.outputLatency||0).toFixed(3)}`);
   ctx.resume();
   t0=ctx.currentTime+0.1; b0 = withCountIn ? -4 : -earlyLead(); schedBeat=b0; S.cin=!!withCountIn; SONG.doneAt=null;
@@ -3437,29 +3451,34 @@ function restoreProject(id){
 }
 async function purgeProject(id){
   if(!PRJ.pend.has(id)) return; PRJ.pend.delete(id);
+  // deleted on the start screen, the project open last time: the app must not bring it back from its saved session
+  if(START.on && id===START.last){ START.last=null; try{ localStorage.removeItem('hcl-project'); localStorage.removeItem(SAVE_KEY); }catch(e){} }
   try{ await dbDo('projects','readwrite',st=>st.delete(id)); await dbDo('sounds','readwrite',st=>st.delete(soundRange(id))); }catch(e){}
   PRJ.list=PRJ.list.filter(x=>x.id!==id); renderProjects();
 }
 const ago = t => { const s=(Date.now()-t)/1000; return s<10?'just now':s<60?`${Math.round(s)} s ago`:s<3600?`${Math.round(s/60)} min ago`:s<86400?`${Math.round(s/3600)} h ago`:new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'}); };
 function renderProjName(){ const p=PRJ.list.find(x=>x.id===PRJ.current); $('projName').textContent = p ? p.name : 'project'; }
 function renderProjStatus(){ const el=$('projStatus'); if(el) el.innerHTML = `<span class="st-long">${PRJ.savedAt ? `saved ${ago(PRJ.savedAt)}` : 'saves automatically'}</span><span class="st-short">saved</span>`; }
+const START={ on:true, last:null, busy:false };   // the start screen (see startScreen)
+// the project to continue: the open one, or on the start screen the one open last time
+const curProj = () => PRJ.current || (START.on ? START.last : null);
 function renderProjects(){
   renderProjName(); renderProjStatus();
   const cur=PRJ.list.find(x=>x.id===PRJ.current);
   const inp=$('projNameInput'); if(cur && document.activeElement!==inp) inp.value=cur.name;
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-  PRJ.list.sort((a,b)=>(b.updated||0)-(a.updated||0));   // last edited first
+  const cid=curProj(); PRJ.list.sort((a,b)=>(b.id===cid)-(a.id===cid) || (b.updated||0)-(a.updated||0));   // the current project on top, then last edited first
   $('projList').innerHTML = '<div class="pnewrow"><button class="pnew" id="projNewTile">+ new project</button><button class="pnew" id="projRecvTile">receive with a code</button></div>' + PRJ.list.map(p=>{
     const z=PRJ.pend.get(p.id);
     if(z){ const left=Math.max(0,z.until-Date.now());
       return `<button class="pundo" data-undo="${p.id}" aria-label="Restore ${esc(p.name)}">
         <i class="pfill" style="transform:scaleX(${left/UNDO_MS})"></i>
         <span class="ptxt">${ic('trash','')}<span><b>${esc(p.name)}</b> deleted</span></span><span class="pact">tap to restore</span></button>`; }
-    const sm=p.summary||summary(p.data); const isCur=p.id===PRJ.current;
+    const sm=p.summary||summary(p.data); const isCur=p.id===curProj();
     return `<div class="proj ${isCur?'cur':''}" data-id="${p.id}">
       <div class="pbg" aria-hidden="true"><span class="pdel">${ic('trash','')}<span class="pword">delete</span></span></div>
       <div class="pface">
-        <div class="pinfo"><b>${esc(p.name)}</b><small>${sm.layers} layer${sm.layers===1?'':'s'}${sm.parts>1?` · ${sm.parts} parts`:''} · ${sm.notes} notes · ${sm.bpm} bpm<br>${ago(p.updated)}</small>${isCur?'<span class="curbadge">current project</span>':''}</div>
+        <div class="pinfo"><b>${esc(p.name)}</b><small>${sm.layers} layer${sm.layers===1?'':'s'}${sm.parts>1?` · ${sm.parts} parts`:''} · ${sm.notes} notes · ${sm.bpm} bpm<br>${ago(p.updated)}</small>${isCur?'<span class="pcur"><span class="curbadge">current project</span><button data-pa="continue" class="primary">continue</button></span>':''}</div>
         ${isCur?'':'<button data-pa="open">open</button>'}
       </div>
     </div>`; }).join('') || '<p class="hint">No projects yet.</p>';
@@ -3626,6 +3645,8 @@ async function xferFetch(code){
     fetch(relayUrl()+'/share/'+code, {method:'DELETE'}).catch(()=>{});   // it's here: the relay can forget it
     XF.busy=false; XF.ctl=null; $('xfer').classList.add('hidden');
     await openProject(p.id);
+    // typing the code and the download can leave the audio paused on iPhone: wake it before play is pressed
+    if(ctx && ctx.state!=='running'){ if(inApp()) nativeAudio({cmd:'wake'}); ctx.resume().then(renderAudioStatus).catch(()=>{}); }
     toast(`received "${p.name}"`);
   }catch(e){ console.warn(e); back("Couldn't store the project on this device (storage full?)."); }
 }
@@ -3953,11 +3974,11 @@ new MutationObserver(()=>document.body.classList.toggle('projopen',$('projSheet'
 $('projNameInput').addEventListener('change',e=>renameProject(e.target.value));
 $('projNameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') e.target.blur(); e.stopPropagation(); });
 $('projList').onclick=e=>{
-  if(e.target.closest('#projNewTile')){ newProject(); return; }
-  if(e.target.closest('#projRecvTile')){ xferReceive(); return; }
+  if(e.target.closest('#projNewTile')){ START.on ? startWith('new') : newProject(); return; }
+  if(e.target.closest('#projRecvTile')){ START.on ? startWith('recv') : xferReceive(); return; }
   const u=e.target.closest('[data-undo]'); if(u){ restoreProject(u.dataset.undo); return; }
   const b=e.target.closest('[data-pa]'); if(!b) return; const row=b.closest('.proj'); if(row.dataset.swiped) return;
-  openProject(row.dataset.id); };
+  START.on ? startWith('open', row.dataset.id) : openProject(row.dataset.id); };
 /* swipe left on a project: the bin shows, then "delete" grows in, and past the threshold letting go deletes it */
 (()=>{ const list=$('projList'); let sw=null;
   const DONE=0.5;   // part of the row width to pull for a delete
@@ -4055,7 +4076,7 @@ function openSheet(id){
   document.querySelectorAll('.sheet.open').forEach(x=>{ if(x.id!==id) x.classList.remove('open'); });
   $(id).classList.add('open'); $('backdrop').classList.add('show'); document.body.classList.add('sheetopen');
 }
-function closeSheets(){ document.body.classList.remove('sheetopen'); const ls=$('layerSheet'); ls.classList.remove('full'); if($('lprev').parentNode!==ls && !ED.dock) ls.prepend($('lprev')); const pk=ls.querySelector('.lsbody>.pkeys'); if(pk) ls.querySelector('.lprev .pstrip').append(pk); document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open')); $('backdrop').classList.remove('show'); }
+function closeSheets(){ document.body.classList.remove('sheetopen'); const ls=$('layerSheet'); ls.classList.remove('full'); if($('lprev').parentNode!==ls && !ED.dock) ls.prepend($('lprev')); const pk=ls.querySelector('.lsbody>.pkeys'); if(pk) ls.querySelector('.lprev .pstrip').append(pk); document.querySelectorAll('.sheet.open').forEach(x=>{ if(!(START.on && x.id==='projSheet')) x.classList.remove('open'); }); $('backdrop').classList.remove('show'); }
 $('backdrop').onclick=closeSheets;
 /* iOS still scrolls the page when a swipe starts on a panel that has nothing to scroll: only a panel area that
    can scroll itself (or a slider or select) keeps the swipe */
@@ -5766,7 +5787,6 @@ async function startApp(){
   setSong(saved && saved.song, true); renderParts();
   if(saved){ master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime(); }
   $('metroChk').checked=S.metro; $('countChk').checked=S.countIn;
-  $('overlay').classList.add('hidden');
   renderBarsSeg(); renderTempo(); renderTransport(); renderLayers(); renderDetail(); renderGlobal(); renderSync(); renderHC();
   loadHCI();   // the HiChord instruments sampled earlier on this device
   await ctx.resume();
@@ -5779,30 +5799,28 @@ async function startApp(){
   renderUndo(); HIST.last=histData(sessionData());
   if(autoConnect()) setTimeout(()=>hcConnect({auto:true}), 300);
 }
-/* the start screen lists your projects: starting a new one, receiving one or opening one of yours starts the app
-   (the tap also lets the browser play sound). The project you had open last is on top, with "continue". */
-const START={ list:[], last:null };
-async function renderStart(){
-  try{ START.list=(await dbDo('projects','readonly',st=>st.getAll()))||[]; }catch(e){ START.list=[]; }
+/* the start screen is the projects screen, before a project is open: starting a new one, receiving one or opening
+   one of yours starts the app (the tap also lets the browser play sound). The project open last time is on top, with "continue". */
+async function startScreen(){
+  document.body.classList.add('startmode');
+  try{ await refreshProjects(); }catch(e){ PRJ.list=[]; }
   try{ START.last=localStorage.getItem('hcl-project'); }catch(e){}
-  START.list.sort((a,b)=>(b.id===START.last)-(a.id===START.last) || (b.updated||0)-(a.updated||0));
-  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-  $('startList').innerHTML = '<div class="pnewrow"><button class="pnew" data-start="new">+ new project</button><button class="pnew" data-start="recv">receive with a code</button></div>'
-    + START.list.map(p=>{ const sm=p.summary||summary(p.data), last=p.id===START.last;
-      return `<div class="proj ${last?'cur':''}" data-start="open" data-id="${p.id}"><div class="pface">
-        <div class="pinfo"><b>${esc(p.name)}</b><small>${sm.layers} layer${sm.layers===1?'':'s'}${sm.parts>1?` · ${sm.parts} parts`:''} · ${sm.notes} notes · ${sm.bpm} bpm<br>${ago(p.updated)}</small></div>
-        <button ${last?'class="primary"':''}>${last?'continue':'open'}</button></div></div>`; }).join('');
+  if(!PRJ.list.some(p=>p.id===START.last)) START.last=null;
+  renderProjects(); openSheet('projSheet');
 }
 async function startWith(kind, id){
-  if(ctx) return;
-  const had=START.list.length>0;
+  if(ctx || START.busy) return; START.busy=true;
+  const last=START.last;
+  // no project from last time (deleted): open the chosen one straight away, without making an empty one first
+  if(kind==='open' && id && !last){ const p=PRJ.list.find(x=>x.id===id);
+    if(p) try{ localStorage.setItem('hcl-project', id); localStorage.setItem(SAVE_KEY, JSON.stringify(p.data)); }catch(e){} }
   await startApp();
-  if(kind==='new'){ if(had || layers.some(Ly=>Ly.events.length)) await newProject(); }   // the very first project is the one the app just made
-  else if(kind==='recv') xferReceive();
-  else if(id && id!==PRJ.current && PRJ.list.some(x=>x.id===id)) await openProject(id);
+  START.on=false; document.body.classList.remove('startmode');
+  if(kind==='new'){ if(last || layers.some(Ly=>Ly.events.length)) await newProject(); closeSheets(); }   // no project from last time: the app just made a new one
+  else if(kind==='recv'){ renderProjects(); xferReceive(); }
+  else { if(id && id!==PRJ.current && PRJ.list.some(x=>x.id===id)) await openProject(id); closeSheets(); }
 }
-$('startList').onclick=e=>{ const b=e.target.closest('[data-start]'); if(b) startWith(b.dataset.start, b.dataset.id); };
-renderStart();
+startScreen();
 </script>
 </body>
 </html>

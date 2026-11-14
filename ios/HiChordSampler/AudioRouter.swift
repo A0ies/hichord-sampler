@@ -103,6 +103,11 @@ final class AudioRouter: NSObject, WKScriptMessageHandler {
         switch cmd {
         case "route":
             report()
+        case "wake":
+            // the page's audio is stuck (paused or interrupted): switch the session on again
+            do { try AVAudioSession.sharedInstance().setActive(true) } catch { print("[audio] wake: \(error)") }
+            apply()
+            webView?.evaluateJavaScript("window.__nativeAudio&&window.__nativeAudio.resume()", completionHandler: nil)
         case "usbInput":
             usbInput = (body["on"] as? Bool) ?? false
             let s = AVAudioSession.sharedInstance()
