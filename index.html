@@ -1430,7 +1430,21 @@ body.startmode #projSheet .sheethead .close{display:none}
 #projSheet .pgrid .proj.full .pkeys{margin-top:0;flex:0 0 min(48%,460px)}
 #projSheet .pgrid .pundo{min-height:96px}
 @media (orientation:portrait){ #projSheet .pgrid{grid-template-columns:repeat(3,minmax(0,1fr))} #projSheet .pbanner .pface,#projSheet .pgrid .proj.full .pface{flex-direction:column;align-items:stretch} #projSheet .pbanner .pkeys,#projSheet .pgrid .proj.full .pkeys{flex:none;margin-top:8px} }
-@media (min-width:700px) and (min-height:600px){ #projSheet .plogo{font-size:32px} #projSheet .pgrid .proj .pnm{font-size:16px} }
+@media (min-width:700px) and (min-height:600px){
+  #projSheet .plogo{font-size:32px} #projSheet .pgrid .proj .pnm{font-size:16px}
+  /* iPad: room to breathe between the header, the banner and the tiles, and inside each */
+  #projSheet{gap:26px;padding-top:calc(26px + var(--st));padding-left:max(28px,calc(var(--sl) + 20px));padding-right:max(28px,calc(var(--sr) + 20px));padding-bottom:calc(24px + var(--sb))}
+  #projSheet .projlist.pbig{gap:28px}
+  #projSheet .pbanner .pface{padding:24px 26px;gap:24px}
+  #projSheet .pbanner .pinf{gap:8px}
+  #projSheet .pbanner small{font-size:12px}
+  #projSheet .pbanner .pstr{margin-top:6px} #projSheet .pbanner .pstr i{height:5px}
+  #projSheet .pgrid{gap:16px}
+  #projSheet .pgrid .pnew,#projSheet .pgrid .proj .pface,#projSheet .pgrid .pundo{min-height:128px}
+  #projSheet .pgrid .proj .pface{padding:18px 20px}
+  #projSheet .pgrid .proj .pinf{gap:6px}
+  #projSheet .pgrid .proj.full .pface{padding:20px 22px}
+}
 /* phones on their side: the current project and the keys on the left, the other projects on the right (each scrolls) */
 @media (min-width:640px){
   #projSheet .projlist{flex-direction:row;align-items:stretch;overflow:hidden;gap:16px}
@@ -1974,7 +1988,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.92';
+const PAGE_VERSION='2026-11-14.93';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
