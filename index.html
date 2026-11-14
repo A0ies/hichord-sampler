@@ -2005,7 +2005,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.105';
+const PAGE_VERSION='2026-11-14.106';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5419,7 +5419,8 @@ const capLayers = () => layers.map((Ly,i)=>[Ly,i]).filter(([Ly])=>Ly.shown);
 function renderCaptureMode(){
   if(!CAP.open) return;
   const vis=capLayers(), n=vis.length, wide=innerWidth>innerHeight;
-  const cols = wide ? Math.min(4,n) : (n<=1?1:2), rows=Math.ceil(n/cols);
+  // from three pads on a grid, also in landscape (two rows): every pad the same size, an odd one out leaves its neighbour's cell empty
+  const cols = wide ? (n<=2 ? Math.max(1,n) : Math.ceil(n/2)) : (n<=1?1:2), rows=Math.max(1,Math.ceil(n/cols));
   const grid=$('cgrid'); grid.style.gridTemplateColumns=`repeat(${cols},minmax(0,1fr))`; grid.style.gridTemplateRows=`repeat(${rows},minmax(0,1fr))`;
   grid.innerHTML = vis.map(([Ly,i])=>capTile(Ly,i,true)).join('');
   grid.querySelectorAll('.ctile').forEach(el=>{ setLockKey(el, CAP.lock.has(+el.dataset.i));
