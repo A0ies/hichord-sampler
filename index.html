@@ -361,6 +361,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .newtop .ntbtn span{display:inline-block;transform:translateX(var(--ntx,0px));font-size:calc(12px + var(--nte,0) * 2px);white-space:nowrap}
 .newtop .ntbtn::before{display:none}
 .newtop.hidden,.newtop.gone{display:none}
+body.studio .layers .newlayer:not(.ntbtn){display:none}   /* iPad: only the key on top */
 /* the song page (full screen): header, a dark screen with the preview and the tape, the part pads */
 .songpg{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;gap:12px;
   padding:calc(12px + var(--st)) max(16px,calc(var(--sr) + 12px)) calc(16px + var(--sb)) max(16px,calc(var(--sl) + 12px));box-sizing:border-box;overflow:hidden}
@@ -1974,7 +1975,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.90';
+const PAGE_VERSION='2026-11-14.91';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -4070,7 +4071,8 @@ document.addEventListener('wheel',e=>{ if(!e.target.closest || !e.target.closest
 function ntCheck(){
   const nt=$('newTop'), nb=$('newLayerBtn'); if(!nt) return;
   let show=true;
-  if(nb && nb.offsetParent){
+  // iPad: the list is short, so the key below it was nearly always in view and the one on top kept going; there the top one stays
+  if(nb && nb.offsetParent && !document.body.classList.contains('studio')){
     const sc=ntScroller(), r=nb.getBoundingClientRect();
     const top = sc ? sc.getBoundingClientRect().top : (document.querySelector('header.top')?.getBoundingClientRect().bottom||0);
     const bottom = sc ? sc.getBoundingClientRect().bottom : innerHeight - (document.querySelector('.tbar')?.offsetHeight||0);
