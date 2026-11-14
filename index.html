@@ -532,6 +532,8 @@ ol.hcsdo{margin:2px 0 6px;padding-left:18px;line-height:1.8;color:var(--ink)}
 .hcskeep{flex:1;color:var(--dim)}
 .hcsend{width:min(640px,100%);margin:auto;display:flex;flex-direction:column;gap:12px;min-height:0}
 .hcsend .hcslist{padding:12px}
+.hcstip{display:flex;flex-direction:column;gap:3px;padding:11px 14px;border-radius:12px;background:var(--acc-soft);border-left:4px solid var(--acc);font-size:14px;line-height:1.35}
+.hcstip b{color:var(--acc-text);font-size:15px}
 /* phones: the sounds as chips that wrap, so all of them fit */
 @media (max-width:639px), (orientation:landscape) and (max-height:500px){
   .hcs.full .hcsgrid{display:flex;flex-wrap:wrap;gap:4px}
@@ -1991,7 +1993,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.97';
+const PAGE_VERSION='2026-11-14.98';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3205,8 +3207,8 @@ function hcsSyncEnd(){
   }
   $('hcsBox').innerHTML=`<div class="hcsend"><div class="hcsbig">${n===1?`${escH(HC_SOUND[run.done[0]])} is in the app`:`${n} HiChord sounds in the app`}</div>
     <p>${run.target.layer!=null?`Layer ${run.target.layer+1} plays it now. The HiChord key on its instrument page switches back.`:`Your layers play the HiChord instruments now, and the new ones are in the instrument list. Switch back to the app's own instruments under Settings → Sync, or per layer with the HiChord key on its instrument page.`}${n<total-(run.skipped||0)?` ${total-n-(run.skipped||0)} not done: sample them again any time.`:''}${run.skipped?` The other drum kits can be added any time: Settings → Sync.`:''}${run.later?` ${run.later} sound${run.later>1?'s':''} still need${run.later>1?'':'s'} a louder pass: Settings → Sync, with the HiChord at about 30%.`:''}</p>
-    <p>They stay in the app for good, also after updates. ${run.loud?'Turn the HiChord back down, or to where you like it.':'Turn the HiChord\'s volume back up.'}</p>
-    <p class="hcstip">Does an instrument sound wrong or odd? Sample just that one again with the HiChord's volume at 100%: Settings → Sync.</p>
+    <p>They stay in the app for good, also after updates. Turn the HiChord's volume back down to 0.</p>
+    <div class="hcstip"><b>Does an instrument sound wrong or odd?</b><span>Sample just that one again with the HiChord's volume at 100%: Settings → Sync.</span></div>
     ${(run.notes||[]).map(t=>`<p>${escH(t)}</p>`).join('')}
     <ul class="hcslist">${run.done.map(k=>`<li class="ok">${escH(HC_SOUND[k])}</li>`).join('')}</ul>
     <div class="row"><button id="hcsOk" class="primary">Done</button></div></div>`;
@@ -4280,11 +4282,16 @@ const INST_GROUPS = [
   ['Pads & voices', ['pad','hc21','hc29']],
   ['Bass & drums', ['ebass','bass','drums','hc94','hc95','hc96','hc97','hc98']],
 ];
-function renderInstGrid(){
-  // the sounds grouped by kind (the HiChord's own sounds among them once sampled); your own sound apart, below
-  const ks=new Set(instKeys()), seen=new Set();
+// the sounds grouped by kind (the HiChord's own sounds among them once sampled): [[title, [keys]]], empty groups left out
+function instGroups(keys){
+  const ks=new Set(keys), seen=new Set();
   const groups=INST_GROUPS.map(([t,list])=>[t, list.filter(k=>ks.has(k) && !seen.has(k) && seen.add(k))]);
   const rest=[...ks].filter(k=>!seen.has(k)); if(rest.length) groups.push(['More', rest]);
+  return groups.filter(g=>g[1].length);
+}
+function renderInstGrid(){
+  // your own sound apart, below
+  const groups=instGroups(instKeys());
   $('instGrid').innerHTML = groups.filter(g=>g[1].length).map(([t,list])=>`<div class="igrp"><h4>${t}</h4><div class="igtiles">${
       list.map(k=>`<button class="inst${isHcx(k)?' hcx':''}" data-k="${k}">${instIcon(k,S.hcInst)}<span>${instLabel(k,S.hcInst)}</span></button>`).join('')}</div></div>`).join('')
     + `<div class="ownrow"><span>your own</span><button class="inst own" data-own="file" aria-label="New layer from an audio file in Files">${ic('upload')}audio file</button>`
@@ -4646,11 +4653,13 @@ function renderPage(host,tab,Ly){
       h.textContent='Every change is live and never touches what you played. "Original" brings back your own timing.'; host.appendChild(h); }
   } else if(tab==='sound'){
     const wantHc=Ly.hc ?? S.hcInst;
-    const opts=instKeys(Ly.inst).map(k=>[k,instLabel(k,wantHc)]); if(Ly.inst==='custom') opts.unshift(['custom',Ly.customName]);
+    // grouped by kind with a title per group, like the new-layer sheet
+    const groups=instGroups(instKeys(Ly.inst)).map(([t,list])=>[t, list.map(k=>[k,instLabel(k,wantHc)])]);
+    if(Ly.inst==='custom') groups.unshift(['Your own', [['custom',Ly.customName]]]);
     // the instrument picker: no label, the instrument's icon inside; a native list underneath so the phone's own picker opens
     const ip=document.createElement('div'); ip.className='p instpick';
     ip.innerHTML=`<div class="instsel">${INST_ICON[Ly.inst]}<span>${instName(Ly)}</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-      <select aria-label="Instrument">${opts.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></div>`;
+      <select aria-label="Instrument">${groups.map(([t,os])=>`<optgroup label="${t}">${os.map(([v,l])=>`<option value="${v}">${String(l).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</option>`).join('')}</optgroup>`).join('')}</select></div>`;
     const db=document.createElement('button'); db.className='instdef'; db.id='instDefBtn'; db.title='Back to default';
     db.setAttribute('aria-label',`Back to the default settings of ${instName(Ly)}`); db.innerHTML=`${ic('reset','')}<span class="lbl">default</span>`;
     db.onclick=()=>instDefaults(Ly); ip.appendChild(db);
