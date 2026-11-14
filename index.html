@@ -1956,7 +1956,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.87';
+const PAGE_VERSION='2026-11-14.88';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2899,7 +2899,7 @@ function hcsSetup(err){
               <li>Click the joystick to close</li>
             </ol>
             <p class="hcsrows"><span>Reverb <em>OFF</em></span><span>Delay <em>OFF</em></span><span>Chorus <em>OFF</em></span><span>Glide <em>OFF</em></span><span>MIDI Out <em>DAW</em></span><span>MIDI In <em>ON</em></span><span>USB Audio <em>ON</em></span></p></li>
-          <li><b>Volume to 5%</b><p>Turn the volume wheel on the HiChord's top edge down to about 5%. The app records over USB, so the HiChord can play through every sound without disturbing anyone. If the sync stops, or a sound comes out gritty, raise it to about 30%.</p></li>
+          <li><b>Volume to 5%</b><p>Turn the volume wheel on the HiChord's top edge down to about 5%. The app records over USB, so the HiChord can play through every sound without disturbing anyone. Sounds too quiet at 5% are set aside; at the end the app asks you to turn it up to about 30% for just those.</p></li>
           <li><b>Plug in with USB-C</b><div class="hcsin ${HC.connected?'ok':'warn'}"><span class="dot${HC.connected?' ok':''}"></span><b>${HC.connected?'HiChord connected':'Not connected yet'}</b>${HC.connected?'':'<button id="hcsConn">Connect</button>'}</div></li>
         </ol>
         <button class="primary hcsnext" id="hcsNext">${H.one?'Next':'Next: pick the sounds'}</button>
@@ -2910,7 +2910,7 @@ function hcsSetup(err){
         <div class="hcsfoot">
           <p>${n?`<b>${n} sound${n>1?'s':''} · about ${hcsMins(picked)} min</b>`:'<b>Pick the sounds to sample</b>'} · <span class="hcsok">✓</span> already in the app</p>
           <p class="hcsonce"${err?' hidden':''}>Once per device: the sounds stay in this app, also through updates. A project you share plays them only on a device that has synced its own HiChord too. Elsewhere every note still arrives, and you can pick other instruments or load your own sounds.</p>
-          ${err?`<p class="err"><b>Some sounds are too quiet at 5%: turn the HiChord's volume up to about 30% and go on.</b> ${err}</p>`:''}
+          ${err?`<p class="err">${err} <b>If the volume is at 5%, turn it up to about 30% and go on.</b></p>`:''}
           <div class="row"><button class="hcsback" id="hcsBack">Back</button><button id="hcsStart" class="primary"${n?'':' disabled'}>${H.done.length?'Go on':'Start sampling'}</button></div>
         </div>
       </section>
@@ -2976,7 +2976,7 @@ function hcsRunView(status){
 function hcsIntro(err){
   if(hcsSync()){
     // stopped partway (an error): the sounds not done yet stay picked
-    if(HCS.queue){ HCS.pick=new Set(HCS.queue.slice(HCS.qi)); HCS.queue=null; HCS.qi=0; if(err) HCS.page='sounds'; }
+    if(HCS.queue){ HCS.pick=new Set([...(HCS.aside||[]), ...HCS.queue.slice(HCS.qi)]); HCS.aside=[]; HCS.misses=0; HCS.queue=null; HCS.qi=0; if(err) HCS.page='sounds'; }
     hcsSetup(err); return;
   }
   const mins=Math.round(HCS_NOTES.length*HCS_STEP/6)/10;
@@ -3073,7 +3073,7 @@ async function hcsStart(){
     const st=$('hcsStrip'); if(st && t>=0) [...st.children].forEach((c,j)=>c.className = j<i?'ok':j===i?'now':'');
     const lf=$('hcsLeft'); if(lf && HCS.queue){ const sec=Math.max(0,HCS.queue.slice(qi+1).reduce((a,k)=>a+hcsSecs(k),0)+(1-f)*hcsSecs(HCS.queue[qi])); lf.textContent = sec<60 ? 'under a minute left' : `about ${Math.round(sec/60)} min left`; }
     // two notes in and nothing came in: stop and say what to check
-    if(t>2*P.step*1000+600 && HCS.maxPeak<0.0006){ hcsFail(P.names ? 'No drum sound came in from the HiChord. The app plays its drum pads over MIDI channel 10: check that MIDI In is on (step 2), that USB Audio is on and the volume isn\'t all the way down.' : 'No sound came in from the HiChord. Check that USB Audio is on, that MIDI In is on (step 2), and that the input is the HiChord.'); return; }
+    if(t>2*P.step*1000+600 && HCS.maxPeak<0.0006){ if(hcsAside()) return; hcsFail(P.names ? 'No drum sound came in from the HiChord. The app plays its drum pads over MIDI channel 10: check that MIDI In is on (step 2), that USB Audio is on and the volume isn\'t all the way down.' : 'No sound came in from the HiChord. Check that USB Audio is on, that MIDI In is on (step 2), and that the input is the HiChord.'); return; }
     if(t>total+900){ hcsFinish(); return; }   // a little longer: the input arrives in blocks, after a delay
     requestAnimationFrame(tick);
   };
@@ -3091,12 +3091,22 @@ function hcsStop(){
 }
 function hcsDone(){ hcsStop(); }
 // one HiChord instrument is in: keep it, start the next, or end
+// a sound too quiet at 5%: set it aside for the pass at about 30% and go on with the next.
+// Only when something came in before (or the first sounds of a run); two misses at the start mean a setup problem.
+function hcsAside(run=HCS){
+  if(!run || !run.queue || run.loud) return false;
+  run.misses=(run.misses||0)+1;
+  if(!run.done.length && run.misses>=2) return false;   // nothing at all yet: check the setup instead
+  if(run.running) hcsStop();
+  run.aside=(run.aside||[]).concat(run.queue[run.qi]); run.qi++;
+  if(run.qi<run.queue.length){ setTimeout(()=>{ if(HCS===run) hcsStart(); }, 400); } else hcsSyncEnd();
+  return true;
+}
 function hcsKeep(run, res){
-  const k=run.queue[run.qi];
+  const k=run.queue[run.qi]; run.misses=0;
   HCI[k]={ buffer:res.buffer, zones:res.zones, kind:res.kind }; storeHCI(k); run.done.push(k);
   layers.forEach(Ly=>{ if(hcKeyOf(Ly.inst)===k) Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05)); });
   renderInstGrid(); renderHcSync();
-  if(res.quiet) run.notes=(run.notes||[]).concat(`${HC_SOUND[k]} came in very quietly, so it can sound gritty: turn the HiChord's volume up to about 30% and sample it again.`);
   if(res.kind==='kit' ? res.missing : res.missing>4) run.notes=(run.notes||[]).concat(res.kind==='kit' ? `${HC_SOUND[k]}: ${res.missing} hit${res.missing>1?'s':''} came in too quiet; the closest hit stands in` : `${HC_SOUND[k]}: ${res.missing} notes came in too quiet`);
   run.qi++;
   if(run.qi<run.queue.length){ setTimeout(()=>{ if(HCS===run) hcsStart(); }, 400); return; }
@@ -3110,11 +3120,20 @@ function hcsSyncEnd(){
     if(run.target.layer!=null){ const Ly=layers[run.target.layer]; if(Ly && run.done.includes(hcKeyOf(Ly.inst))) Ly.hc=true; renderLayers(); renderDetail(); renderHcSync(); save(); }
     else setHcInst(true);
   }
-  const n=run.done.length, total=n+(run.queue?run.queue.length-run.qi:0);
-  if(!n){ hcsClose(); return; }
+  const n=run.done.length, total=n+(run.queue?run.queue.length-run.qi:0), aside=run.aside||[];
+  if(!n && !aside.length){ hcsClose(); return; }
+  if(aside.length){   // the louder pass for just these
+    $('hcsBox').innerHTML=`<div class="hcsend"><div class="hcsbig">${n} done at 5% · ${aside.length} need${aside.length>1?'':'s'} more volume</div>
+      <p>${aside.length>1?'These were':'This one was'} too quiet to record well at 5%. Turn the HiChord's volume wheel up to about 30% and the app samples just ${aside.length>1?`these ${aside.length}`:'this one'}: about ${hcsMins(aside)} min. Then turn it back down.</p>
+      <ul class="hcslist">${aside.map(k=>`<li class="now">${escH(HC_SOUND[k])}</li>`).concat(run.done.map(k=>`<li class="ok">${escH(HC_SOUND[k])}</li>`)).join('')}</ul>
+      <div class="row"><button id="hcsLater">Later</button><button id="hcsLoud" class="primary">Volume at 30%: sample ${aside.length>1?`these ${aside.length}`:'it'}</button></div></div>`;
+    $('hcsLater').onclick=()=>{ run.aside=[]; run.skipped=(run.skipped||0); run.later=aside.length; hcsSyncEnd(); };
+    $('hcsLoud').onclick=()=>{ Object.assign(run, { loud:true, aside:[], misses:0, queue:aside.slice(), qi:0, kitReady:null, prevPreset:HC.state.preset }); hcsStart(); };
+    return;
+  }
   $('hcsBox').innerHTML=`<div class="hcsend"><div class="hcsbig">${n===1?`${escH(HC_SOUND[run.done[0]])} is in the app`:`${n} HiChord sounds in the app`}</div>
-    <p>${run.target.layer!=null?`Layer ${run.target.layer+1} plays it now. The HiChord key on its instrument page switches back.`:`Your layers play the HiChord instruments now, and the new ones are in the instrument list. Switch back to the app's own instruments under Settings → Sync, or per layer with the HiChord key on its instrument page.`}${n<total-(run.skipped||0)?` ${total-n-(run.skipped||0)} not done: sample them again any time.`:''}${run.skipped?` The other drum kits can be added any time: Settings → Sync.`:''}</p>
-    <p>They stay in the app for good, also after updates. Turn the HiChord's volume back up.</p>
+    <p>${run.target.layer!=null?`Layer ${run.target.layer+1} plays it now. The HiChord key on its instrument page switches back.`:`Your layers play the HiChord instruments now, and the new ones are in the instrument list. Switch back to the app's own instruments under Settings → Sync, or per layer with the HiChord key on its instrument page.`}${n<total-(run.skipped||0)?` ${total-n-(run.skipped||0)} not done: sample them again any time.`:''}${run.skipped?` The other drum kits can be added any time: Settings → Sync.`:''}${run.later?` ${run.later} sound${run.later>1?'s':''} still need${run.later>1?'':'s'} a louder pass: Settings → Sync, with the HiChord at about 30%.`:''}</p>
+    <p>They stay in the app for good, also after updates. ${run.loud?'Turn the HiChord back down, or to where you like it.':'Turn the HiChord\'s volume back up.'}</p>
     ${(run.notes||[]).map(t=>`<p>${escH(t)}</p>`).join('')}
     <ul class="hcslist">${run.done.map(k=>`<li class="ok">${escH(HC_SOUND[k])}</li>`).join('')}</ul>
     <div class="row"><button id="hcsOk" class="primary">Done</button></div></div>`;
@@ -3134,6 +3153,7 @@ function hcsFinish(){
   else $('hcsBox').innerHTML='<h3>cutting the notes…</h3><p>finding where each note starts and where it can loop</p>';
   setTimeout(()=>{
     let res; try{ res=hcsBuild(run); }catch(e){ console.warn(e); hcsIntro('Something went wrong while cutting the notes. Try again.'); return; }
+    if(run.queue && (!res || (res.quiet && !run.loud))){ if(hcsAside(run)) return; }
     if(!res){ hcsIntro('Too few notes came in to make an instrument. Check the HiChord\'s volume and that it plays incoming MIDI (MIDI IN on), then try again.'); return; }
     if(run.queue){ hcsKeep(run, res); return; }
     const name=hcsName();
@@ -3150,7 +3170,7 @@ function hcsFloor(L, R, a, b){
   for(let s=a; s+blk<=b; s+=blk){ let p=0; for(let k=s;k<s+blk;k++){ const x=Math.abs(L[k]), y=Math.abs(R[k]); if(x>p) p=x; if(y>p) p=y; } m.push(p); }
   if(!m.length) return 0; m.sort((x,y)=>x-y); return m[Math.floor(m.length*0.2)];
 }
-const HCS_QUIET = 0.03;   // a recording whose loudest note peaks below -30 dBFS: too quiet, it comes out gritty
+const HCS_QUIET = 0.02;   // a recording whose loudest note peaks below -34 dBFS: too quiet at 5%, it comes out gritty; set aside for the pass at ~30%
 // cut the recording into notes: timing first, then the real onset (USB latency) within a window around it
 function hcsBuild(run){
   if(run.plan && run.plan.names) return hcsBuildKit(run);
