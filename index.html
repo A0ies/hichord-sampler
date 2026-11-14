@@ -1991,7 +1991,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.96';
+const PAGE_VERSION='2026-11-14.97';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3206,6 +3206,7 @@ function hcsSyncEnd(){
   $('hcsBox').innerHTML=`<div class="hcsend"><div class="hcsbig">${n===1?`${escH(HC_SOUND[run.done[0]])} is in the app`:`${n} HiChord sounds in the app`}</div>
     <p>${run.target.layer!=null?`Layer ${run.target.layer+1} plays it now. The HiChord key on its instrument page switches back.`:`Your layers play the HiChord instruments now, and the new ones are in the instrument list. Switch back to the app's own instruments under Settings → Sync, or per layer with the HiChord key on its instrument page.`}${n<total-(run.skipped||0)?` ${total-n-(run.skipped||0)} not done: sample them again any time.`:''}${run.skipped?` The other drum kits can be added any time: Settings → Sync.`:''}${run.later?` ${run.later} sound${run.later>1?'s':''} still need${run.later>1?'':'s'} a louder pass: Settings → Sync, with the HiChord at about 30%.`:''}</p>
     <p>They stay in the app for good, also after updates. ${run.loud?'Turn the HiChord back down, or to where you like it.':'Turn the HiChord\'s volume back up.'}</p>
+    <p class="hcstip">Does an instrument sound wrong or odd? Sample just that one again with the HiChord's volume at 100%: Settings → Sync.</p>
     ${(run.notes||[]).map(t=>`<p>${escH(t)}</p>`).join('')}
     <ul class="hcslist">${run.done.map(k=>`<li class="ok">${escH(HC_SOUND[k])}</li>`).join('')}</ul>
     <div class="row"><button id="hcsOk" class="primary">Done</button></div></div>`;
