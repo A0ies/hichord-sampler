@@ -19,6 +19,7 @@
   --screen:#0b0b0b; --screen2:#171717; --screen-line:#2b2b2b; --screen-ink:#f4f4f2; --screen-dim:#8a8a86;
   --enc1:#2f6fe0; --enc2:#00a651; --enc3:#e8e8e4; --enc4:#ff5000;   /* the four encoders */
   --l0:#2f6fe0; --l1:#00a651; --l2:#ff5000; --l3:#ffc400; --l4:#ff3d8b; --l5:#00b8d4; --l6:#8b5cf6; --l7:#b8b8b2;
+  --p0:#2f6fe0; --p1:#00a651; --p2:#ff5000; --p3:#ffc400; --p4:#ff3d8b; --p5:#00b8d4; --p6:#8b5cf6; --p7:#b8b8b2;   /* song parts A–H */
   --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
   --sans:"Inter",system-ui,sans-serif;
   --sl:env(safe-area-inset-left); --sr:env(safe-area-inset-right); --st:env(safe-area-inset-top); --sb:env(safe-area-inset-bottom);
@@ -88,6 +89,12 @@ h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)
 
 /* layers */
 .layers{display:flex;flex-direction:column;gap:8px}
+.layers.dragging .layer{transition:transform .15s ease}
+.layers .layer.lifted{position:relative;z-index:6;transition:none;box-shadow:0 14px 30px rgba(0,0,0,.35);border-color:var(--lc);touch-action:none}
+.laymove svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.laymove:disabled{opacity:.3}
+.layersheet .sheethead{flex-wrap:nowrap;gap:6px} .layersheet #detailTitle{min-width:0;flex:0 1 auto;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.15}   /* narrow phones: number and instrument on two lines */
+.layersheet .sheethead .laymove{min-width:38px;width:38px;padding:0;flex:none} .layersheet .sheethead>button{flex:none}
 .layer{background:var(--bg);border:2px solid transparent;border-radius:12px;padding:8px 10px;cursor:pointer}
 .layer.sel{border-color:var(--ink)}
 .layer .top{display:flex;align-items:center;gap:8px}
@@ -1771,6 +1778,8 @@ body.studio .tbar .pos b{font-size:26px}
       <div class="row sheethead">
         <h2 id="detailTitle" style="margin:0">Layer 1</h2>
         <div class="spacer"></div>
+        <button id="layUp" class="icon laymove" aria-label="Move this layer up"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+        <button id="layDown" class="icon laymove" aria-label="Move this layer down"><svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
         <button id="setBtn" class="icon" aria-label="Layer settings"></button>
         <button id="editBtn" class="primary">Edit notes</button>
         <button class="icon close" data-close aria-label="Close"></button>
@@ -1994,7 +2003,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.102';
+const PAGE_VERSION='2026-11-14.103';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3450,6 +3459,8 @@ function describeChange(aJ,bJ){
   const pa=a.song?.parts||[], pb=b.song?.parts||[];
   if(pa.length!==pb.length) return pb.length>pa.length ? 'part added' : 'part removed';
   if(JSON.stringify(a.song?.order)!==JSON.stringify(b.song?.order)) return 'song order';
+  const lk=l=>JSON.stringify([l.inst,l.customName,l.shown,l.vol,l.pan,l.oct]);
+  if(a.layers.map(lk).join()!==b.layers.map(lk).join() && a.layers.map(lk).sort().join()===b.layers.map(lk).sort().join()) return 'layer order';
   if(pa.some((p,k)=>p.name!==pb[k].name)) return 'part name';
   for(let i=0;i<a.layers.length;i++){
     const x=a.layers[i], y=b.layers[i];
@@ -3762,7 +3773,7 @@ function renderProjects(){
         <span class="ptxt">${ic('trash','')}<span><b>${esc(p.name)}</b> deleted</span></span><span class="pact">tap to restore</span></button>`; }
     const d=p.data, sm=p.summary||summary(d), isCur=p.id===cid, full=PRJ.open===p.id || (big && isCur);
     const parts=d.song&&d.song.parts ? d.song.parts.map((_,k)=>PART_L(k)).join(' · ') : 'A';
-    const stripes=d.layers.map((l,i)=>l.shown ? `<i style="${(l.events&&l.events.length)||(d.song&&d.song.parts||[]).some(pt=>(pt.ev&&pt.ev[i]||[]).length) ? `background:var(--l${i})` : ''}"></i>` : '').join('');
+    const stripes=d.layers.map((l,i)=>l.shown ? `<i style="${(l.events&&l.events.length)||(d.song&&d.song.parts||[]).some(pt=>(pt.ev&&pt.ev[i]||[]).length) ? `background:${instColour(l.inst)}` : ''}"></i>` : '').join('');
     const info=`${sm.layers} layer${sm.layers===1?'':'s'} · ${sm.notes} notes · ${sm.bpm} bpm`;
     return `<div class="proj ${isCur?'cur':''} ${full?'full':''}" data-id="${p.id}">
       <div class="pbg" aria-hidden="true"><span class="pdel">${ic('trash','')}<span class="pword">delete</span></span></div>
@@ -4059,6 +4070,7 @@ const instIcon = (k, hc) => ic(hc && k==='ebass' && HCI[hcKeyOf(k)] ? 'triangle'
 const INST_ICON=new Proxy({}, { get:(_,k)=>instIcon(k, S.hcInst) });
 const SLIDERS=ic('faders','');
 function renderLayers(){
+  applyLayerColours();
   const vis=layers.map((Ly,i)=>[Ly,i]).filter(([Ly,i])=>Ly.shown || i===S.sel);
   $('layers').innerHTML = vis.map(([Ly,i])=>`
     <div class="layer ${i===S.sel?'sel':''} ${audible(Ly)?'':'muted'} ${S.rec?'recording':''}" data-i="${i}" style="--lc:var(--l${i})">
@@ -4077,6 +4089,7 @@ function renderLayers(){
     </div>`).join('') +
     (layers.some(Ly=>!Ly.shown) ? '<button class="newlayer" id="newLayerBtn">+ New layer</button>' : '');
   $('detailTitle').textContent = `Layer ${S.sel+1} · ${instName(selLayer())}`;
+  $('layUp').disabled=layerNeighbour(S.sel,-1)<0; $('layDown').disabled=layerNeighbour(S.sel,1)<0;
   renderPrevSolo();
   const nb=$('newLayerBtn'); if(nb) nb.onclick=()=>openSheet('newSheet');
   const free=layers.some(Ly=>!Ly.shown); $('newTop').classList.toggle('hidden',!free); ntSet(ntE); requestAnimationFrame(ntCheck);
@@ -4195,16 +4208,64 @@ $('layers').addEventListener('click',e=>{
   if(i===S.sel){ if(e.target.tagName==='CANVAS') openEditor(i); else openSheet('layerSheet'); return; }   // the record layer: roll = notes, rest = settings
   selectLayer(i);
 });
-(()=>{ let t=null, x0=0, y0=0; const L=$('layers');
-  L.addEventListener('pointerdown',e=>{ const el=e.target.closest('.layer'); if(!el || e.target.closest('[data-act]')) return;
+/* hold a layer: it lifts. Drag it to move it to another place in the list; let go without moving for the layer menu. */
+(()=>{ let t=null, x0=0, y0=0, D=null, swallow=false; const L=$('layers');
+  const scroller=el=>{ for(let p=el.parentElement; p; p=p.parentElement){ const o=getComputedStyle(p).overflowY; if((o==='auto'||o==='scroll') && p.scrollHeight>p.clientHeight) return p; } return document.scrollingElement; };
+  const lift=(el,e)=>{ const cards=[...L.querySelectorAll('.layer')], p=cards.indexOf(el);
+    D={el, pid:e.pointerId, cards, p, k:p, y0:e.clientY, y:e.clientY, moved:false, sc:scroller(el), raf:0,
+       mids:cards.map(c=>{ const r=c.getBoundingClientRect(); return r.top+r.height/2; }), h:el.offsetHeight+(parseFloat(getComputedStyle(L).rowGap)||8)};
+    D.s0=D.sc.scrollTop; try{ L.setPointerCapture(e.pointerId); }catch(err){}
+    el.classList.add('lifted'); L.classList.add('dragging'); if(navigator.vibrate) navigator.vibrate(10);
+    const auto=()=>{ if(!D) return; const r=D.sc===document.scrollingElement ? {top:0,bottom:innerHeight} : D.sc.getBoundingClientRect();
+      const v = D.y<r.top+56 ? -8 : D.y>r.bottom-56 ? 8 : 0; if(v && D.moved){ D.sc.scrollTop+=v; place(); } D.raf=requestAnimationFrame(auto); };
+    D.raf=requestAnimationFrame(auto); };
+  const place=()=>{ const ds=D.sc.scrollTop-D.s0, dy=D.y-D.y0+ds, mid=D.mids[D.p]+dy;
+    let k=0; D.mids.forEach((m,j)=>{ if(j!==D.p && m<mid) k++; }); D.k=k;
+    D.el.style.transform=`translateY(${dy}px) scale(1.03)`;
+    D.cards.forEach((c,j)=>{ if(j===D.p) return; c.style.transform = (j>D.p && j<=k) ? `translateY(${-D.h}px)` : (j<D.p && j>=k) ? `translateY(${D.h}px)` : ''; }); };
+  const drop=()=>{ const d=D; D=null; cancelAnimationFrame(d.raf); L.classList.remove('dragging'); d.el.classList.remove('lifted');
+    d.cards.forEach(c=>c.style.transform='');
+    swallow=true; setTimeout(()=>swallow=false, 400);
+    if(!d.moved){ openLayerMenu(+d.el.dataset.i); return; }
+    if(d.k!==d.p){ const from=+d.el.dataset.i, to=+d.cards[d.k].dataset.i; if(moveLayer(from,to)) toast(`layer moved to place ${S.sel+1}`); } };
+  L.addEventListener('pointerdown',e=>{ const el=e.target.closest('.layer'); if(!el || e.target.closest('[data-act]') || D) return;
     x0=e.clientX; y0=e.clientY; clearTimeout(t);
-    t=setTimeout(()=>{ t='fired'; if(navigator.vibrate) navigator.vibrate(10); openLayerMenu(+el.dataset.i); setTimeout(()=>{ if(t==='fired') t=null; },700); },480); });
-  L.addEventListener('pointermove',e=>{ if(t && t!=='fired' && Math.hypot(e.clientX-x0,e.clientY-y0)>8){ clearTimeout(t); t=null; } });
-  ['pointerup','pointercancel','pointerleave'].forEach(ev=>L.addEventListener(ev,()=>{ if(t!=='fired'){ clearTimeout(t); t=null; } }));
-  L.addEventListener('click',e=>{ if(t==='fired'){ e.stopImmediatePropagation(); t=null; } }, true);
+    t=setTimeout(()=>{ t=null; if(el.isConnected) lift(el,e); },480); });
+  L.addEventListener('pointermove',e=>{
+    if(D && e.pointerId===D.pid){ D.y=e.clientY; if(!D.moved && Math.abs(D.y-D.y0)>6) D.moved=true; if(D.moved) place(); return; }
+    if(t && Math.hypot(e.clientX-x0,e.clientY-y0)>8){ clearTimeout(t); t=null; } });
+  ['pointerup','pointercancel'].forEach(ev=>L.addEventListener(ev,e=>{ clearTimeout(t); t=null;
+    if(D && e.pointerId===D.pid){ if(ev==='pointercancel') D.moved=true, D.k=D.p; drop(); } }));
+  L.addEventListener('pointerleave',()=>{ if(!D){ clearTimeout(t); t=null; } });
+  // while a layer is lifted the list must not scroll under the finger
+  L.addEventListener('touchmove',e=>{ if(D) e.preventDefault(); },{passive:false});
+  L.addEventListener('click',e=>{ if(swallow || D){ e.stopImmediatePropagation(); e.preventDefault(); swallow=false; } }, true);
   L.addEventListener('contextmenu',e=>e.preventDefault());
 })();
 $('layers').addEventListener('dblclick',e=>{ const el=e.target.closest('canvas'); if(el){ openEditor(+el.closest('.layer').dataset.i); } });
+
+/* moving a layer: it takes its notes in every part, its sound, settings and colour along; the numbers follow the order */
+function moveLayer(from, to){
+  if(from===to || to<0 || to>=layers.length || from<0) return false;
+  if(S.rec){ toast('stop recording to move a layer'); return false; }
+  flushSave(); syncPart();
+  const ord=[...layers.keys()]; ord.splice(to,0,ord.splice(from,1)[0]);   // ord[new place] = old place
+  const nw=o=>ord.indexOf(o), old=[...layers];
+  ord.forEach((o,n)=>{ layers[n]=old[o]; });
+  SONG.parts.forEach(p=>{ const ev=[...(p.ev||[])], mu=[...(p.mute||[])]; ord.forEach((o,n)=>{ p.ev[n]=ev[o]||[]; p.mute[n]=!!mu[o]; }); });
+  S.sel=nw(S.sel); if(ED.li!=null) ED.li=nw(ED.li);
+  CAP.touch.forEach(t=>{ clearTimeout(t.timer); clearTimeout(t.st); }); CAP.touch.clear();
+  CAP.lock=new Map([...CAP.lock].map(([i,v])=>[nw(i),v])); if(CAP.lastLock!=null) CAP.lastLock=nw(CAP.lastLock);
+  if(sPadLast>=0) sPadLast=nw(sPadLast); lastChord=null;
+  layers.forEach((Ly,i)=>{ if(Ly.inst==='custom' && Ly.buffer) storeSound(i); });   // your own sounds are kept by layer place
+  layerColKey=''; writeSave();
+  renderLayers(); renderDetail(); renderParts(); if(CAP.open) renderCaptureMode();
+  if(ED.open){ edRenderTools(); edDraw(); }
+  return true;
+}
+// the next layer up or down in the list (layers that aren't shown are skipped)
+function layerNeighbour(i, dir){ for(let j=i+dir; j>=0 && j<layers.length; j+=dir) if(layers[j].shown) return j; return -1; }
+function moveLayerBy(dir){ const i=S.sel, j=layerNeighbour(i,dir); if(j<0) return; if(moveLayer(i,j)) toast(`layer moved to place ${S.sel+1}`); }
 
 /* adding and removing layers */
 function addLayer(key, own){
@@ -4261,15 +4322,17 @@ function duplicateLayer(){
 function openLayerMenu(i){
   selectLayer(i); const Ly=layers[i];
   $('menuTitle').textContent=`layer ${i+1} · ${instName(Ly)}`;
-  const items=[['edit','edit notes'],['mute', Ly.mute?'unmute':'mute'],['solo', Ly.solo?'unsolo':'solo'],['sound','change instrument'],['dup','duplicate layer'],['clear','clear notes','danger'],['remove','remove layer','danger']];
+  const items=[['edit','edit notes'],['mute', Ly.mute?'unmute':'mute'],['solo', Ly.solo?'unsolo':'solo'],['sound','change instrument'],...(layerNeighbour(i,-1)>=0?[['up','move up']]:[]),...(layerNeighbour(i,1)>=0?[['down','move down']]:[]),['dup','duplicate layer'],['clear','clear notes','danger'],['remove','remove layer','danger']];
   $('menuList').innerHTML=items.map(([k,l,c])=>`<button data-m="${k}" class="${c||''}">${l}</button>`).join('');
   openSheet('menuSheet');
 }
+$('layUp').onclick=()=>moveLayerBy(-1); $('layDown').onclick=()=>moveLayerBy(1);
 $('menuList').onclick=e=>{
   const k=e.target.closest('[data-m]')?.dataset.m; if(!k) return; const Ly=selLayer();
   if(k==='edit'){ closeSheets(); openEditor(S.sel); }
   else if(k==='mute'||k==='solo'){ Ly[k]=!Ly[k]; layers.forEach(applyLayer); closeSheets(); renderLayers(); save(); }
   else if(k==='sound'){ S.tab='sound'; renderDetail(); closeSheets(); openSheet('layerSheet'); }
+  else if(k==='up'||k==='down'){ closeSheets(); moveLayerBy(k==='up'?-1:1); }
   else if(k==='dup') duplicateLayer();
   else if(k==='clear') clearLayer();
   else if(k==='remove') removeLayer();
@@ -4284,6 +4347,15 @@ const INST_GROUPS = [
   ['Bass & drums', ['ebass','bass','drums','hc94','hc95','hc96','hc97','hc98']],
 ];
 // the sounds grouped by kind (the HiChord's own sounds among them once sampled): [[title, [keys]]], empty groups left out
+// a layer's colour is the colour of its instrument's group (your own sound: orange), so a layer keeps it when it moves
+const GROUP_COL={ 'Keys':'#2f6fe0', 'Strings & plucked':'#00a651', 'Brass & winds':'#ffc400', 'Synths':'#8b5cf6', 'Pads & voices':'#00b8d4', 'Bass & drums':'#ff3d8b', 'More':'#b8b8b2' };
+function instColour(inst){ if(inst==='custom') return '#ff5000'; const g=INST_GROUPS.find(([t,l])=>l.includes(inst)); return GROUP_COL[g?g[0]:'More']; }
+let layerColKey='';
+function applyLayerColours(){   // the --l0…--l7 tokens follow the instruments; called every frame, it only touches the page on a change
+  const k=layers.map(Ly=>Ly.inst).join('|'); if(k===layerColKey) return; layerColKey=k;
+  layers.forEach((Ly,i)=>document.documentElement.style.setProperty('--l'+i, instColour(Ly.inst)));
+  if(!S.playing) drawAll(); if(ED.open) edDraw();
+}
 function instGroups(keys){
   const ks=new Set(keys), seen=new Set();
   const groups=INST_GROUPS.map(([t,list])=>[t, list.filter(k=>ks.has(k) && !seen.has(k) && seen.add(k))]);
@@ -4855,7 +4927,7 @@ let edLastNotes=-1, edLastLive='';
 function edLiveKeys(Ly){ const out=new Set(); if(!Ly || !Ly.live) return out;
   for(const n of Ly.live.keys()) out.add(Ly.mono && Ly.mono.notes.includes(n) ? Ly.mono.out : n); return out; }
 function frame(){
-  tick();
+  tick(); applyLayerColours();
   if(ED.open){
     // redraw while the loop plays (playhead) or when recording adds notes
     const n=edLy().events.length;
@@ -5007,13 +5079,13 @@ function renderSongPage(){
   $('spStats').innerHTML = `· ${n} pass${n===1?'':'es'}<span class="spx"> · ${n*S.bars} bars · ${mmss(n*loopSecs())}</span>`;
   $('spAuto').classList.toggle('on',SONG.follow); $('spAuto').setAttribute('aria-pressed',SONG.follow);
   $('spTrack').style.width=(n*W)+'px';
-  $('spTrack').innerHTML = SONG.order.map((k,i)=>`<button class="spblk" data-n="${i}" style="--pc:var(--l${k});left:${i*W+2}px;width:${W-4}px" aria-label="Pass ${i+1}: ${escH(partName(k))}">${PART_L(k)}<span>${escH(SONG.parts[k].name||'')}</span></button>`).join('');
+  $('spTrack').innerHTML = SONG.order.map((k,i)=>`<button class="spblk" data-n="${i}" style="--pc:var(--p${k});left:${i*W+2}px;width:${W-4}px" aria-label="Pass ${i+1}: ${escH(partName(k))}">${PART_L(k)}<span>${escH(SONG.parts[k].name||'')}</span></button>`).join('');
   const P=SONG.parts.length, tiles=P+(P<8?1:0)+1, wide=matchMedia('(min-width:1000px) and (min-height:700px) and (orientation:landscape)').matches;
   if(wide) $('spPads').style.setProperty('--pcols', tiles<=6 ? 6 : Math.ceil(tiles/2)); else $('spPads').style.removeProperty('--pcols');
   $('spPads').innerHTML = SONG.parts.map((p,k)=>{
     const uses=SONG.order.filter(x=>x===k).length;
     const stripes=layers.map((Ly,i)=>Ly.shown ? `<i style="${!p.mute[i] && (p.ev[i]||[]).length ? `background:var(--l${i})` : ''}"></i>` : '').join('');
-    return `<button class="sppad ${k===SONG.cur?'on':''}" data-k="${k}" style="--pc:var(--l${k})" aria-label="${escH(partName(k))}: tap to go there, hold for name, copy and remove, drag onto the tape">
+    return `<button class="sppad ${k===SONG.cur?'on':''}" data-k="${k}" style="--pc:var(--p${k})" aria-label="${escH(partName(k))}: tap to go there, hold for name, copy and remove, drag onto the tape">
       <span class="pk"><b>${PART_L(k)}</b><small>${uses}×</small></span><span class="ps">${stripes}</span><span class="pn">${escH(p.name||'part '+PART_L(k))}</span></button>`; }).join('')
     + (P<8 ? '<button class="sppad add" data-add aria-label="New part">+ part</button>' : '')
     + '<div class="sppad rm" id="spRm">drop a block here to take it off the tape</div>';
@@ -5024,7 +5096,7 @@ function renderSongPage(){
 }
 function spNow(){
   const H=songHeard(), k=H.cur;
-  $('spBadge').textContent=PART_L(k); $('spBadge').style.setProperty('--pc',`var(--l${k})`); $('spBadge').parentElement.style.setProperty('--pc',`var(--l${k})`);
+  $('spBadge').textContent=PART_L(k); $('spBadge').style.setProperty('--pc',`var(--p${k})`); $('spBadge').parentElement.style.setProperty('--pc',`var(--p${k})`);
   $('spName').textContent = SONG.parts[k].name || `part ${PART_L(k)}`;
   $('spHint').textContent = S.playing ? 'tap a block to play it next' : 'tap a block to go there';
   document.querySelectorAll('#spTrack .spblk').forEach(b=>{ const i=+b.dataset.n; b.classList.toggle('now',i===H.pos); b.classList.toggle('queued',i===H.jump); });
@@ -5092,7 +5164,7 @@ function spInsAt(x){   // where a drop at screen x lands on the tape: a gap inde
 }
 function spDragStart(kind, k, n, x, y){
   const W=spW(), gh=document.createElement('div'); gh.className='spghost';
-  gh.style.cssText=`--pc:var(--l${k});width:${W-4}px;height:${$('spTape').clientHeight-22}px;left:${x}px;top:${y}px`;
+  gh.style.cssText=`--pc:var(--p${k});width:${W-4}px;height:${$('spTape').clientHeight-22}px;left:${x}px;top:${y}px`;
   gh.innerHTML=`${PART_L(k)}<span>${escH(SONG.parts[k].name||'')}</span>`; document.body.appendChild(gh);
   SPG.drag={kind,k,n,ghost:gh,x,y,edge:0};
   if(kind==='blk') $('spTrack').querySelector(`[data-n="${n}"]`)?.classList.add('lifted');
@@ -5177,7 +5249,7 @@ $('spAuto').onclick=()=>{ SONG.follow=!SONG.follow; renderSongPage(); save(); to
 // hold a pad: name, copy, remove
 function spEditOpen(k){
   const ed=$('spEdit'), p=SONG.parts[k];
-  ed.innerHTML=`<h3 style="color:var(--l${k})">part ${PART_L(k)}</h3><input id="spEName" maxlength="14" placeholder="name" value="${escH(p.name)}" aria-label="Name of part ${PART_L(k)}">
+  ed.innerHTML=`<h3 style="color:var(--p${k})">part ${PART_L(k)}</h3><input id="spEName" maxlength="14" placeholder="name" value="${escH(p.name)}" aria-label="Name of part ${PART_L(k)}">
     <div class="row"><button id="spECopy" ${SONG.parts.length>=8?'disabled':''}>copy</button><button id="spERm" class="danger" ${SONG.parts.length<=1?'disabled':''}>remove</button><button id="spEDone" class="primary">done</button></div>`;
   ed.classList.remove('hidden'); ed.dataset.k=k;
   const nm=$('spEName'); nm.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') spEditClose(); });
