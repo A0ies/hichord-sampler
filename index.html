@@ -2006,7 +2006,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.112';
+const PAGE_VERSION='2026-11-14.113';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5494,7 +5494,10 @@ function capWire(grid, capEl, rerender){
     t.el.querySelector('.cfx').textContent=label;
     t.at={x, y, y0:t.y0, fx:px/r.width, fy:py/r.height, label};
     if(CAP.lock.has(t.i)) CAP.lock.set(t.i, t.at);   // a locked pad you touch again moves its lock
-    if(!t.ready && !none){ if(!t.sx || Math.hypot(e.clientX-t.sx[0], e.clientY-t.sx[1])>12) arm(t,e); } };
+    if(!t.ready && !none){ if(!t.sx || Math.hypot(e.clientX-t.sx[0], e.clientY-t.sx[1])>12) arm(t,e); }
+    // the lock key pulses and the ring is full, then the effect moves again: both go, hold still again to lock
+    else if(t.ready && !t.mouse && !CAP.lock.has(t.i) && t.sx && Math.hypot(e.clientX-t.sx[0], e.clientY-t.sx[1])>12){
+      t.ready=false; t.el.classList.remove('lockable'); arm(t,e); } };
   // holding still for 1 s: the ring appears and fills in 1 s more, then the lock key appears (it locks only when you press it).
   // With a mouse in the web app there is no second hand for the key: after 1 s the effect locks and a full ring shows it.
   const arm=(t,e)=>{ t.sx=[e.clientX,e.clientY]; clearTimeout(t.st); t.el.classList.remove('arming');
