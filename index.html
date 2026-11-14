@@ -895,6 +895,7 @@ body.projopen .pbar{display:none}
 .partbar button span{text-transform:none} .ctl button,.tline button,.prow .pl,.tlkeys button,.capnext span{text-transform:none}
 .partbar button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);min-width:0}
 .partbar button.on{background:var(--dark-key);color:var(--dark-key-ink)} .partbar button.on span{color:inherit;opacity:.8}
+.partbar.multi button.on{background:var(--acc);color:#fff}   /* a song of several parts: the part you are on in orange */
 .partbar .padd{color:var(--dim);flex:none;background:transparent;box-shadow:inset 0 0 0 2px var(--line)}   /* outlined: an action, not a part */
 .partbar .psong{margin-left:auto;flex:none;gap:5px;color:var(--ink)}
 .partbar .psong svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
@@ -2003,7 +2004,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.103';
+const PAGE_VERSION='2026-11-14.104';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5011,7 +5012,7 @@ function capFxPop(i, k){
 const escH=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const SONG_IC='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h5M10 7h11M3 12h9M14 12h7M3 17h3M8 17h13"/></svg>';
 function renderParts(){
-  const el=$('partBar'); if(!el) return; el.classList.toggle('many', SONG.parts.length>=4);
+  const el=$('partBar'); if(!el) return; el.classList.toggle('many', SONG.parts.length>=4); el.classList.toggle('multi', SONG.parts.length>1);
   el.innerHTML = SONG.parts.map((p,k)=>`<button class="${k===SONG.cur?'on':''}" data-part="${k}" aria-label="${partName(k)}${k===SONG.cur?' (you are here: tap for the song panel)':''}"><b>${PART_L(k)}</b>${p.name?`<span>${escH(p.name)}</span>`:''}</button>`).join('')
     + (SONG.parts.length<8 ? `<button class="padd" data-part="add" aria-label="New part">${SONG.parts.length>=4?'+':'+ part'}</button>` : '')
     + `<button class="psong" data-part="song" aria-label="Song: parts and timeline">${SONG_IC}<span>${SONG.order.length}</span></button>`;
