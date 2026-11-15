@@ -371,6 +371,27 @@ footer p{margin:0;max-width:52em}
 .kk:hover .pup{transform:translateX(2px)}
 @media (max-width:560px){.kk{right:10px;bottom:10px}}
 @media print{.kk{display:none}}
+/* HiChord sync: a panel of its own, not one of the numbered features */
+.only{white-space:nowrap;display:inline-flex;align-items:center;gap:8px;font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:#fff;background:var(--l4);padding:6px 11px;border-radius:999px}
+.hpanel{position:relative;border-radius:clamp(20px,2.4vw,32px);padding:clamp(24px,5vw,72px);background:radial-gradient(120% 140% at 100% 0%,rgba(255,61,139,.30),transparent 55%),var(--bg2);box-shadow:0 0 0 1px var(--line);overflow:hidden}
+.hp-top{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(28px,4vw,64px);align-items:center}
+.hp-top h2{max-width:11em}
+.hp-top .kicker .dot{width:10px;height:10px;border-radius:3px;background:var(--l4);display:inline-block}
+.hp-img{margin:0;position:relative}
+.hp-img img{display:block;width:100%;height:auto;aspect-ratio:6/5;object-fit:cover;border-radius:clamp(14px,1.6vw,22px);box-shadow:0 40px 90px -30px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.05)}
+.hp-img figcaption{position:absolute;right:12px;bottom:10px;font:11px var(--mono);color:rgba(21,21,21,.55)}
+.hstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:clamp(32px,4vw,56px) 0 0}
+.hstats div{border-top:1.5px solid #3a3a37;padding-top:16px}
+.hstats b{display:block;font-size:clamp(44px,6vw,92px);line-height:1;letter-spacing:-.04em;font-weight:700}
+.hstats b em{font-family:var(--serif);font-weight:400;color:var(--l4)}
+.hstats span{font:500 14px var(--mono);color:var(--dim)}
+.hsteps{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+.hsteps .chip b{display:inline-flex;width:20px;height:20px;border-radius:6px;background:var(--l4);color:#fff;align-items:center;justify-content:center;font-size:11px}
+.hcta{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;margin-top:30px}
+.hcta .btn{background:var(--l4)}
+.hcta .btn:hover{background:#ff5c9e}
+.hcta small{font:13px/1.5 var(--mono);color:var(--dim);max-width:30em}
+@media (max-width:860px){.hp-top{grid-template-columns:1fr}.hstats{grid-template-columns:1fr}.hstats div{display:flex;align-items:baseline;gap:14px}}
 </style>
 </head>
 <body class="no-js">
@@ -481,6 +502,28 @@ footer p{margin:0;max-width:52em}
         <div class="chips rv d3"><span class="chip"><i style="background:var(--l0)"></i>A intro</span><span class="chip"><i style="background:var(--l1)"></i>B verse</span><span class="chip"><i style="background:var(--l2)"></i>C chorus</span></div>
       </div>
       <div class="vis rv d1"><div class="fbox" data-box="song"><img src="media/ipad-l-song.jpg" alt="Song page in the app" loading="lazy"></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="hichord">
+  <div class="wrap">
+    <div class="hpanel">
+      <div class="hp-top">
+        <div>
+          <p class="kicker rv" style="flex-wrap:wrap"><span class="dot"></span>HiChord sync <span class="only" style="margin-left:6px">only with a HiChord</span></p>
+          <h2 class="rv d1">Your HiChord, in <span class="it">every layer.</span></h2>
+          <p class="copy rv d2">Plug in your HiChord and the app samples its own sounds over USB-C, so any layer can play them. You only do this once on each device. These sounds come from your HiChord by Pocket Audio, so you need one to use&nbsp;them.</p>
+        </div>
+        <figure class="hp-img rv d1"><img src="media/hichord.jpg" alt="The HiChord pocket synth by Pocket Audio" width="1200" height="1000" loading="lazy"><figcaption>photo: Pocket Audio</figcaption></figure>
+      </div>
+      <div class="hstats rv d2">
+        <div><b>30</b><span>of its sounds</span></div>
+        <div><b>6</b><span>drum kits</span></div>
+        <div><b>1<em>×</em></b><span>per device</span></div>
+      </div>
+      <div class="hsteps rv d3"><span class="chip own"><b>1</b>plug in over USB-C</span><span class="chip own"><b>2</b>settings → sync</span><span class="chip own"><b>3</b>play them in any layer</span></div>
+      <div class="hcta rv d3"><a class="btn primary" href="https://hichord.shop/" target="_blank" rel="noopener">Get a HiChord →</a><small>No HiChord? The open-source instruments work without one.</small></div>
     </div>
   </div>
 </section>
