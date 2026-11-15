@@ -81,15 +81,16 @@
   }
 
   class MIDIOutput extends MIDIPort {
-    constructor(o) { super(o, 'output'); }
+    constructor(o) { super(o, 'output'); this._due = new Set(); }
     send(data, timestamp) {
       if (this.state !== 'connected') throw new DOMException('Port is disconnected', 'InvalidStateError');
       const arr = Array.from(data, (x) => x & 0xFF);
       const go = () => post({ cmd: 'send', id: this.id, data: arr });
       const wait = timestamp ? timestamp - performance.now() : 0;
-      if (wait > 1) setTimeout(go, wait); else go();
+      if (wait > 1) { const t = setTimeout(() => { this._due.delete(t); go(); }, wait); this._due.add(t); } else go();
     }
-    clear() {}
+    // drop messages still waiting for their time (the page calls this on stop)
+    clear() { this._due.forEach((t) => clearTimeout(t)); this._due.clear(); }
   }
 
   class MIDIAccess extends Emitter {

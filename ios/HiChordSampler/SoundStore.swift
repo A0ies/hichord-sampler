@@ -1,7 +1,8 @@
 import Foundation
 import WebKit
 
-/// Keeps the HiChord sounds the page samples, as files in the app's own storage (Application Support).
+/// Keeps the HiChord sounds the page samples, and a copy of your projects and own sounds,
+/// as files in the app's own storage (Application Support).
 ///
 /// The page's own storage (IndexedDB) belongs to the website it was loaded from and WebKit may clear it;
 /// these files stay through app updates and are only removed when the app is deleted. The page sends
@@ -9,7 +10,11 @@ import WebKit
 ///
 ///   {cmd:"put", key, data}  -> "ok"
 ///   {cmd:"get", key}        -> base64 or nil
-///   {cmd:"list"}            -> [key]
+///   {cmd:"list"}            -> [key]           (HiChord sounds: "hc" + preset)
+///   {cmd:"list", prefix}    -> [key]           (keys starting with prefix, e.g. "p:" projects, "s:" own sounds)
+///
+/// Projects are mirrored here because the page's storage belongs to the site it came from: when the app starts
+/// offline it falls back to its bundled copy (another origin, empty storage) and reads the projects from here.
 ///   {cmd:"delete", key}     -> "ok"
 final class SoundStore: NSObject, WKScriptMessageHandlerWithReply {
     private let queue = DispatchQueue(label: "sound-store")
@@ -21,10 +26,12 @@ final class SoundStore: NSObject, WKScriptMessageHandlerWithReply {
         return dir
     }
 
-    /// Only the page's own sound names: "hc" and a preset number.
+    /// Only the page's own names: "hc" + preset (HiChord sounds), "p:<id>" (project), "s:<id>:<layer>" (own sound),
+    /// "x:<id>" (a deleted project) and "last" (the project open last).
+    private static let keyPattern = "^(hc[0-9]{1,3}|p:[A-Za-z0-9]{1,40}|x:[A-Za-z0-9]{1,40}|s:[A-Za-z0-9]{1,40}:[0-9]{1,3}|last)$"
     private func file(_ key: Any?) -> URL? {
-        guard let key = key as? String, key.range(of: "^hc[0-9]{1,3}$", options: .regularExpression) != nil else { return nil }
-        return folder?.appendingPathComponent(key + ".hcs")
+        guard let key = key as? String, key.range(of: Self.keyPattern, options: .regularExpression) != nil else { return nil }
+        return folder?.appendingPathComponent(key.replacingOccurrences(of: ":", with: "~") + ".hcs")
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
@@ -45,7 +52,9 @@ final class SoundStore: NSObject, WKScriptMessageHandlerWithReply {
                 if let url = self.file(key), let d = try? Data(contentsOf: url) { result = d.base64EncodedString() }
             case "list":
                 let names = (try? FileManager.default.contentsOfDirectory(atPath: self.folder?.path ?? "")) ?? []
-                result = names.filter { $0.hasSuffix(".hcs") }.map { String($0.dropLast(4)) }
+                let keys = names.filter { $0.hasSuffix(".hcs") }.map { String($0.dropLast(4)).replacingOccurrences(of: "~", with: ":") }
+                if let prefix = body["prefix"] as? String { result = keys.filter { $0.hasPrefix(prefix) } }
+                else { result = keys.filter { $0.hasPrefix("hc") } }
             case "delete":
                 if let url = self.file(key) { try? FileManager.default.removeItem(at: url); result = "ok" }
             default:

@@ -9,8 +9,8 @@ binding = "BUCKET"
 bucket_name = "looper-shares"
 
 [vars]
-# where the app runs: the GitHub Pages site, the iOS app's bundled fallback page ("null"), local testing
-ALLOWED_ORIGINS = "https://a0ies.github.io,null,http://localhost:8417"
+# where the app runs: the GitHub Pages site, local testing (the iOS app's offline copy has no internet, so no "null")
+ALLOWED_ORIGINS = "https://a0ies.github.io,http://localhost:8417"
 MAX_BYTES = "31457280"   # 30 MB per shared project
 TTL_HOURS = "24"
 

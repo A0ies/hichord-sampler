@@ -825,6 +825,34 @@ body.projopen .pbar{display:none}
 .pnew::before{display:none}
 .pnewrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .pnewrow .pnew{white-space:normal;text-align:center;line-height:1.35;padding:6px 10px;min-width:0}
+/* MIDI page: your devices, each with a light for what comes in */
+.midilist{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.mdev{display:flex;align-items:center;gap:10px;background:var(--key);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:12px}
+.mdev b{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mdev small{color:var(--dim);font-size:11px}
+.mdev .dot{transition:background .25s,box-shadow .25s}
+.mdev.act .dot{background:var(--acc);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 30%,transparent);transition:none}
+.midilist .linkish{background:none;box-shadow:none;padding:0;min-height:0;color:var(--acc);text-decoration:underline;font:inherit}
+.midilist .linkish::before{display:none}
+.hcrow .helpbtn{margin-left:auto;flex:none;width:40px;min-height:40px;padding:0;border-radius:20px;font-family:var(--mono);font-weight:600;font-size:15px}
+.helprow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px} .helprow button{min-height:40px;padding:0 14px}
+@media not (pointer:fine){ .kbonly{display:none} }
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:12px}
+.keys dt{font-family:var(--mono);font-weight:600;white-space:nowrap} .keys dd{margin:0;color:var(--dim)}
+.keys h4{grid-column:1/-1;margin:6px 0 0;font-family:var(--sans);font-size:13px}
+/* first steps: a card near the top, the key it talks about pulses */
+.guide{position:fixed;left:0;right:0;top:calc(var(--st) + 64px);z-index:34;display:flex;justify-content:center;padding:0 16px;pointer-events:none}
+.guide.hidden{display:none}
+.gbox{pointer-events:auto;width:min(400px,100%);background:var(--panel);border-radius:18px;padding:16px 18px;box-shadow:0 0 0 2px var(--acc),0 20px 50px rgba(0,0,0,.3);
+  display:flex;flex-direction:column;gap:8px;box-sizing:border-box}
+.gbox h3{margin:0;font-size:17px;font-weight:600}
+.gbox p{margin:0;line-height:1.5;color:var(--dim);font-size:13px}
+.gbox .row{display:flex;gap:8px;align-items:center} .gbox .row span{flex:1} .gbox .row button{min-height:40px;padding:0 14px}
+.gdots{display:flex;gap:5px} .gdots i{width:6px;height:6px;border-radius:3px;background:var(--line)} .gdots i.on{background:var(--acc);width:16px}
+.ghl{outline:3px solid var(--acc);outline-offset:3px;animation:ghl 1.2s ease-in-out infinite}
+@keyframes ghl{50%{outline-offset:7px;outline-color:color-mix(in srgb,var(--acc) 40%,transparent)}}
+@media (orientation:landscape) and (max-height:560px){ .guide{top:50%;transform:translateY(-50%);justify-content:flex-end;padding-right:calc(16px + var(--sr))} .gbox{width:min(340px,100%);padding:12px 14px;gap:6px} .gbox p{font-size:12px}
+  .keys{grid-template-columns:auto 1fr auto 1fr;gap:4px 10px;font-size:11px} }
 /* share / receive with a code */
 .xfer .xcode{font-family:var(--mono);font-size:clamp(30px,10vw,44px);font-weight:600;letter-spacing:.14em;text-align:center;background:var(--screen);color:var(--screen-ink);
   border-radius:14px;padding:18px 8px;-webkit-user-select:text;user-select:text}
@@ -1258,8 +1286,7 @@ body.projopen .pbar{display:none}
   #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(1){grid-area:1/1}
   #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(2){grid-area:1/2}
   #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(3){grid-area:2/1}
-  #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(4){grid-area:3/2}
-  #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(5){grid-area:3/1}
+  #settingsSheet .setpage[data-k=sync] .params>.p:nth-child(4){grid-area:3/1}
   #settingsSheet .setpage[data-k=sync] .params .hcsync{grid-area:2/2;flex-direction:column;align-items:stretch;gap:8px} #settingsSheet .params .hcsync .hcsynchint{display:none}
   /* sound check: more air between the test key, the read-outs and the test chords */
   #settingsSheet .setpage[data-k=sound] .row+.hint{margin-top:18px}
@@ -1951,13 +1978,19 @@ body.studio .tbar .pos b{font-size:26px}
       <div class="hcrow">
         <button id="hcConnect">Connect HiChord</button>
         <span class="stat"><span class="dot" id="hcDot"></span><span id="hcStatus">not connected</span></span>
+        <button id="guideBtn" class="helpbtn" aria-label="First steps: a short tour">?</button>
       </div>
       <div class="hcstate" id="hcState"></div>
     </div>
-    <div class="tabs settabs" id="setTabs"><button data-k="sync" class="on">Sync</button><button data-k="sound">Sound check</button><button data-k="room">Room</button><button data-k="credits">Credits</button></div>
+    <div class="tabs settabs" id="setTabs"><button data-k="sync" class="on">Sync</button><button data-k="midi">MIDI</button><button data-k="sound">Sound check</button><button data-k="room">Room</button><button data-k="credits">About</button></div>
     <div class="setpage" data-k="sync">
       <div class="params" id="pSync"></div>
       <p class="hint">Don't use the HiChord's own looper while you record here: its replays would come in as notes too.</p>
+    </div>
+    <div class="setpage" data-k="midi" hidden>
+      <div class="midilist" id="midiList"></div>
+      <div class="params" id="pMidi"></div>
+      <p class="hint" id="midiMon">Notes in: none yet — play on the HiChord</p>
     </div>
     <div class="setpage" data-k="sound" hidden>
       <div class="row">
@@ -1965,7 +1998,6 @@ body.studio .tbar .pos b{font-size:26px}
         <span class="stat"><span class="dot" id="audioDot"></span><span id="audioStatus">audio not started</span></span>
       </div>
       <p class="hint" id="routeInfo"></p>
-      <p class="hint" id="midiMon">Notes in: none yet — play on the HiChord</p>
       <label class="check hidden" id="usbOutRow"><input type="checkbox" id="usbOutChk"> Send the app's sound to the HiChord's USB port (for recording on another device)</label>
       <div class="padsbox"><h2>test chords · keys 1–7</h2><div class="pads" id="pads"></div></div>
     </div>
@@ -1973,6 +2005,7 @@ body.studio .tbar .pos b{font-size:26px}
       <div class="roomgroups" id="pGlobal"></div>
     </div>
     <div class="setpage credits" data-k="credits" hidden>
+      <div class="helprow kbonly"><button id="keysBtn">keyboard shortcuts · ?</button></div>
       <ul>
         <li><b>grand piano</b> <a href="https://github.com/sfzinstruments/SalamanderGrandPiano">Salamander Grand Piano V3</a> by Alexander Holm · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>, trimmed and levelled</li>
         <li><b>strings, horns</b> <a href="https://versilian-studios.com/vsco-community/">VSCO 2 Community Edition</a> by Versilian Studios / Sam Gossner · CC0</li>
@@ -1981,7 +2014,7 @@ body.studio .tbar .pos b{font-size:26px}
         <li><b>drums</b> <a href="https://github.com/sfzinstruments/virtuosity_drums">Virtuosity Drums</a> by Versilian Studios · CC0</li>
         <li><b>electric piano, leads, pad, synth bass</b> made for this app · CC0</li>
       </ul>
-      <p class="hint">Your own sounds (file, microphone, sampled HiChord) stay on this device. Nothing leaves it unless you share a project: then the project and its own sounds go to the share relay, which deletes them as soon as they are received, or after 24 hours.</p>
+      <p class="hint">Your own sounds (file, microphone, sampled HiChord) stay on this device. Nothing leaves it unless you share a project: then the project and its own sounds go to the share relay, which hands them out once and deletes them, or after 24 hours.</p>
     </div>
   </div>
 </section>
@@ -2029,6 +2062,10 @@ body.studio .tbar .pos b{font-size:26px}
 <div class="hcs hidden" id="hcs" role="dialog" aria-modal="true" aria-label="Sample your HiChord"><div class="hcsbox" id="hcsBox"></div></div>
 <!-- sending a project to another device: a six-character code through the share relay (relay/) -->
 <div class="hcs xfer hidden" id="xfer" role="dialog" aria-modal="true" aria-label="Share a project"><div class="hcsbox" id="xferBox"></div></div>
+<div class="guide hidden" id="guide" role="dialog" aria-label="First steps"><div class="gbox">
+  <div class="gdots" id="gDots"></div><h3 id="gTitle"></h3><p id="gText"></p>
+  <div class="row"><button id="gSkip">skip</button><span></span><button id="gBack">back</button><button id="gNext" class="primary">next</button></div>
+</div></div>
 <div class="toast" id="toast"></div>
 <!-- own sounds come from the Files app only: a list of audio file types (no audio/*, no camera or library) -->
 <input type="file" id="fileIn" accept=".wav,.mp3,.m4a,.aac,.aif,.aiff,.caf,.flac,.ogg,.opus" class="hidden">
@@ -2036,7 +2073,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-15.119';
+const PAGE_VERSION='2026-11-15.120';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2642,17 +2679,20 @@ function onClock(){
 }
 setInterval(()=>{ if(lastClock && !clockLive()){ lastClock=0; clockTimes=[]; renderTempo(); } },500);
 
+const MIDI_ERR={ v:null };   // 'none' (no Web MIDI in this browser), 'blocked' (not allowed for this site)
 async function initMIDI(sysex){
-  if(!navigator.requestMIDIAccess){ $('midiStatus').textContent='no Web MIDI here'; return false; }
+  if(!navigator.requestMIDIAccess){ MIDI_ERR.v='none'; $('midiStatus').textContent='no MIDI here'; renderMidiPage(); return false; }
   let acc; try{ acc = await navigator.requestMIDIAccess({sysex:!!sysex}); }
-  catch(e){ $('midiStatus').textContent='MIDI blocked'; return false; }
+  catch(e){ MIDI_ERR.v='blocked'; $('midiStatus').textContent='MIDI blocked'; renderMidiPage(); return false; }
+  MIDI_ERR.v=null;
   if(midi && midi!==acc){ midi.onstatechange=null; midi.inputs.forEach(i=>{ i.onmidimessage=null; }); }   // Chrome gives new input objects: else each note arrives twice
   midi=acc; midi.onstatechange = bindInputs; bindInputs(); return true;
 }
 function bindInputs(){
   if(!midi) return;
   const ins=[...midi.inputs.values()];
-  ins.forEach(i=>{ const isHC=/hichord/i.test(i.name); i.onmidimessage=e=>handleMsg(e.data, isHC); });
+  ins.forEach(i=>{ const isHC=/hichord/i.test(i.name); i.onmidimessage=e=>{ midiAct(i.id); handleMsg(e.data, isHC); }; });
+  renderMidiPage();
   const hc=ins.find(i=>/hichord/i.test(i.name));
   $('midiDot').className='dot'+(hc?' ok':ins.length?' live':'');
   $('midiStatus').textContent = HC.connected ? 'hichord connected' : hc ? 'hichord in' : ins.length ? `${ins.length} midi input${ins.length>1?'s':''}` : 'no midi device';
@@ -2813,7 +2853,7 @@ async function hcConnect(opts={}){
   if(!ctx){ toast('press start first'); return; }
   HC.connecting=true;
   try{
-    if(!(await initMIDI(true))){ setAlert('midi','midi access is blocked — allow it in the browser settings'); return; }
+    if(!(await initMIDI(true))){ setAlert('midi', MIDI_ERR.v==='none' ? 'this browser has no midi' : 'midi access is blocked', 'how to fix', midiHelp); return; }
     clearAlert('midi');
     HC.out=[...midi.outputs.values()].find(o=>/hichord/i.test(o.name))||null;
     if(!HC.out){ if(!opts.auto) setAlert('hc','no hichord found — plug it in over usb-c','try again',()=>hcConnect()); return; }
@@ -2866,12 +2906,18 @@ window.__nativeAudio = {
   route(r){ audioRoute=r; renderAudioStatus(); },
   resume(){ if(ctx && ctx.state!=='running') ctx.resume().then(renderAudioStatus); },
 };
+const AUD={ tried:false };
+const wakeAudio=()=>{ if(!ctx || ctx.state==='running' || ctx.state==='closed') return;
+  ctx.resume().then(renderAudioStatus).catch(()=>{});
+  setTimeout(()=>{ if(ctx.state!=='running'){ AUD.tried=true; renderAudioStatus(); } }, 900); };
+addEventListener('pointerdown', wakeAudio, true); addEventListener('keydown', wakeAudio, true);
 function renderAudioStatus(){
   if(!ctx){ return; }
   const st=ctx.state, ok=st==='running';
   $('audioDot').className='dot'+(ok?' ok':' live');
   $('audioStatus').textContent = ok ? `audio running · ${Math.round(ctx.sampleRate/1000)} kHz` : `audio ${st} · tap anywhere to wake it`;
-  if(ok) clearAlert('audio'); else setAlert('audio','audio is paused','resume',()=>ctx.resume().then(renderAudioStatus));
+  // a tap anywhere wakes it (see below); the bar only shows when that did not work
+  if(ok){ AUD.tried=false; clearAlert('audio'); } else if(AUD.tried) setAlert('audio','audio is paused','resume',()=>ctx.resume().then(renderAudioStatus));
   if(audioRoute){
     const outs=audioRoute.outputs.map(o=>o.name).join(', ')||'none';
     const toUSB=audioRoute.outputs.some(o=>/usb/i.test(o.type));
@@ -3672,22 +3718,104 @@ function idb(){
 async function dbDo(store, mode, fn){
   const db=await idb();
   return new Promise((res,rej)=>{ const t=db.transaction(store,mode), st=t.objectStore(store); let out; const r=fn(st); if(r) r.onsuccess=()=>{ out=r.result; };
-    t.oncomplete=()=>res(out); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); });
+    t.oncomplete=()=>{ res(out); if(mode==='readwrite'){ if(store==='sounds') MIR.scan=true; mirrorSoon(); } }; t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); });
 }
 const soundRange = id => IDBKeyRange.bound(id+':', id+':\uffff');
-async function soundsOf(id){
+async function soundsOf(id, raw){
   const [keys,vals]=await Promise.all([dbDo('sounds','readonly',st=>st.getAllKeys(soundRange(id))), dbDo('sounds','readonly',st=>st.getAll(soundRange(id)))]);
-  const out={}; (keys||[]).forEach((k,n)=>{ out[+k.split(':')[1]]=vals[n]; }); return out;
+  const out={}; (keys||[]).forEach((k,n)=>{ const v=vals[n]; out[+k.split(':')[1]] = raw ? v : soundFloat(v); }); return out;
 }
+/* own sounds are kept as 16-bit (half the space of the 32-bit audio buffer, the same depth as the HiChord sounds) */
+function soundRec(name, sampleRate, chans, zones, kind){
+  const channels=chans.map(x=>{ const o=new Int16Array(x.length); for(let n=0;n<x.length;n++){ const v=x[n]; o[n] = v>=1 ? 32767 : v<=-1 ? -32767 : Math.round(v*32767); } return o; });
+  return { name, sampleRate, channels, pcm16:true, zones:zones||null, kind:kind||null, sig:Date.now().toString(36)+Math.random().toString(36).slice(2,6) };
+}
+// a stored record as 32-bit channels (records from before 16-bit are already)
+function soundFloat(r){ if(!r || !r.pcm16) return r;
+  return Object.assign({}, r, { pcm16:false, channels:r.channels.map(x=>{ const f=new Float32Array(x.length); for(let n=0;n<x.length;n++) f[n]=x[n]/32767; return f; }) }); }
 function storeSound(i){
   const Ly=layers[i]; if(!PRJ.current || !Ly) return;
   const key=PRJ.current+':'+i;
   // no own sound here (any more): drop the record, or a later sample layer in this place would get it back
-  if(Ly.inst!=='custom' || !Ly.buffer){ dbDo('sounds','readwrite',st=>st.delete(key)).catch(()=>{}); return; }
-  const b=Ly.buffer, rec={ name:Ly.customName, sampleRate:b.sampleRate, channels:[...Array(b.numberOfChannels)].map((_,c)=>b.getChannelData(c).slice()), zones:Ly.czones||null, kind:Ly.ckind||null };
-  dbDo('sounds','readwrite',st=>st.put(rec, key)).catch(e=>{ console.warn('sound save', e); setAlert('save',`could not save the sound of layer ${i+1} — storage may be full`); });
+  if(Ly.inst!=='custom' || !Ly.buffer){ SOUND_SAVED.delete(key); dbDo('sounds','readwrite',st=>st.delete(key)).then(()=>{ MIR.dirty.add(key.split(':')[0]); mirrorSoon(); }).catch(()=>{}); return; }
+  // the same sound stored already (a layer saved again without a new recording) is not written again
+  const b=Ly.buffer; if(SOUND_SAVED.get(key)===b && b.__name===Ly.customName) return;
+  const rec=soundRec(Ly.customName, b.sampleRate, [...Array(b.numberOfChannels)].map((_,c)=>b.getChannelData(c)), Ly.czones, Ly.ckind);
+  dbDo('sounds','readwrite',st=>st.put(rec, key)).then(()=>{ SOUND_SAVED.set(key,b); b.__name=Ly.customName; MIR.dirty.add(key.split(':')[0]); mirrorSoon(); })
+    .catch(e=>{ console.warn('sound save', e); setAlert('save',`could not save the sound of layer ${i+1} — storage may be full`); });
 }
+const SOUND_SAVED=new Map();   // project:layer -> the buffer stored there last
 const storeAllSounds = () => layers.forEach((_,i)=>storeSound(i));
+/* the iPhone/iPad app keeps a copy of your projects and own sounds in its own files. When it starts without internet
+   it opens its built-in copy of this page, whose storage is separate (another origin) and empty: the projects come from there.
+   Each project's copy carries the stamps of its sounds, so a sound is only sent again when it changed. */
+const MIR={ p:new Map(), s:new Map(), dirty:new Set(), t:null, busy:false, ready:false };   // id -> stamp of the copy there, project:layer -> sound stamp
+const mirSig = p => `${p.updated}|${p.name}|${p.named?1:0}`;
+const sndSig = r => r ? (r.sig || `old|${r.name}|${r.channels&&r.channels[0]?r.channels[0].length:0}`) : null;
+function mirrorSoon(){ if(!nativeStore() || !MIR.ready) return; clearTimeout(MIR.t); MIR.t=setTimeout(mirrorNow, 1500); }
+function packSnd(r){
+  const ch=r.channels.map(x=>{ if(r.pcm16) return x; const o=new Int16Array(x.length); for(let n=0;n<x.length;n++){ const v=x[n]; o[n]=v>=1?32767:v<=-1?-32767:Math.round(v*32767); } return o; });
+  const head=new TextEncoder().encode(JSON.stringify({ name:r.name, sampleRate:r.sampleRate, nch:ch.length, len:ch[0].length, zones:r.zones||null, kind:r.kind||null, sig:sndSig(r) }));
+  const out=new Uint8Array(8+head.length+ch.length*ch[0].length*2); out.set([83,78,68,49]); new DataView(out.buffer).setUint32(4, head.length, true); out.set(head, 8);
+  let off=8+head.length; ch.forEach(x=>{ out.set(new Uint8Array(x.buffer, x.byteOffset, x.byteLength), off); off+=x.byteLength; }); return out;
+}
+function unpackSnd(u8){
+  if(String.fromCharCode(...u8.subarray(0,4))!=='SND1') throw new Error('not a sound');
+  const hl=new DataView(u8.buffer, u8.byteOffset, 8).getUint32(4,true), h=JSON.parse(new TextDecoder().decode(u8.subarray(8,8+hl)));
+  let off=8+hl; const channels=[]; for(let c=0;c<h.nch;c++){ channels.push(new Int16Array(u8.slice(off, off+h.len*2).buffer)); off+=h.len*2; }
+  return { name:h.name, sampleRate:h.sampleRate, channels, pcm16:true, zones:h.zones, kind:h.kind, sig:h.sig };
+}
+async function mirrorNow(){
+  if(!nativeStore() || !MIR.ready) return; if(MIR.busy){ mirrorSoon(); return; } MIR.busy=true;
+  try{
+    const list=(await dbDo('projects','readonly',st=>st.getAll()))||[], have=new Set(), scan=MIR.scan; MIR.scan=false;
+    for(const p of list){
+      if(PRJ.pend.has(p.id)) continue; have.add(p.id);
+      if(MIR.p.get(p.id)===mirSig(p) && !MIR.dirty.has(p.id) && !scan) continue; MIR.dirty.delete(p.id);
+      const snd=await soundsOf(p.id, true), ssig={};
+      for(const [i,r] of Object.entries(snd)){ const k=p.id+':'+i, g=sndSig(r); ssig[i]=g;
+        if(MIR.s.get(k)!==g && await nsCall({cmd:'put', key:'s:'+k, data:toB64(packSnd(r))})==='ok') MIR.s.set(k,g); }
+      for(const k of [...MIR.s.keys()]) if(k.startsWith(p.id+':') && !(k.split(':')[1] in ssig)){ await nsCall({cmd:'delete', key:'s:'+k}); MIR.s.delete(k); }
+      const sig=mirSig(p);
+      if(await nsCall({cmd:'put', key:'p:'+p.id, data:toB64(new TextEncoder().encode(JSON.stringify({p, ssig}))) })==='ok') MIR.p.set(p.id, sig);
+    }
+    // gone here (deleted): gone there too, with a note so the other copy of the page deletes it as well
+    for(const id of [...MIR.p.keys()]) if(!have.has(id) && !PRJ.pend.has(id)){
+      await nsCall({cmd:'put', key:'x:'+id, data:btoa('1')}); await nsCall({cmd:'delete', key:'p:'+id});
+      for(const k of [...MIR.s.keys()]) if(k.startsWith(id+':')){ await nsCall({cmd:'delete', key:'s:'+k}); MIR.s.delete(k); }
+      MIR.p.delete(id);
+    }
+    const last=PRJ.current || START.last; if(last && last!==MIR.last){ await nsCall({cmd:'put', key:'last', data:btoa(last)}); MIR.last=last; }
+  }catch(e){ console.warn('project copy', e); }
+  MIR.busy=false;
+}
+// at start: take what the app's copy has that this page's storage lacks (or has older), and drop what was deleted elsewhere
+async function mirrorIn(){
+  if(!nativeStore()) return;
+  try{
+    const dec = b64 => new TextDecoder().decode(fromB64(b64));
+    for(const k of await nsCall({cmd:'list', prefix:'x:'})||[]){ const id=k.slice(2);
+      await dbDo('projects','readwrite',st=>st.delete(id)).catch(()=>{}); await dbDo('sounds','readwrite',st=>st.delete(soundRange(id))).catch(()=>{}); }
+    const mine=new Map(((await dbDo('projects','readonly',st=>st.getAll()))||[]).map(p=>[p.id,p]));
+    for(const k of await nsCall({cmd:'list', prefix:'p:'})||[]){
+      const b64=await nsCall({cmd:'get', key:k}); if(!b64) continue; let rec; try{ rec=JSON.parse(dec(b64)); }catch(e){ continue; }
+      const p=rec.p; if(!p || !p.id || !p.data) continue; const here=mine.get(p.id);
+      if(!here || (here.updated||0) < (p.updated||0)){
+        await dbDo('projects','readwrite',st=>st.put(p));
+        const snd=await soundsOf(p.id, true);
+        for(const [i,g] of Object.entries(rec.ssig||{})){ if(snd[i] && sndSig(snd[i])===g) continue;
+          const s64=await nsCall({cmd:'get', key:'s:'+p.id+':'+i}); if(!s64) continue;
+          try{ const r=unpackSnd(fromB64(s64)); await dbDo('sounds','readwrite',st=>st.put(r, p.id+':'+i)); MIR.s.set(p.id+':'+i, sndSig(r)); }catch(e){ console.warn('own sound copy', e); }
+        }
+        for(const i of Object.keys(snd)) if(!(i in (rec.ssig||{}))) await dbDo('sounds','readwrite',st=>st.delete(p.id+':'+i)).catch(()=>{});
+        MIR.p.set(p.id, mirSig(p));
+        Object.entries(rec.ssig||{}).forEach(([i,g])=>MIR.s.set(p.id+':'+i, g));
+      } else if(here.updated===p.updated){ MIR.p.set(p.id, mirSig(p)); Object.entries(rec.ssig||{}).forEach(([i,g])=>MIR.s.set(p.id+':'+i, g)); }
+    }
+    const l=await nsCall({cmd:'get', key:'last'}); if(l) MIR.last=atob(l);
+  }catch(e){ console.warn('project copy in', e); }
+  MIR.ready=true; mirrorSoon();
+}
 function bufferFrom(rec){ const b=ctx.createBuffer(rec.channels.length, rec.channels[0].length, rec.sampleRate); rec.channels.forEach((ch,c)=>b.copyToChannel(ch,c)); return b; }
 const newId = () => 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function summary(d){ const ls=d.layers.filter(l=>l.shown), parts=d.song&&d.song.parts||null;
@@ -3736,7 +3864,7 @@ function applySession(d, sounds){
   if(!layers[S.sel] || !layers[S.sel].shown) S.sel=layers.findIndex(l=>l.shown);
   master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime();
   $('metroChk').checked=S.metro; $('countChk').checked=S.countIn;
-  renderBarsSeg(); renderTempo(); renderTransport(); renderLayers(); renderDetail(); renderGlobal(); renderSync();
+  renderBarsSeg(); renderTempo(); renderTransport(); renderLayers(); renderDetail(); renderGlobal(); renderSync(); renderMidiPage();
   if(ED.open){ if(ED.dock) setFull(''); else closeEditor(); }
   HIST.undo=[]; HIST.redo=[]; HIST.last=histData(sessionData()); renderUndo();
   try{ localStorage.setItem(SAVE_KEY, JSON.stringify(sessionData())); }catch(e){}
@@ -3791,7 +3919,7 @@ async function saveAsCopy(){
   const src=PRJ.list.find(x=>x.id===PRJ.current), d=sessionData();
   const p={ id:newId(), name:`${src?src.name:'project'} copy`, created:Date.now(), updated:Date.now(), data:d, summary:summary(d) };
   await dbDo('projects','readwrite',st=>st.put(p)); PRJ.list.unshift(p);
-  const sounds=await soundsOf(PRJ.current);
+  const sounds=await soundsOf(PRJ.current, true);
   for(const [i,rec] of Object.entries(sounds)) await dbDo('sounds','readwrite',st=>st.put(rec, p.id+':'+i));
   setCurrent(p.id); renderProjects(); toast(`saved as "${p.name}" — you are now working in the copy`);
 }
@@ -3802,7 +3930,7 @@ async function dupProject(id){
   const now=Date.now(), d=JSON.parse(JSON.stringify(src.data));
   const p={ id:newId(), name:`${src.name} copy`.slice(0,60), named:true, created:now, updated:now, data:d, summary:summary(d) };
   await dbDo('projects','readwrite',st=>st.put(p));
-  const sounds=await soundsOf(id); for(const [i,rec] of Object.entries(sounds)) await dbDo('sounds','readwrite',st=>st.put(rec, p.id+':'+i));
+  const sounds=await soundsOf(id, true); for(const [i,rec] of Object.entries(sounds)) await dbDo('sounds','readwrite',st=>st.put(rec, p.id+':'+i));
   PRJ.list.push(p); PRJ.open=p.id; renderProjects(); toast(`duplicated as "${p.name}"`);
 }
 async function renameProj(id, name){
@@ -3819,7 +3947,7 @@ const UNDO_MS=5000;
 PRJ.pend=new Map();   // id -> {until, timer}
 async function deleteProject(id){
   const p=PRJ.list.find(x=>x.id===id); if(!p || PRJ.pend.has(id)) return;
-  PRJ.pend.set(id, { until:Date.now()+UNDO_MS, timer:setTimeout(()=>purgeProject(id), UNDO_MS) });
+  PRJ.pend.set(id, { until:Date.now()+UNDO_MS, timer:setTimeout(()=>purgeProject(id), UNDO_MS) }); pendSave();
   if(id===PRJ.current){
     // the open project goes: continue in the most recent other one, or in a fresh project
     await projSaveNow().catch(()=>{});
@@ -3829,12 +3957,21 @@ async function deleteProject(id){
   }
   renderProjects();
 }
+// a project still in its 5 seconds when the app closes is deleted the next time it starts (no undo after a restart)
+const pendSave = () => { try{ localStorage.setItem('hcl-pend', JSON.stringify([...PRJ.pend.keys()])); }catch(e){} };
+async function purgeLeft(){
+  let ids=[]; try{ ids=JSON.parse(localStorage.getItem('hcl-pend')||'[]'); }catch(e){}
+  for(const id of ids){ if(typeof id!=='string') continue;
+    try{ await dbDo('projects','readwrite',st=>st.delete(id)); await dbDo('sounds','readwrite',st=>st.delete(soundRange(id))); }catch(e){}
+    try{ if(localStorage.getItem('hcl-project')===id){ localStorage.removeItem('hcl-project'); localStorage.removeItem(SAVE_KEY); } }catch(e){} }
+  try{ localStorage.removeItem('hcl-pend'); }catch(e){}
+}
 function restoreProject(id){
   const z=PRJ.pend.get(id); if(!z) return;
-  clearTimeout(z.timer); PRJ.pend.delete(id); renderProjects(); toast('project restored');
+  clearTimeout(z.timer); PRJ.pend.delete(id); pendSave(); renderProjects(); toast('project restored');
 }
 async function purgeProject(id){
-  if(!PRJ.pend.has(id)) return; PRJ.pend.delete(id);
+  if(!PRJ.pend.has(id)) return; PRJ.pend.delete(id); pendSave();
   // deleted on the start screen, the project open last time: the app must not bring it back from its saved session
   if(START.on && id===START.last){ START.last=null; try{ localStorage.removeItem('hcl-project'); localStorage.removeItem(SAVE_KEY); }catch(e){} }
   try{ await dbDo('projects','readwrite',st=>st.delete(id)); await dbDo('sounds','readwrite',st=>st.delete(soundRange(id))); }catch(e){}
@@ -4055,7 +4192,7 @@ async function xferFetch(code){
     const now=Date.now(), p={ id:newId(), name:pj.name, named:pj.named, created:now, updated:now, data:pj.data, summary:summary(pj.data), received:now };
     try{
       await dbDo('projects','readwrite',st=>st.put(p));
-      for(const [i,rec] of Object.entries(pj.sounds)) await dbDo('sounds','readwrite',st=>st.put(rec, p.id+':'+i));
+      for(const [i,r] of Object.entries(pj.sounds)) await dbDo('sounds','readwrite',st=>st.put(soundRec(r.name, r.sampleRate, r.channels, r.zones, r.kind), p.id+':'+i));
     }catch(e){   // stored only half: take it out again, so no project without its sounds stays behind
       await dbDo('projects','readwrite',st=>st.delete(p.id)).catch(()=>{}); await dbDo('sounds','readwrite',st=>st.delete(soundRange(p.id))).catch(()=>{});
       throw e;
@@ -4605,11 +4742,12 @@ document.addEventListener('touchmove',e=>{
 },{passive:false});
 $('setBtn').onclick=openLayerFull; $('setBtn').innerHTML=SLIDERS;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
-$('setTabs').onclick=e=>{ const b=e.target.closest('[data-k]'); if(!b) return;
+$('setTabs').onclick=e=>{ const b=e.target.closest('[data-k]'); if(!b) return; if(b.dataset.k==='midi') renderMidiPage();
   $('setTabs').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
   document.querySelectorAll('#settingsSheet .setpage').forEach(p=>p.hidden=p.dataset.k!==b.dataset.k); };
 $('settingsBtn').onclick=()=>openSheet('settingsSheet');
-$('midiChip').onclick=()=>openSheet('settingsSheet');
+$('midiChip').onclick=()=>{ if(MIDI_ERR.v) midiHelp(); else { openSheet('settingsSheet'); setTab('midi'); } };
+function setTab(k){ const b=$('setTabs').querySelector(`[data-k="${k}"]`); if(b) b.click(); }
 $('loopBtn').onclick=()=>openSheet('loopSheet');
 
 function selectLayer(i){
@@ -4900,7 +5038,6 @@ function renderSync(){
   checkParam(p,'Follow the HiChord tempo',()=>S.followClock,v=>{S.followClock=v; renderTempo();});
   checkParam(p,'Send my tempo to the HiChord',()=>S.sendTempo,v=>{S.sendTempo=v; if(v&&HC.connected&&!clockLive()) hcSendTempo();});
   checkParam(p,'HiChord start/stop runs the loop',()=>S.hcTransport,v=>{S.hcTransport=v;});
-  selectParam(p,'Listen to',[['all','All channels'],['1','Channel 1 (live)'],['10','Channel 10 (drums)']],()=>S.input,v=>{S.input=v;});
   param(p,'Recording offset',()=>S.recOffset,v=>{S.recOffset=v;},-100,150,1,v=>(v>0?'+':'')+v+' ms');
   const hb=document.createElement('div'); hb.id='hcSyncBox'; hb.style.display='contents'; p.appendChild(hb); renderHcSync();   // last: the layouts place the first five by position
 }
@@ -4945,7 +5082,7 @@ function renderHCState(flashKey){
     sel.onchange=()=>{ s[k]=+sel.value; hcCC(cc,+sel.value); renderHCState(k); }; });
 }
 function renderHCControls(){}   // the HiChord's own settings are picked on its screen cells (renderHCState)
-function renderHC(){
+function renderHC(){ renderMidiPage();
   $('hcConnect').textContent = HC.connected?'Disconnect':'Connect HiChord';
   $('hcConnect').classList.toggle('on',HC.connected);
   $('hcDot').className='dot'+(HC.connected?' ok':'');
@@ -5631,7 +5768,8 @@ function capWire(grid, capEl, rerender){
       if(k==='off'){ Ly.cfx=[]; m.remove(); }
       else { Ly.cfx = capHas(Ly,k) ? capFx(Ly).filter(f=>f.k!==k) : [...capFx(Ly), {k, v:1}];   // several effects: tap to switch each on or off
         m.querySelectorAll('[data-fxset]').forEach(b=>b.classList.toggle('on', b.dataset.fxset==='off' ? !capFx(Ly).length : capHas(Ly,b.dataset.fxset))); }
-      save(); rerender(); return; }
+      save(); rerender(); if(k!=='off' && !m.isConnected) capEl.appendChild(m);   // iPad pad: the redraw replaced the menu, keep it open
+      return; }
     const open=capEl.querySelector('.cfxmenu'); if(open){ const same=chip && open.dataset.fxl===chip.dataset.fxi; open.remove(); if(same || !chip) return; }
     if(!chip) return;
     const i=+chip.dataset.fxi, m=document.createElement('div'); m.className='cfxmenu'; m.dataset.fxl=i;
@@ -6271,6 +6409,96 @@ async function selfTest(){
 }
 if(location.hash==='#selftest') setTimeout(selfTest, 500);
 
+/* ============ help: browser check, MIDI help and devices, keyboard shortcuts, first steps ============ */
+function infoShow(label, html, keys){   // a card in the share dialog's place; keys: [id, text, class, onclick]
+  $('xfer').setAttribute('aria-label', label);
+  xferShow(html + `<div class="row">${keys.map(([id,t,c])=>`<button id="${id}" class="${c||''}">${t}</button>`).join('')}</div>`);
+  keys.forEach(([id,,,fn])=>{ $(id).onclick=()=>{ xferClose(); $('xfer').setAttribute('aria-label','Share a project'); if(fn) fn(); }; });
+}
+let STORE_OK=true;
+function browserGaps(){
+  const g=[];
+  if(!(window.AudioContext||window.webkitAudioContext)) g.push('audio');
+  if(!navigator.requestMIDIAccess) g.push('midi');
+  if(!STORE_OK) g.push('storage');
+  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) g.push('mic');
+  return g;
+}
+function compatCheck(){
+  if(inApp() || location.hash==='#selftest') return;
+  const g=browserGaps(); if(!g.length) return;
+  let seen=null; try{ seen=localStorage.getItem('hcl-compat'); }catch(e){}
+  if(seen===g.join(',')) return;
+  const apple=/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints>1);
+  const why={
+    audio:'<li><b>No Web Audio:</b> nothing can play in this browser.</li>',
+    midi:'<li><b>No MIDI:</b> it can\'t connect to your HiChord or a MIDI keyboard. You can still play the loop, edit notes, use capture mode and record your own samples.</li>',
+    storage:'<li><b>No storage</b> (private browsing?): your projects won\'t be kept after you close this page.</li>',
+    mic:'<li><b>No microphone:</b> you can\'t record samples here; sound files still work.</li>' };
+  infoShow('Browser check', `<h3>this browser can't do everything</h3>
+    <p>${apple ? 'On iPhone and iPad, the <b>Looper app</b> connects to your HiChord.' : 'Looper works best in <b>Chrome</b> or <b>Edge</b> on a computer, or in the Looper app on iPhone and iPad.'}</p>
+    <ul>${g.map(k=>why[k]).join('')}</ul>`,
+    [['cpHide',"don't show again",'',()=>{ try{ localStorage.setItem('hcl-compat', g.join(',')); }catch(e){} }], ['cpOk','continue','primary']]);
+}
+function midiHelp(){
+  if(MIDI_ERR.v==='none') infoShow('MIDI', `<h3>no MIDI in this browser</h3><p>This browser can't talk to MIDI devices, so your HiChord can't connect here. Use <b>Chrome</b> or <b>Edge</b> on a computer, or the Looper app on iPhone and iPad.</p>`, [['mhOk','ok','primary']]);
+  else infoShow('MIDI', `<h3>MIDI is blocked</h3><p>This site isn't allowed to use your MIDI devices. To allow it in Chrome or Edge:</p>
+    <ul><li>Click the icon left of the web address (site settings).</li><li>Set <b>MIDI devices</b> to <b>Allow</b>.</li><li>Reload this page.</li></ul>`,
+    [['mhOk','close'], ['mhReload','reload','primary',()=>location.reload()]]);
+}
+function renderMidiPage(){
+  const box=$('midiList'); if(!box) return;
+  if(MIDI_ERR.v){ box.innerHTML=`<p class="hint">${MIDI_ERR.v==='none' ? 'This browser has no MIDI.' : 'MIDI is blocked for this site.'} <button class="linkish" id="mdHelp">how to fix</button></p>`; $('mdHelp').onclick=midiHelp; }
+  else if(!midi) box.innerHTML='<p class="hint">MIDI starts with the app.</p>';
+  else { const ins=[...midi.inputs.values()];
+    box.innerHTML = ins.length ? ins.map(i=>{ const hc=/hichord/i.test(i.name);
+      return `<div class="mdev" data-mid="${escH(i.id)}"><span class="dot${hc?' ok':''}"></span><b>${escH(i.name||'MIDI input')}</b><small>${hc?(HC.connected?'connected':'hichord'):escH(i.manufacturer||'')}</small></div>`; }).join('')
+      : '<p class="hint">No MIDI devices yet. Plug in your HiChord, or any MIDI keyboard, over USB.</p>'; }
+  const p=$('pMidi'); if(p && !p.childElementCount) selectParam(p,'Listen to',[['all','All channels'],['1','Channel 1 (live)'],['10','Channel 10 (drums)']],()=>S.input,v=>{S.input=v;});
+  else if(p){ const sel=p.querySelector('select'); if(sel) sel.value=S.input; }
+}
+function midiAct(id){
+  if(!$('settingsSheet').classList.contains('open')) return;
+  const el=$('midiList').querySelector(`.mdev[data-mid="${CSS.escape(id)}"]`); if(!el) return;
+  el.classList.add('act'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('act'), 90);
+}
+function showKeys(){
+  const k=(a,b)=>`<dt>${a}</dt><dd>${b}</dd>`;
+  infoShow('Keyboard shortcuts', `<h3>keyboard shortcuts</h3><dl class="keys">
+    ${k('space','play / stop')}${k('R','record into the selected layer')}${k('1 – 7','play the chords')}${k('↑ ↓','select the layer above / below')}
+    ${k('C','capture mode')}${k('Z · ⇧Z','undo · redo')}${k('⌘S','save the project')}${k('esc','close')}${k('?','this list')}
+    <h4>note editor</h4>${k('B','draw / select')}${k('Q','quantize the selected notes')}${k('← → ↑ ↓','move them (⇧ ↑↓: an octave)')}
+    ${k('⌘D · ⌘A','duplicate · select all')}${k('delete','remove them')}</dl>`, [['kOk','ok','primary']]);
+}
+/* first steps: five short cards, once; the key a card talks about pulses */
+const GUIDE=[
+  { t:'connect', id:'midiChip', x:'Plug your HiChord into this device over USB-C: it connects by itself. Any MIDI keyboard works too. This chip shows what is connected; tap it for your MIDI devices.' },
+  { t:'record a layer', id:'recBtn', x:'Pick a layer, tap ● and play. What you play keeps looping; every layer has its own instrument. Tap ● again to stop recording; add more with "+ new layer".' },
+  { t:'layer settings', id:'setBtn', alt:'tabs', x:'The sliders key sets up the selected layer: Timing (quantize, swing), Instrument and Mix (volume, effects).',
+    xs:'This panel sets up the selected layer: Timing (quantize, swing), Instrument and Mix (volume, effects).' },
+  { t:'song parts', id:'partBar', x:'A song has parts, like a verse and a chorus, each with its own notes. Add one with "+ part"; tap the part you are in to line the parts up on the song page.' },
+  { t:'capture mode', id:'captureBtn', x:'Capture turns your layers into pads. Slide a finger over a pad to play with its effects; hold still to lock them.' },
+];
+const GD={ n:0 };
+function guideOpen(){ GD.n=0; $('guide').classList.remove('hidden'); guideShow(); try{ localStorage.setItem('hcl-guide','1'); }catch(e){} }
+function guideClose(){ $('guide').classList.add('hidden'); document.querySelectorAll('.ghl').forEach(x=>x.classList.remove('ghl')); }
+function guideShow(){
+  const g=GUIDE[GD.n], last=GD.n===GUIDE.length-1;
+  document.querySelectorAll('.ghl').forEach(x=>x.classList.remove('ghl'));
+  const vis=id=>{ const e=id && $(id); return e && e.offsetParent ? e : null; };
+  const el=vis(g.id) || vis(g.alt); if(el) el.classList.add('ghl');
+  $('gTitle').textContent=`${GD.n+1}. ${g.t}`;
+  $('gText').textContent=(!vis(g.id) && g.xs ? g.xs : g.x)+(last && matchMedia('(pointer:fine)').matches ? ' Press ? for all keyboard shortcuts.' : '');
+  $('gDots').innerHTML=GUIDE.map((_,k)=>`<i class="${k===GD.n?'on':''}"></i>`).join('');
+  $('gBack').disabled=GD.n===0; $('gNext').textContent=last?'done':'next'; $('gSkip').hidden=last;
+}
+$('gNext').onclick=()=>{ if(GD.n>=GUIDE.length-1) guideClose(); else { GD.n++; guideShow(); } };
+$('gBack').onclick=()=>{ if(GD.n>0){ GD.n--; guideShow(); } };
+$('gSkip').onclick=guideClose;
+$('guideBtn').onclick=()=>{ closeSheets(); guideOpen(); };
+$('keysBtn').onclick=showKeys;
+function guideFirst(){ let seen=null; try{ seen=localStorage.getItem('hcl-guide'); }catch(e){} if(!seen && location.hash!=='#selftest') setTimeout(guideOpen, 700); }
+
 /* controls */
 $('playBtn').onclick=()=>{
   if(!ctx) return;
@@ -6365,11 +6593,14 @@ $('themeBtn').onclick=()=>{ const r=document.documentElement, dark=r.dataset.the
   r.dataset.theme=dark?'light':'dark'; try{localStorage.setItem('hcl-theme',r.dataset.theme);}catch(e){} drawAll(); };
 try{ const th=localStorage.getItem('hcl-theme'); if(th) document.documentElement.dataset.theme=th; }catch(e){}
 addEventListener('keydown',e=>{
-  if(['INPUT','SELECT'].includes(e.target.tagName)||!ctx) return;
+  if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)||!ctx) return;
+  if(e.key==='?'){ e.preventDefault(); showKeys(); return; }
   if(ED.open && (!ED.dock || sFull()==='ed')){ edKey(e); return; }
   // iPad: the docked editor takes the keys that act on its selected notes
   if(ED.dock && ED.sel.size && (['Delete','Backspace','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','q','Q'].includes(e.key) || ((e.metaKey||e.ctrlKey) && 'dD'.includes(e.key)))){ edKey(e); return; }
   if((e.metaKey||e.ctrlKey) && (e.key==='s'||e.key==='S')){ e.preventDefault(); projSaveNow(); return; }
+  if(e.key==='Escape' && !$('xfer').classList.contains('hidden') && !XF.busy){ xferClose(); return; }
+  if(e.key==='Escape' && !$('guide').classList.contains('hidden')){ guideClose(); return; }
   if(e.key==='Escape' && document.querySelector('.fxpop')){ fxPopClose(); return; }
   if(e.key==='Escape' && document.querySelector('.sheet.open')){ closeSheets(); return; }
   if(e.key==='Escape' && SPG.open){ if(!$('spEdit').classList.contains('hidden')) spEditClose(); else closeSongPage(); return; }
@@ -6409,7 +6640,7 @@ async function startApp(){
   restoreLocks();
   if(saved){ master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime(); }
   $('metroChk').checked=S.metro; $('countChk').checked=S.countIn;
-  renderBarsSeg(); renderTempo(); renderTransport(); renderLayers(); renderDetail(); renderGlobal(); renderSync(); renderHC();
+  renderBarsSeg(); renderTempo(); renderTransport(); renderLayers(); renderDetail(); renderGlobal(); renderSync(); renderMidiPage(); renderHC();
   loadHCI();   // the HiChord instruments sampled earlier on this device
   await ctx.resume();
   ctx.onstatechange=()=>{ console.log('audio state', ctx.state); renderAudioStatus(); };
@@ -6425,10 +6656,15 @@ async function startApp(){
    one of yours starts the app (the tap also lets the browser play sound). The project open last time is on top, with "continue". */
 async function startScreen(){
   document.body.classList.add('startmode');
+  try{ await idb(); }catch(e){ STORE_OK=false; }
+  await purgeLeft().catch(()=>{}); await mirrorIn();
   try{ await refreshProjects(); }catch(e){ PRJ.list=[]; }
   try{ START.last=localStorage.getItem('hcl-project'); }catch(e){}
+  // the app's built-in page (no internet) has no history of its own: continue the project open last in the app
+  if(!START.last && MIR.last){ const p=PRJ.list.find(x=>x.id===MIR.last); if(p){ START.last=p.id; try{ localStorage.setItem('hcl-project', p.id); localStorage.setItem(SAVE_KEY, JSON.stringify(p.data)); }catch(e){} } }
   if(!PRJ.list.some(p=>p.id===START.last)) START.last=null;
   renderProjects(); openSheet('projSheet');
+  compatCheck();
 }
 async function startWith(kind, id){
   if(ctx || START.busy) return; START.busy=true;
@@ -6438,6 +6674,7 @@ async function startWith(kind, id){
     if(p) try{ localStorage.setItem('hcl-project', id); localStorage.setItem(SAVE_KEY, JSON.stringify(p.data)); }catch(e){} }
   await startApp();
   START.on=false; document.body.classList.remove('startmode');
+  if(kind!=='recv') guideFirst();
   if(kind==='new'){ if(last || layers.some(Ly=>Ly.events.length)) await newProject(); closeSheets(); }   // no project from last time: the app just made a new one
   else if(kind==='recv'){ renderProjects(); xferReceive(); }
   else { if(id && id!==PRJ.current && PRJ.list.some(x=>x.id===id)) await openProject(id); closeSheets(); }

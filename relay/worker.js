@@ -1,15 +1,16 @@
 /* Looper for HiChord: the share relay.
    GitHub Pages is static, so sending a project from one device to another goes through this small
    Cloudflare Worker. The app uploads one file (the project plus its own sounds, gzipped) and gets a
-   six-character code back; the other device downloads the file with that code and then deletes it.
-   No accounts: the code is the only key. Uploads expire after TTL_HOURS (24) and are removed by
-   the hourly cron at the latest; a receiver deletes the upload as soon as it has it.
+   six-character code back; the other device downloads the file with that code, once: the relay deletes
+   it as it hands it out. No accounts: the code is the only key. Uploads expire after TTL_HOURS (24) and
+   are removed by the hourly cron at the latest.
 
      POST   /share          body: the file         -> 201 {code, expires}
-     GET    /share/<code>   the file                 (404 when unknown or expired)
+     GET    /share/<code>   the file, once            (404 when unknown, expired or already received)
      DELETE /share/<code>   remove it now
-   Limits: MAX_BYTES per upload (413 above it); per IP, RL_SHARE uploads and RL_GET lookups a minute
-   (429), so codes can't be guessed: 31^6 ≈ 887 million codes against 30 tries a minute. */
+   Limits: only gzip files (what the app sends), with a Content-Length of at most MAX_BYTES (411/413/415);
+   per IP, RL_SHARE uploads and RL_GET lookups a minute (429), so codes can't be guessed: 31^6 ≈ 887
+   million codes against 30 tries a minute. When the rate limiter itself fails, requests are refused. */
 
 const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';   // no 0/O, 1/I/L
 const CODE_LEN = 6;
@@ -43,7 +44,7 @@ const json = (obj, status, h) => new Response(JSON.stringify(obj), { status, hea
 async function limited(limiter, req) {
   if (!limiter) return false;   // no rate limit binding (e.g. an older wrangler): no limit
   const ip = req.headers.get('CF-Connecting-IP') || 'local';
-  try { const { success } = await limiter.limit({ key: ip }); return !success; } catch (e) { return false; }
+  try { const { success } = await limiter.limit({ key: ip }); return !success; } catch (e) { return true; }   // can't count: refuse
 }
 
 export default {
@@ -59,11 +60,15 @@ export default {
 
     if (parts.length === 1 && req.method === 'POST') {
       if (await limited(env.RL_SHARE, req)) return json({ error: 'too many uploads, try again in a minute' }, 429, h);
-      const len = Number(req.headers.get('Content-Length') || 0);
+      const lenH = req.headers.get('Content-Length');
+      if (lenH == null || !/^\d+$/.test(lenH)) return json({ error: 'length required' }, 411, h);
+      const len = Number(lenH);
       if (len > max) return json({ error: 'too big', max }, 413, h);
+      if (len < 18) return json({ error: 'empty' }, 400, h);
       const body = await req.arrayBuffer();
       if (body.byteLength > max) return json({ error: 'too big', max }, 413, h);
-      if (body.byteLength < 8) return json({ error: 'empty' }, 400, h);
+      const head = new Uint8Array(body, 0, 3);
+      if (body.byteLength < 18 || head[0] !== 0x1f || head[1] !== 0x8b || head[2] !== 8) return json({ error: 'not a Looper project' }, 415, h);   // gzip, deflate
       let code = null;
       for (let i = 0; i < 8 && !code; i++) { const c = newCode(); if (!(await env.BUCKET.head(c))) code = c; }
       if (!code) return json({ error: 'try again' }, 503, h);
@@ -80,7 +85,10 @@ export default {
       const obj = await env.BUCKET.get(code);
       const exp = obj ? Number(obj.customMetadata?.expires || 0) : 0;
       if (!obj || exp < Date.now()) { if (obj) await env.BUCKET.delete(code); return json({ error: 'unknown or expired code' }, 404, h); }
-      return new Response(obj.body, { headers: { ...h, 'Content-Type': 'application/octet-stream', 'Content-Length': String(obj.size), 'X-Expires': String(exp) } });
+      // one download: read it, delete it, hand it out
+      const data = await obj.arrayBuffer();
+      await env.BUCKET.delete(code);
+      return new Response(data, { headers: { ...h, 'Content-Type': 'application/octet-stream', 'Content-Length': String(data.byteLength), 'X-Expires': String(exp) } });
     }
     return json({ error: 'not found' }, 404, h);
   },
