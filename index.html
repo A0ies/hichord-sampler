@@ -199,6 +199,8 @@ button.icon svg{width:20px;height:20px;fill:currentColor}
 .layer .nmwrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .layer .nm{flex:none}
 .layer .tag{display:none;font:700 10px var(--mono);letter-spacing:.08em;color:var(--lc)}
+.layer .tag.t-lock{display:inline-flex;align-items:center;min-height:0;height:20px;padding:0 7px;margin-left:6px;border-radius:6px;background:var(--lc);color:#fff;box-shadow:none;text-transform:lowercase}
+.layer .tag.t-lock::before{display:none}
 .layer.sel{background:color-mix(in srgb,var(--lc) 17%,var(--panel));border-color:var(--lc)}
 .layer.sel .tag.t-target{display:block}
 .layer.sel.recording{background:color-mix(in srgb,var(--rec) 15%,var(--panel));border-color:var(--rec)}
@@ -2015,7 +2017,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-15.116';
+const PAGE_VERSION='2026-11-15.117';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3451,12 +3453,12 @@ let saveT;
 function sessionData(){
   return { v:1,
     S:{bpm:S.bpm,bars:S.bars,metro:S.metro,countIn:S.countIn,sel:S.sel,followClock:S.followClock,sendTempo:S.sendTempo,hcTransport:S.hcTransport,input:S.input,recOffset:S.recOffset,revSize:S.revSize,revLevel:S.revLevel,dlyDiv:S.dlyDiv,dlyFb:S.dlyFb,drive:S.drive,volume:S.volume,tab:S.tab},
-    layers: layers.map(Ly=>Object.fromEntries(LAYER_KEYS.map(k=>[k,Ly[k]]))), song: songData() };
+    layers: layers.map((Ly,i)=>({ ...Object.fromEntries(LAYER_KEYS.map(k=>[k,Ly[k]])), lock: CAP.lock.get(i)||null })), song: songData() };   // lock: a capture effect held in place
 }
 /* history: what counts as a change for undo (not which layer or tab you look at) */
 /* notes and on/off live per part in the song, so switching parts is not a change */
 function histData(d){ const S2={...d.S}; delete S2.sel; delete S2.tab; delete S2.metro; delete S2.countIn;
-  const L=d.layers.map(l=>{ const c={...l}; delete c.events; delete c.mute; return c; });
+  const L=d.layers.map(l=>{ const c={...l}; delete c.events; delete c.mute; delete c.lock; return c; });   // locking an effect is playing, not an edit to undo
   const sg = d.song ? {parts:d.song.parts, order:d.song.order} : null;
   return JSON.stringify({S:S2, layers:L, song:sg}); }
 const HIST={undo:[],redo:[],last:null,applying:false};
@@ -3670,7 +3672,7 @@ function applySession(d, sounds){
     Ly.events.forEach(e=>{ if(!e.id) e.id=evId++; evId=Math.max(evId,e.id+1); if(e.chord!=null) chordSeq=Math.max(chordSeq,e.chord+1); });
     applyLayer(Ly);
   });
-  layers.forEach(ensureChords);
+  layers.forEach(ensureChords); restoreLocks();
   setSong(d.song, true); renderParts();
   if(!layers.some(l=>l.shown)) layers[0].shown=true;
   if(!layers[S.sel] || !layers[S.sel].shown) S.sel=layers.findIndex(l=>l.shown);
@@ -4106,7 +4108,7 @@ function renderLayers(){
         <span class="num">${i+1}</span>
         <div class="nmwrap">
           <span class="nm">${INST_ICON[Ly.inst]||''} ${instName(Ly)}</span>
-          <span class="meta"><span class="cnt" id="cnt${i}">${noteCount(Ly)}</span><span class="tag t-target">● rec</span><span class="tag t-rec">● recording</span></span>
+          <span class="meta"><span class="cnt" id="cnt${i}">${noteCount(Ly)}</span>${CAP.lock.has(i)?`<button class="tag t-lock" data-act="unlock" aria-label="Effect of layer ${i+1} locked: tap to release it">fx locked ×</button>`:''}<span class="tag t-target">● rec</span><span class="tag t-rec">● recording</span></span>
         </div>
         <button class="ms m ${Ly.mute?'on':''}" data-act="mute" aria-label="Mute layer ${i+1}">M</button>
         <button class="ms s ${Ly.solo?'on':''}" data-act="solo" aria-label="Solo layer ${i+1}">S</button>
@@ -4228,6 +4230,7 @@ function renderLayerMeta(){ layers.forEach((Ly,i)=>{ const c=$('cnt'+i); if(c) c
 $('layers').addEventListener('click',e=>{
   const el=e.target.closest('.layer'); if(!el) return; const i=+el.dataset.i, Ly=layers[i];
   const act=e.target.closest('[data-act]')?.dataset.act;
+  if(act==='unlock'){ CAP.lock.delete(i); fxReset(Ly); lockChanged(); toast(`effect of layer ${i+1} released`); return; }
   if(act==='mute'){ Ly.mute=!Ly.mute; layers.forEach(applyLayer); renderLayers(); save(); return; }
   if(act==='solo'){ Ly.solo=!Ly.solo; layers.forEach(applyLayer); renderLayers(); save(); return; }
   if(act==='open'){ selectLayer(i); openSheet('layerSheet'); return; }
@@ -4712,7 +4715,6 @@ let sPadLast=-1;
 function sPadRender(){
   const box=$('sPad'); if(!document.body.dataset.studio){ box.innerHTML=''; return; }
   const i=S.sel, Ly=layers[i]; if(!Ly) return;   // the start screen: no layers yet
-  if(sPadLast!==i && sPadLast>=0 && CAP.lock.has(sPadLast) && !CAP.open){ CAP.lock.delete(sPadLast); fxReset(layers[sPadLast]); }
   sPadLast=i;
   const full=sFull()==='cp';
   box.innerHTML=capTile(Ly,i,false,`<button class="icon sfull" data-full="cp" aria-label="${full?'Back from full screen':'Capture pad full screen'}">${full?IC_MIN:IC_MAX}</button>`);
@@ -5438,14 +5440,23 @@ function gateOff(Ly){
   Ly.fxGate.gain.cancelScheduledValues(ctx.currentTime); Ly.fxGate.gain.setTargetAtTime(1, ctx.currentTime, 0.01);
 }
 
-var CAP={open:false, touch:new Map(), lock:new Map()};   // lock: layer → where its effect is locked {x,y,y0,fx,fy,label}   // var: applyFx asks it before this line has run
+var CAP={open:false, touch:new Map(), lock:new Map()};
+// the locks a session was saved with: back in place, sounding (also while no pad shows)
+function restoreLocks(){
+  const was=new Set(CAP.lock.keys()); CAP.lock.clear(); CAP.lastLock=null;
+  layers.forEach((Ly,i)=>{ const lo=Ly.lock; delete Ly.lock;
+    if(lo && typeof lo.x==='number' && capFx(Ly).length){ CAP.lock.set(i, lo); lo.label=fxSet(Ly, lo.x, lo.y, lo.y0) || lo.label; CAP.lastLock=i; } });
+  was.forEach(i=>{ if(!CAP.lock.has(i) && layers[i]) fxReset(layers[i]); });   // the project before had locks this one hasn't
+}
+// a lock was set, moved or released: keep it with the project and show it on the layer card
+function lockChanged(){ save(); if(!CAP.open) renderLayers(); }   // lock: layer → where its effect is locked {x,y,y0,fx,fy,label}   // var: applyFx asks it before this line has run
 function openCapture(){
   if(!ctx) return;
   closeSheets(); if(S.rec) setRec(false); SONG.pos=SONG.order.indexOf(SONG.cur); SONG.jump=null; SONG.doneAt=null; CAP.open=true; document.body.classList.add('cap'); $('capMode').classList.remove('hidden'); $('captureBtn').classList.add('on'); renderTransport();
   renderCaptureMode();
 }
 function closeCapture(){
-  CAP.touch.forEach(t=>{ clearTimeout(t.timer); clearTimeout(t.st); }); CAP.touch.clear(); CAP.lock.clear(); layers.forEach(fxReset);
+  CAP.touch.forEach(t=>{ clearTimeout(t.timer); clearTimeout(t.st); }); CAP.touch.clear(); layers.forEach((Ly,i)=>{ if(!CAP.lock.has(i)) fxReset(Ly); });   // locked effects stay locked
   if(bouncer) bouncer.stop();   // leaving capture mode saves a running output recording
   document.querySelector('.cfxmenu')?.remove();
   CAP.open=false; requestAnimationFrame(fabLiftCheck); document.body.classList.remove('cap'); $('capMode').classList.add('hidden'); $('captureBtn').classList.remove('on');
@@ -5516,22 +5527,24 @@ function capWire(grid, capEl, rerender){
   // With a mouse in the web app there is no second hand for the key: after 1 s the effect locks and a full ring shows it.
   const arm=(t,e)=>{ t.sx=[e.clientX,e.clientY]; clearTimeout(t.st); t.el.classList.remove('arming');
     t.st=setTimeout(()=>{
-      if(t.mouse){ if(!t.at) return; t.ready=true; CAP.lock.set(t.i, t.at); CAP.lastLock=t.i; t.el.classList.add('locked','lockring'); setLockKey(t.el,true); return; }
+      if(t.mouse){ if(!t.at) return; t.ready=true; CAP.lock.set(t.i, t.at); CAP.lastLock=t.i; t.el.classList.add('locked','lockring'); setLockKey(t.el,true); lockChanged(); return; }
       void t.el.offsetWidth; t.el.classList.add('arming');
       t.st=setTimeout(()=>{ t.ready=true; t.el.classList.remove('arming');
         if(!CAP.lock.has(t.i)) setLockKey(t.el,false); t.el.classList.add('lockable'); if(navigator.vibrate) navigator.vibrate(12); }, 1000);
     }, 1000); };
   const start=(t,e)=>{ if(t.active) return; t.active=true; clearTimeout(t.timer); t.el.classList.add('touch'); if(navigator.vibrate) navigator.vibrate(8); apply(t, t.last||e); };
   // the lock key: press with another finger to lock what you hold, press a locked one to release it
-  const lockKey=(i)=>{ const el=grid.querySelector(`.ctile[data-i="${i}"]`), Ly=layers[i]; if(!el) return;
+  const lockKey=(i)=>{ const el=grid.querySelector(`.ctile[data-i="${i}"]`), Ly=layers[i];
     if(CAP.lock.has(i)){
-      CAP.lock.delete(i); el.classList.remove('locked'); setLockKey(el,false);
-      const t=[...CAP.touch.values()].find(o=>o.i===i && o.active);
-      if(!t){ el.classList.remove('lockable'); fxReset(Ly); el.querySelector('.cfx').textContent=capHow(Ly); }
-      return;
+      CAP.lock.delete(i); const t=[...CAP.touch.values()].find(o=>o.i===i && o.active);
+      if(el){ el.classList.remove('locked'); setLockKey(el,false); if(!t){ el.classList.remove('lockable'); el.querySelector('.cfx').textContent=capHow(Ly); } }
+      if(!t) fxReset(Ly);
+      lockChanged(); return;
     }
+    if(!el) return;
     const t=[...CAP.touch.values()].find(o=>o.i===i && o.active && o.at); if(!t) return;
     CAP.lock.set(i, t.at); el.classList.add('locked'); setLockKey(el,true); if(navigator.vibrate) navigator.vibrate(20);
+    lockChanged();
   };
   grid._lockKey=lockKey;   // the lock key in the bottom-left stack
   // the effect chip and its menu are keys, not part of the pad
@@ -5574,7 +5587,7 @@ function capWire(grid, capEl, rerender){
     if(t.active){
       if(![...CAP.touch.values()].some(o=>o.i===t.i && o.active)){
         t.el.classList.remove('touch','arming','lockable','lockring');
-        if(CAP.lock.has(t.i)) t.el.querySelector('.cfx').textContent=CAP.lock.get(t.i).label;   // locked: the effect stays where you left it
+        if(CAP.lock.has(t.i)){ t.el.querySelector('.cfx').textContent=CAP.lock.get(t.i).label; save(); }   // locked: the effect stays where you left it (and maybe moved)
         else { fxReset(Ly); t.el.querySelector('.cfx').textContent=capHow(Ly); }   // back to the hint it showed before
       }
     } else if(e.type==='pointerup'){
@@ -6321,6 +6334,7 @@ async function startApp(){
   layers[S.sel].shown=true;
   layers.forEach(applyLayer); layers.forEach(ensureChords);
   setSong(saved && saved.song, true); renderParts();
+  restoreLocks();
   if(saved){ master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime(); }
   $('metroChk').checked=S.metro; $('countChk').checked=S.countIn;
   renderBarsSeg(); renderTempo(); renderTransport(); renderLayers(); renderDetail(); renderGlobal(); renderSync(); renderHC();
