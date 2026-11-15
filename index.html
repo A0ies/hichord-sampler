@@ -649,6 +649,8 @@ body:not(.studio) .ownsnd .instdef .lbl{display:inline}
 #instGrid .ownrow .inst.own .ii{width:18px;height:18px}
 #instGrid .ownrow .inst.own.micrec{background:var(--rec);border-color:var(--rec)}
 #instGrid .ownrow .inst .micmeter{width:40px}
+@media (max-width:440px){ #instGrid .ownrow{gap:6px} #instGrid .ownrow>span{display:none} #instGrid .ownrow .inst.own{padding:6px 6px;gap:5px;font-size:11px;min-width:0} #instGrid .ownrow .inst .micmeter{width:24px} }
+@media (max-width:380px){ .hcrow{gap:8px} .hcrow .helpbtn{width:34px;min-height:34px} .hcrow .stat{white-space:nowrap;overflow:hidden;flex:1} .hcrow .stat #hcStatus{overflow:hidden;text-overflow:ellipsis} }
 /* small phones: no group names (the gaps keep the groups apart) */
 /* small phones (iPhone SE): the keys as chips, icon beside the name */
 @media (max-width:639px) and (max-height:700px){
@@ -840,6 +842,21 @@ body.projopen .pbar{display:none}
 .keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:12px}
 .keys dt{font-family:var(--mono);font-weight:600;white-space:nowrap} .keys dd{margin:0;color:var(--dim)}
 .keys h4{grid-column:1/-1;margin:6px 0 0;font-family:var(--sans);font-size:13px}
+#editor.isvocal .edroll{opacity:.2;pointer-events:none}
+/* the microphone listens: a card near the top (sampling or a vocal take) */
+.miccard{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--st) + 62px);z-index:36;width:min(440px,calc(100% - 32px));box-sizing:border-box;
+  display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;border-radius:16px;background:var(--panel);box-shadow:0 0 0 2px var(--rec),0 16px 40px rgba(0,0,0,.3)}
+.miccard.hidden{display:none}
+.miccard .mdot{width:12px;height:12px;border-radius:6px;background:var(--rec);flex:none;animation:mdot 1s ease-in-out infinite}
+@keyframes mdot{50%{opacity:.25}}
+.miccard .mtx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.miccard .mtx b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.miccard .mtx small{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.miccard .micmeter{width:64px;height:6px;border-radius:3px;background:var(--line);overflow:hidden;flex:none}
+.miccard .micmeter i{display:block;height:100%;width:0;background:var(--rec)}
+.miccard button{min-height:40px;padding:0 14px;flex:none}
+@media (max-width:420px){ .miccard .micmeter{width:36px} }
+@media (orientation:landscape) and (max-height:560px){ .miccard{top:calc(var(--st) + 8px)} }
 /* first steps: a card near the top, the key it talks about pulses */
 .guide{position:fixed;left:0;right:0;top:calc(var(--st) + 64px);z-index:34;display:flex;justify-content:center;padding:0 16px;pointer-events:none}
 .guide.hidden{display:none}
@@ -2062,6 +2079,7 @@ body.studio .tbar .pos b{font-size:26px}
 <div class="hcs hidden" id="hcs" role="dialog" aria-modal="true" aria-label="Sample your HiChord"><div class="hcsbox" id="hcsBox"></div></div>
 <!-- sending a project to another device: a six-character code through the share relay (relay/) -->
 <div class="hcs xfer hidden" id="xfer" role="dialog" aria-modal="true" aria-label="Share a project"><div class="hcsbox" id="xferBox"></div></div>
+<div class="miccard hidden" id="micCard" role="status" aria-live="polite"><span class="mdot"></span><div class="mtx"><b id="micTitle"></b><small id="micSub"></small></div><span class="micmeter"><i></i></span><button id="micStop" class="primary">stop</button></div>
 <div class="guide hidden" id="guide" role="dialog" aria-label="First steps"><div class="gbox">
   <div class="gdots" id="gDots"></div><h3 id="gTitle"></h3><p id="gText"></p>
   <div class="row"><button id="gSkip">skip</button><span></span><button id="gBack">back</button><button id="gNext" class="primary">next</button></div>
@@ -2073,7 +2091,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-15.120';
+const PAGE_VERSION='2026-11-15.121';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2242,6 +2260,7 @@ function newLayerData(i){
     gateDiv: 4,   // the gate's note: chops per beat (1 = 1/4, 2 = 1/8, 4 = 1/16, 8 = 1/32, 3 = 1/8t, 6 = 1/16t)
     fxs: [],   // effects that stay on: [{k, v}] with v from 0 to 1
     fx: isDrum(inst) ? 'gate' : 'lp',   // what holding and dragging this layer does in capture mode
+    vocal:false, vname:null, vox:null,   // a vocal layer: your voice as audio; vox = the take of the part you are on
     shown:false };   // layers appear in the list once you add them
 }
 function attachNodes(Ly){
@@ -2374,6 +2393,7 @@ function setTempo(bpm, fromClock){
   if(Math.abs(bpm-S.bpm)<0.05) return;
   if(S.playing){ const now=ctx.currentTime; b0=beatAt(now); t0=now; }
   S.bpm=bpm; updateDelayTime(); renderTempo();
+  voxRestartAll();   // takes play at the new speed from here
   if(fromClock){ layers.forEach(Ly=>{ if(Ly.gateFx) Ly.gateFx.osc.frequency.setTargetAtTime(S.bpm/60*Ly.gateFx.perBeat, ctx.currentTime, 0.05); }); return; }   // following the clock: no undo step, the gate just follows
   gateResync();
   if(S.sendTempo && HC.connected && !clockLive()) hcSendTempo();
@@ -2398,12 +2418,19 @@ async function startTransport(withCountIn){
 function stopTransport(){
   if(!S.playing) return;
   if(S.rec) setRec(false);
-  S.playing=false; stopAllVoices(); try{ HC.out && HC.out.clear && HC.out.clear(); }catch(e){} hcAllOff(); renderTransport(); drawPos(); drawAll();
+  S.playing=false; stopAllVoices(); layers.forEach(Ly=>voxStopAt(Ly, ctx.currentTime)); try{ HC.out && HC.out.clear && HC.out.clear(); }catch(e){} hcAllOff(); renderTransport(); drawPos(); drawAll();
 }
 function setRec(on){
+  // a sample layer still without its sound: ● records the sample with the microphone (the song stays quiet)
+  if(mic && mic.rec && !mic.onBuf){ if(on) toggleMic(); return; }
   if(on===S.rec) return;
   if(on && CAP.open){ toast('Capture mode records the output only: use rec out'); return; }
   const Ly=selLayer();
+  if(on && sampleWaiting(Ly)){ toggleMic(); return; }
+  // a vocal layer: ● records your voice over the loop
+  if(on && Ly.vocal){ if(mic){ toast('the microphone is busy'); return; }
+    S.rec=true; voxRecStart(Ly); if(!S.playing) startTransport(S.countIn); renderTransport(); renderLayers(); return; }
+  if(!on && VXR.on){ S.rec=false; voxRecStop(); renderTransport(); renderLayers(); return; }
   if(on){
     S.rec=true; Ly.takes=(Ly.takes||0)+1; S.curTake=Ly.takes;
     if(!S.playing) startTransport(S.countIn);
@@ -2447,6 +2474,7 @@ function scheduleRange(a, b){
   if(b<=-EARLY) return;
   const L=loopLen(), lo=Math.max(a,-EARLY);
   for(const Ly of layers){
+    if(Ly.vocal){ schedVox(Ly, a, b); continue; }   // muting a take works through its gain, so it can come back mid-pass
     if(!audible(Ly) || !Ly.events.length) continue;
     const evs = effEvents(Ly);
     for(let n=Math.floor(lo/L); n*L<b; n++){
@@ -2471,7 +2499,7 @@ function click(t, accent, countIn){
   if(t < ctx.currentTime) return;
   const o=ctx.createOscillator(), g=ctx.createGain();
   o.frequency.value = accent ? 1760 : 1180;
-  const lvl = (countIn?0.5:0.28)*(accent?1:0.7)*Math.min(1,S.volume)*(mic?MIC_DUCK:1);
+  const lvl = (countIn?0.5:0.28)*(accent?1:0.7)*Math.min(1,S.volume)*(VXR.on?MIC_DUCK:1);
   g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(lvl,t+0.002); g.gain.exponentialRampToValueAtTime(0.0001,t+0.05);
   o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+0.06);   // straight out: a monitor, not part of what rec out records
 }
@@ -2532,6 +2560,7 @@ function liveOn(note, vel, ch){
   if(ctx.state!=='running') ctx.resume();
   const Ly=selLayer();
   midiSeen(note, vel);
+  if(Ly.vocal) return;   // a vocal layer has no instrument to play
   if(monoLayer(Ly, ch)){
     // the notes of one chord arrive a few milliseconds apart, in any order: rework the target as they come in
     let c=Ly.mono; const now=performance.now();
@@ -2620,7 +2649,11 @@ function undoTake(){
   toast(`Removed the last take (${n-Ly.events.length} notes)`); renderLayers(); save();
 }
 function clearLayer(){
-  const Ly=selLayer(); if(!Ly.events.length){ toast('this layer has no notes'); return; }
+  const Ly=selLayer();
+  if(Ly.vocal){ if(!Ly.vox){ toast('this layer has no take in this part'); return; }
+    flushSave(); voxStopAt(Ly, ctx.currentTime); Ly.vox=null; syncPart(); closeSheets(); renderLayers(); renderDetail(); writeSave();
+    toast(`take of layer ${S.sel+1} cleared in ${partName(SONG.cur)}`, 'undo', undo); return; }
+  if(!Ly.events.length){ toast('this layer has no notes'); return; }
   flushSave();
   Ly.events=[]; Ly.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05));
   if(ED.li===S.sel){ ED.hist=[]; ED.fut=[]; ED.sel.clear(); }
@@ -2957,13 +2990,11 @@ async function toggleMic(onBuf){
     stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
     const srcN=ctx.createMediaStreamSource(stream), an=ctx.createAnalyser(); an.fftSize=1024; srcN.connect(an);
     const rec=new MediaRecorder(stream), chunks=[]; rec.ondataavailable=e=>chunks.push(e.data);
-    mic={rec,Ly:selLayer(),started:performance.now(),onBuf}; renderDetail(); renderNewMic();
-    // the song plays along while you record, quieter, so you can sample in time without it filling the recording
-    if(!S.playing){ mic.autoPlay=true; const m=mic; startTransport(false).then(()=>{ if(mic!==m && S.playing) stopTransport(); }); }   // stopped before the song got going: stop it too
-    master.gain.setTargetAtTime(S.volume*MIC_DUCK, ctx.currentTime, 0.08);
+    // a sampler records just the sound: the song stops, so nothing of it ends up in the sample
+    if(S.playing) stopTransport();
+    mic={rec,Ly:selLayer(),started:performance.now(),onBuf}; renderDetail(); renderNewMic(); renderTransport(); renderMicCard();
     rec.onstop=async()=>{
-      stream.getTracks().forEach(x=>x.stop()); srcN.disconnect(); const target=mic.Ly, done=mic.onBuf, cancel=mic.cancel, auto=mic.autoPlay; mic=null; renderNewMic(); setAudioSessionType(playbackSession());
-      master.gain.setTargetAtTime(S.volume, ctx.currentTime, 0.08); if(auto && S.playing) stopTransport();
+      stream.getTracks().forEach(x=>x.stop()); srcN.disconnect(); const target=mic.Ly, done=mic.onBuf, cancel=mic.cancel; mic=null; renderNewMic(); renderTransport(); renderMicCard(); setAudioSessionType(playbackSession());
       // a sample layer (or one still empty) keeps its name; any other layer gets the next sample number
       const keep = target.inst==='custom' && target.customName && (!target.buffer || /^sample \d+$/.test(target.customName));
       try{ const b=await ctx.decodeAudioData(await new Blob(chunks).arrayBuffer()); const tr=trimSilence(b);
@@ -2974,9 +3005,163 @@ async function toggleMic(onBuf){
     rec.start();
     const meter=()=>{ if(!mic) return; const a=new Float32Array(an.fftSize); an.getFloatTimeDomainData(a); let p=0; for(const x of a) p=Math.max(p,Math.abs(x));
       document.querySelectorAll('#micMeter i,.micmeter i').forEach(m=>m.style.width=Math.min(100,p*140)+'%');
-      if(performance.now()-mic.started>8000) mic.rec.stop(); else requestAnimationFrame(meter); };
+      const el=(performance.now()-mic.started)/1000; if($('micSub') && !mic.onBuf) $('micSub').textContent=`${el.toFixed(1)} s of ${MIC_MAX} · tap ● when done`;
+      if(el>MIC_MAX) mic.rec.stop(); else requestAnimationFrame(meter); };
     meter();
-  }catch(e){ if(stream) stream.getTracks().forEach(x=>x.stop()); setAudioSessionType(playbackSession()); if(mic){ if(mic.autoPlay && S.playing) stopTransport(); mic=null; } renderNewMic(); renderDetail(); master.gain.setTargetAtTime(S.volume, ctx.currentTime, 0.05); toast('No access to the microphone'); }
+  }catch(e){ if(stream) stream.getTracks().forEach(x=>x.stop()); setAudioSessionType(playbackSession()); mic=null; renderNewMic(); renderDetail(); renderTransport(); renderMicCard(); toast('No access to the microphone'); }
+}
+const MIC_MAX=20;   // seconds a sample can be (like a file)
+// an own-sound layer that has no sound yet (a new "sample" layer): ● records its sample
+const sampleWaiting = Ly => Ly && Ly.inst==='custom' && !Ly.buffer;
+/* the card that says the microphone listens: sampling (the song is quiet) or a vocal take (over the song) */
+function renderMicCard(){
+  const c=$('micCard'); if(!c) return;
+  const smp = mic && mic.rec && !mic.onBuf, vx = VXR.on;
+  c.classList.toggle('hidden', !smp && !vx); if(!smp && !vx) return;
+  c.classList.toggle('vox', !!vx);
+  if(smp){ $('micTitle').textContent=`mic listening · ${mic.Ly.customName||'sample'}`; $('micSub').textContent='make your sound, then tap ●'; $('micStop').hidden=false; }
+  else { $('micTitle').textContent=`recording · ${instName(VXR.Ly)} · ${partName(SONG.cur)}`; $('micSub').textContent='sing with the loop · ● keeps the take'; $('micStop').hidden=false; }
+}
+$('micStop').onclick=()=>{ if(mic && mic.rec) mic.rec.stop(); else if(VXR.on) setRec(false); };
+
+/* ============ vocal layers: your voice as audio, one take per song part ============
+   A take is one pass of the loop (as long as the loop was when you sang it), recorded raw from the microphone
+   with the time of every block, so it lands on the beat (output and input latency, and Settings → Sync's
+   recording offset, are taken off). It plays from the start of each pass through the layer's filter, effects,
+   volume, pan and sends; a shorter take (the loop was doubled since) repeats within the pass. A tempo change
+   plays it faster or slower (and so higher or lower). Takes are kept by id: undo switches between them. */
+const VOX=new Map();   // take id -> {buffer, bpm, beats, peaks}
+const VXR={ on:false, chunks:[] };
+const voxTake = Ly => Ly && Ly.vocal && Ly.vox ? VOX.get(Ly.vox)||null : null;
+const VOX_WORKLET=`registerProcessor('vox-tap', class extends AudioWorkletProcessor{
+  constructor(){ super(); this.b=new Float32Array(2048); this.n=0; this.t=0; }
+  process(ins){ const x=ins[0]&&ins[0][0]; if(x){ if(this.n===0) this.t=currentTime; this.b.set(x,this.n); this.n+=x.length;
+    if(this.n>=2048){ this.port.postMessage({t:this.t, d:this.b}); this.b=new Float32Array(2048); this.n=0; } } return true; } });`;
+function voxStopAt(Ly, t){
+  if(!Ly.vsrc || !Ly.vsrc.length) return;
+  Ly.vsrc.forEach(x=>{ if(x.end<=t) return; try{ x.g.gain.cancelScheduledValues(t); x.g.gain.setTargetAtTime(0, t, 0.004); x.src.stop(t+0.03); }catch(e){} });
+  Ly.vsrc=[];
+}
+// play the take for the passes that start between beats a and b; mid: also the pass already under way at a
+function schedVox(Ly, a, b, mid){
+  const tk=voxTake(Ly); if(!tk || Ly.vrec || !ctx) return;
+  const L=loopLen(), tb=Math.min(tk.beats, L), nud=(Ly.nudge||0)/1000*S.bpm/60;
+  for(let n=Math.max(0,Math.floor((a-nud)/L)-1); n*L+nud<b; n++){
+    for(let j=0; j*tb<L-1e-6; j++){
+      const s=n*L+j*tb+nud, e=n*L+Math.min(L,(j+1)*tb)+nud;
+      let st; if(s>=a && s<b) st=s; else if(mid && s<a && e>a+0.02) st=a; else continue;
+      let when=timeAt(st);
+      if(when<ctx.currentTime){ st+=(ctx.currentTime-when)*S.bpm/60; when=ctx.currentTime; }
+      const durB=e-st; if(durB<=0.02) continue;
+      const src=ctx.createBufferSource(); src.buffer=tk.buffer; src.playbackRate.value=S.bpm/tk.bpm;
+      const g=ctx.createGain(), endT=when+durB*60/S.bpm;
+      g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(1,when+0.005); g.gain.setValueAtTime(1,Math.max(when+0.005,endT-0.006)); g.gain.linearRampToValueAtTime(0,endT);
+      src.connect(g).connect(Ly.filter);
+      try{ src.start(when, (st-s)*60/tk.bpm, durB*60/tk.bpm+0.01); }catch(err){ continue; }
+      const x={src,g,end:endT}; (Ly.vsrc||(Ly.vsrc=[])).push(x);
+      src.onended=()=>{ if(Ly.vsrc) Ly.vsrc=Ly.vsrc.filter(y=>y!==x); };
+      flash(Ly);
+    }
+  }
+}
+// the take changed (or the tempo, or the part) while playing: what plays now, from where the loop is
+function voxRestart(Ly){
+  if(!Ly.vocal || !S.playing || !ctx) return;
+  voxStopAt(Ly, ctx.currentTime);
+  const nb=beatAt(ctx.currentTime+0.02); if(schedBeat>nb) schedVox(Ly, nb, schedBeat, true);
+}
+const voxRestartAll = () => { if(S.playing) layers.forEach(voxRestart); };
+async function voxRecStart(Ly){
+  Object.assign(VXR,{ on:true, Ly, chunks:[], bpm:S.bpm, L:loopLen(), peak:0, level:0 });
+  Ly.vrec=true; voxStopAt(Ly, ctx.currentTime);
+  master.gain.setTargetAtTime(S.volume*MIC_DUCK, ctx.currentTime, 0.08);   // the song plays along, quieter, so less of it ends up in the take
+  renderMicCard();
+  setAudioSessionType('play-and-record');
+  let stream=null;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    if(!VXR.on || VXR.Ly!==Ly){ stream.getTracks().forEach(t=>t.stop()); return; }   // stopped while asking
+    const src=ctx.createMediaStreamSource(stream), sink=ctx.createGain(); sink.gain.value=0;
+    const onBlock=(t,d)=>{ if(!VXR.on) return;
+      const lat=(ctx.outputLatency||0)+(ctx.baseLatency||0)+S.recOffset/1000;
+      VXR.chunks.push({ b:beatAt(t-lat), d }); let p=0; for(let i=0;i<d.length;i+=4) p=Math.max(p,Math.abs(d[i])); VXR.level=p; VXR.peak=Math.max(VXR.peak,p); };
+    let node;
+    if(ctx.audioWorklet && window.AudioWorkletNode){
+      if(!VXR.mod) VXR.mod=ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([VOX_WORKLET],{type:'application/javascript'})));
+      await VXR.mod;
+      node=new AudioWorkletNode(ctx,'vox-tap',{numberOfInputs:1,numberOfOutputs:1,channelCount:1,channelCountMode:'explicit'});
+      node.port.onmessage=e=>onBlock(e.data.t, e.data.d);
+    } else { node=ctx.createScriptProcessor(2048,1,1); node.onaudioprocess=e=>onBlock(e.playbackTime-2048/ctx.sampleRate, e.inputBuffer.getChannelData(0).slice()); }
+    src.connect(node); node.connect(sink); sink.connect(ctx.destination);
+    Object.assign(VXR,{ stream, src, node, sink });
+    if(!VXR.on) voxTeardown();
+    const meter=()=>{ if(!VXR.on) return; document.querySelectorAll('#micCard .micmeter i').forEach(m=>m.style.width=Math.min(100,VXR.level*140)+'%'); requestAnimationFrame(meter); }; meter();
+  }catch(e){ console.warn('vocal mic', e); if(stream) stream.getTracks().forEach(t=>t.stop());
+    VXR.on=false; Ly.vrec=false; S.rec=false; master.gain.setTargetAtTime(S.volume, ctx.currentTime, 0.05); setAudioSessionType(playbackSession());
+    renderMicCard(); renderTransport(); renderLayers(); toast('No access to the microphone'); }
+}
+function voxTeardown(){
+  try{ VXR.src && VXR.src.disconnect(); VXR.node && VXR.node.disconnect(); VXR.sink && VXR.sink.disconnect(); }catch(e){}
+  if(VXR.node && VXR.node.port) VXR.node.port.onmessage=null;
+  if(VXR.stream) VXR.stream.getTracks().forEach(t=>t.stop());
+  VXR.src=VXR.node=VXR.sink=VXR.stream=null;
+}
+function voxRecStop(){
+  if(!VXR.on) return; VXR.on=false;
+  const Ly=VXR.Ly; Ly.vrec=false; voxTeardown();
+  master.gain.setTargetAtTime(S.volume, ctx.currentTime, 0.08); setAudioSessionType(playbackSession()); renderMicCard();
+  const ch=VXR.chunks, L=VXR.L, bpm=VXR.bpm, sr=ctx.sampleRate; VXR.chunks=[];
+  const done = msg => { toast(msg); voxRestart(Ly); };
+  if(!ch.length || VXR.peak<0.003) return done('No sound came in from the microphone');
+  // the pass you sang: the one under way, unless it only just began (less than a bar): then the one before
+  const first=Math.max(0,ch[0].b), last=ch[ch.length-1], endB=last.b+last.d.length/sr*bpm/60;
+  let n=Math.floor(endB/L); if(endB-n*L<4 && n-1>=Math.floor(first/L)) n--;
+  if(n<0) return done('Nothing was recorded: sing after the count-in');
+  const len=Math.round(L*60/bpm*sr), out=new Float32Array(len);
+  for(const c of ch){ const o=Math.round((c.b-n*L)*60/bpm*sr); for(let k=0;k<c.d.length;k++){ const q=o+k; if(q>=0 && q<len) out[q]=c.d[k]; } }
+  let pk=0; for(let k=0;k<len;k+=4) pk=Math.max(pk,Math.abs(out[k]));
+  if(pk<0.003) return done('That pass was silent: no take kept');
+  const f=Math.min(len>>1, Math.round(sr*0.004)); for(let k=0;k<f;k++){ out[k]*=k/f; out[len-1-k]*=k/f; }   // no clicks at the seam
+  const buf=ctx.createBuffer(1,len,sr); buf.copyToChannel(out,0);
+  const id='v'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  VOX.set(id,{ buffer:buf, bpm, beats:L }); voxStore(id);
+  Ly.vox=id; syncPart(); renderLayers(); renderDetail(); writeSave(); voxRestart(Ly);
+  toast(`take kept in ${partName(SONG.cur)} · undo brings back the one before`, 'undo', undo);
+}
+/* stored apart from the project, by id ('vox:<id>', 16-bit); takes no project uses are cleared when the app starts */
+function voxStore(id){
+  const t=VOX.get(id); if(!t) return;
+  const r=Object.assign(soundRec('take', t.buffer.sampleRate, [t.buffer.getChannelData(0)]), { bpm:t.bpm, beats:t.beats });
+  dbDo('sounds','readwrite',st=>st.put(r, 'vox:'+id)).catch(e=>{ console.warn('take save', e); setAlert('save','could not save the vocal take — storage may be full'); });
+}
+function voxFromRec(r){ const f=soundFloat(r); const b=ctx.createBuffer(1, f.channels[0].length, f.sampleRate); b.copyToChannel(f.channels[0],0); return { buffer:b, bpm:r.bpm||S.bpm, beats:r.beats||loopLen() }; }
+const voxIdsOf = d => { const ids=new Set(); ((d&&d.song&&d.song.parts)||[]).forEach(p=>(p.vox||[]).forEach(x=>{ if(typeof x==='string') ids.add(x); })); ((d&&d.layers)||[]).forEach(l=>{ if(typeof l.vox==='string') ids.add(l.vox); }); return ids; };
+async function voxLoadAll(){
+  if(!ctx) return; const ids=new Set(); SONG.parts.forEach(p=>(p.vox||[]).forEach(x=>{ if(x) ids.add(x); })); layers.forEach(Ly=>{ if(Ly.vox) ids.add(Ly.vox); });
+  let got=false;
+  for(const id of ids){ if(VOX.has(id)) continue;
+    try{ const r=await dbDo('sounds','readonly',st=>st.get('vox:'+id)); if(r){ VOX.set(id, voxFromRec(r)); got=true; } }catch(e){ console.warn('take', id, e); } }
+  if(got){ drawAll(); voxRestartAll(); }
+}
+async function voxGC(){
+  try{
+    const keep=new Set(); ((await dbDo('projects','readonly',st=>st.getAll()))||[]).forEach(p=>voxIdsOf(p.data).forEach(x=>keep.add(x)));
+    voxIdsOf(load()).forEach(x=>keep.add(x));
+    const keys=(await dbDo('sounds','readonly',st=>st.getAllKeys(IDBKeyRange.bound('vox:','vox:\uffff'))))||[];
+    for(const k of keys) if(!keep.has(String(k).slice(4))) await dbDo('sounds','readwrite',st=>st.delete(k));
+  }catch(e){ console.warn('takes clean-up', e); }
+}
+// the take's outline for the layer card (peaks per pixel column, made once)
+function voxPeaks(t, n){
+  if(t.peaks && t.peaks.length===n) return t.peaks;
+  const d=t.buffer.getChannelData(0), per=Math.max(1,Math.floor(d.length/n)), out=new Float32Array(n);
+  for(let c=0;c<n;c++){ let m=0; const a=c*per; for(let k=a;k<a+per && k<d.length;k+=4) m=Math.max(m,Math.abs(d[k])); out[c]=m; }
+  let mx=0; out.forEach(v=>mx=Math.max(mx,v)); if(mx>0) for(let c=0;c<n;c++) out[c]=Math.sqrt(out[c]/mx);
+  return t.peaks=out;
+}
+function vocalName(){
+  const used=new Set(layers.filter(l=>l.shown && l.vocal).map(l=>l.vname));
+  if(!used.has('vocals')) return 'vocals'; for(let n=2;;n++) if(!used.has('vocals '+n)) return 'vocals '+n;
 }
 // a recording is called sample 1, sample 2, … (the next number free among the layers)
 function sampleName(){
@@ -3540,7 +3725,7 @@ function drawCapRec(){
 
 /* ============ the session is kept between visits ============ */
 const SAVE_KEY='hichord-looper-v1';
-const LAYER_KEYS=['inst','customName','root','snd','fx','cfx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown','fxs','gateDiv','hc'];
+const LAYER_KEYS=['vocal','vname','vox','inst','customName','root','snd','fx','cfx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown','fxs','gateDiv','hc'];
 let saveT;
 function sessionData(){
   return { v:1,
@@ -3551,7 +3736,7 @@ function sessionData(){
 /* history: what counts as a change for undo (not which layer or tab you look at) */
 /* notes and on/off live per part in the song, so switching parts is not a change */
 function histData(d){ const S2={...d.S}; delete S2.sel; delete S2.tab; delete S2.metro; delete S2.countIn;
-  const L=d.layers.map(l=>{ const c={...l}; delete c.events; delete c.mute; delete c.lock; return c; });   // locking an effect is playing, not an edit to undo
+  const L=d.layers.map(l=>{ const c={...l}; delete c.events; delete c.mute; delete c.lock; delete c.vox; return c; });   // takes live per part, in the song   // locking an effect is playing, not an edit to undo
   const sg = d.song ? {parts:d.song.parts, order:d.song.order} : null;
   return JSON.stringify({S:S2, layers:L, song:sg}); }
 const HIST={undo:[],redo:[],last:null,applying:false};
@@ -3588,6 +3773,7 @@ function describeChange(aJ,bJ){
     if(JSON.stringify(x)===JSON.stringify(y) && ex===ey && mx===my) continue;
     if(x.shown!==y.shown) return `layer ${i+1} ${y.shown?'added':'removed'}`;
     if(ex!==ey) return `notes of layer ${i+1}`;
+    if(JSON.stringify(pa.map(p=>p.vox&&p.vox[i]))!==JSON.stringify(pb.map(p=>p.vox&&p.vox[i]))) return `vocal take of layer ${i+1}`;
     if(mx!==my) return `layer ${i+1} on/off`;
     if(x.inst!==y.inst) return `instrument of layer ${i+1}`;
     return `layer ${i+1} settings`;
@@ -3616,6 +3802,7 @@ function applySnapshot(json){
     applyLayer(Ly);
   });
   if(d.song) setSong({...d.song, cur:Math.min(SONG.cur, d.song.parts.length-1), follow:SONG.follow}, false);
+  voxLoadAll(); voxRestartAll();
   storeAllSounds();
   if(!layers[S.sel].shown){ const n=layers.findIndex(l=>l.shown); if(n>=0) S.sel=n; }
   renderParts(); renderSongSheet(); if(CAP.open) renderCaptureMode();
@@ -3650,12 +3837,12 @@ function load(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
 var SONG={ parts:[{name:'',ev:[],mute:[]}], cur:0, order:[0], follow:true, pos:-1, jump:null, doneAt:null };
 const PART_L = k => String.fromCharCode(65+k);
 const partName = k => SONG.parts[k].name ? `${PART_L(k)} · ${SONG.parts[k].name}` : `part ${PART_L(k)}`;
-const blankPart = () => ({ name:'', ev:Array.from({length:8},()=>[]), mute:Array(8).fill(false) });
-function syncPart(){ const p=SONG.parts[SONG.cur]; if(!p || !layers.length) return; layers.forEach((Ly,i)=>{ p.ev[i]=Ly.events; p.mute[i]=!!Ly.mute; }); }
+const blankPart = () => ({ name:'', ev:Array.from({length:8},()=>[]), mute:Array(8).fill(false), vox:Array(8).fill(null) });
+function syncPart(){ const p=SONG.parts[SONG.cur]; if(!p || !layers.length) return; p.vox=p.vox||Array(8).fill(null); layers.forEach((Ly,i)=>{ p.ev[i]=Ly.events; p.mute[i]=!!Ly.mute; p.vox[i]=Ly.vox||null; }); }
 function showPart(k){   // put part k into the layers (without saving the one you leave: see loadPart)
   SONG.cur=k; const p=SONG.parts[k];
-  layers.forEach((Ly,i)=>{ Ly.events=p.ev[i]||(p.ev[i]=[]); Ly.mute=!!p.mute[i]; ensureChords(Ly); });
-  layers.forEach(applyLayer);
+  layers.forEach((Ly,i)=>{ Ly.events=p.ev[i]||(p.ev[i]=[]); Ly.mute=!!p.mute[i]; Ly.vox=(p.vox&&p.vox[i])||null; ensureChords(Ly); });
+  layers.forEach(applyLayer); voxRestartAll();
 }
 function loadPart(k, quiet){
   if(!SONG.parts[k] || k===SONG.cur) return;
@@ -3664,11 +3851,11 @@ function loadPart(k, quiet){
   if(!quiet){ renderParts(); renderLayers(); renderDetail(); if(CAP.open) renderCaptureMode(); save(); }
 }
 function songData(){ syncPart();
-  return { parts:SONG.parts.map(p=>({ name:p.name, ev:Array.from({length:8},(_,i)=>p.ev[i]||[]), mute:Array.from({length:8},(_,i)=>!!p.mute[i]) })), cur:SONG.cur, order:SONG.order.slice(), follow:SONG.follow }; }
+  return { parts:SONG.parts.map(p=>({ name:p.name, ev:Array.from({length:8},(_,i)=>p.ev[i]||[]), mute:Array.from({length:8},(_,i)=>!!p.mute[i]), vox:Array.from({length:8},(_,i)=>(p.vox&&p.vox[i])||null) })), cur:SONG.cur, order:SONG.order.slice(), follow:SONG.follow }; }
 /* from a saved session (layersHoldCur: the layers already carry the current part) or an undo snapshot */
 function setSong(d, layersHoldCur){
   if(d && d.parts && d.parts.length){
-    SONG.parts=d.parts.map(p=>({ name:p.name||'', ev:Array.from({length:8},(_,i)=>JSON.parse(JSON.stringify((p.ev&&p.ev[i])||[]))), mute:Array.from({length:8},(_,i)=>!!(p.mute&&p.mute[i])) }));
+    SONG.parts=d.parts.map(p=>({ name:p.name||'', ev:Array.from({length:8},(_,i)=>JSON.parse(JSON.stringify((p.ev&&p.ev[i])||[]))), mute:Array.from({length:8},(_,i)=>!!(p.mute&&p.mute[i])), vox:Array.from({length:8},(_,i)=>(p.vox&&typeof p.vox[i]==='string')?p.vox[i]:null) }));
     SONG.cur=clamp(d.cur|0,0,SONG.parts.length-1);
     SONG.order=(d.order||[]).filter(k=>k>=0 && k<SONG.parts.length); if(!SONG.order.length) SONG.order=[SONG.cur];
     SONG.follow=d.follow!==false;
@@ -3678,7 +3865,7 @@ function setSong(d, layersHoldCur){
   if(layersHoldCur) syncPart(); else showPart(SONG.cur);
 }
 /* a layer that is new (or a copy) starts empty and on in the other parts */
-function freshInParts(i){ SONG.parts.forEach((p,k)=>{ if(k!==SONG.cur){ p.ev[i]=[]; p.mute[i]=false; } }); }
+function freshInParts(i){ SONG.parts.forEach((p,k)=>{ if(k!==SONG.cur){ p.ev[i]=[]; p.mute[i]=false; (p.vox||(p.vox=Array(8).fill(null)))[i]=null; } }); }
 function addPart(){
   if(SONG.parts.length>=8){ toast('8 parts is the maximum'); return; }
   flushSave(); syncPart(); SONG.parts.push(blankPart()); const k=SONG.parts.length-1; SONG.order.push(k);
@@ -3688,7 +3875,7 @@ function addPart(){
 function dupPart(k){
   if(SONG.parts.length>=8){ toast('8 parts is the maximum'); return; }
   flushSave(); syncPart(); const src=SONG.parts[k], ids=new Map();
-  const p={ name: src.name ? src.name+' 2' : '', mute:src.mute.slice(),
+  const p={ name: src.name ? src.name+' 2' : '', mute:src.mute.slice(), vox:(src.vox||Array(8).fill(null)).slice(),
     ev: src.ev.map(a=>(a||[]).map(e=>{ if(e.chord!=null && !ids.has(e.chord)) ids.set(e.chord,chordSeq++); return {...e, id:evId++, chord: e.chord!=null ? ids.get(e.chord) : e.chord}; })) };
   SONG.parts.push(p); const n=SONG.parts.length-1; SONG.order.push(n);
   loadPart(n,true); renderParts(); renderLayers(); renderDetail(); renderSongSheet(); writeSave();
@@ -3749,13 +3936,13 @@ const storeAllSounds = () => layers.forEach((_,i)=>storeSound(i));
 /* the iPhone/iPad app keeps a copy of your projects and own sounds in its own files. When it starts without internet
    it opens its built-in copy of this page, whose storage is separate (another origin) and empty: the projects come from there.
    Each project's copy carries the stamps of its sounds, so a sound is only sent again when it changed. */
-const MIR={ p:new Map(), s:new Map(), dirty:new Set(), t:null, busy:false, ready:false };   // id -> stamp of the copy there, project:layer -> sound stamp
+const MIR={ p:new Map(), s:new Map(), v:new Set(), dirty:new Set(), t:null, busy:false, ready:false };   // id -> stamp of the copy there, project:layer -> sound stamp
 const mirSig = p => `${p.updated}|${p.name}|${p.named?1:0}`;
 const sndSig = r => r ? (r.sig || `old|${r.name}|${r.channels&&r.channels[0]?r.channels[0].length:0}`) : null;
 function mirrorSoon(){ if(!nativeStore() || !MIR.ready) return; clearTimeout(MIR.t); MIR.t=setTimeout(mirrorNow, 1500); }
 function packSnd(r){
   const ch=r.channels.map(x=>{ if(r.pcm16) return x; const o=new Int16Array(x.length); for(let n=0;n<x.length;n++){ const v=x[n]; o[n]=v>=1?32767:v<=-1?-32767:Math.round(v*32767); } return o; });
-  const head=new TextEncoder().encode(JSON.stringify({ name:r.name, sampleRate:r.sampleRate, nch:ch.length, len:ch[0].length, zones:r.zones||null, kind:r.kind||null, sig:sndSig(r) }));
+  const head=new TextEncoder().encode(JSON.stringify({ name:r.name, sampleRate:r.sampleRate, nch:ch.length, len:ch[0].length, zones:r.zones||null, kind:r.kind||null, sig:sndSig(r), bpm:r.bpm||null, beats:r.beats||null }));
   const out=new Uint8Array(8+head.length+ch.length*ch[0].length*2); out.set([83,78,68,49]); new DataView(out.buffer).setUint32(4, head.length, true); out.set(head, 8);
   let off=8+head.length; ch.forEach(x=>{ out.set(new Uint8Array(x.buffer, x.byteOffset, x.byteLength), off); off+=x.byteLength; }); return out;
 }
@@ -3763,7 +3950,7 @@ function unpackSnd(u8){
   if(String.fromCharCode(...u8.subarray(0,4))!=='SND1') throw new Error('not a sound');
   const hl=new DataView(u8.buffer, u8.byteOffset, 8).getUint32(4,true), h=JSON.parse(new TextDecoder().decode(u8.subarray(8,8+hl)));
   let off=8+hl; const channels=[]; for(let c=0;c<h.nch;c++){ channels.push(new Int16Array(u8.slice(off, off+h.len*2).buffer)); off+=h.len*2; }
-  return { name:h.name, sampleRate:h.sampleRate, channels, pcm16:true, zones:h.zones, kind:h.kind, sig:h.sig };
+  const r={ name:h.name, sampleRate:h.sampleRate, channels, pcm16:true, zones:h.zones, kind:h.kind, sig:h.sig }; if(h.bpm){ r.bpm=h.bpm; r.beats=h.beats; } return r;
 }
 async function mirrorNow(){
   if(!nativeStore() || !MIR.ready) return; if(MIR.busy){ mirrorSoon(); return; } MIR.busy=true;
@@ -3776,6 +3963,8 @@ async function mirrorNow(){
       for(const [i,r] of Object.entries(snd)){ const k=p.id+':'+i, g=sndSig(r); ssig[i]=g;
         if(MIR.s.get(k)!==g && await nsCall({cmd:'put', key:'s:'+k, data:toB64(packSnd(r))})==='ok') MIR.s.set(k,g); }
       for(const k of [...MIR.s.keys()]) if(k.startsWith(p.id+':') && !(k.split(':')[1] in ssig)){ await nsCall({cmd:'delete', key:'s:'+k}); MIR.s.delete(k); }
+      for(const vid of voxIdsOf(p.data)){ if(MIR.v.has(vid)) continue;
+        const r=await dbDo('sounds','readonly',st=>st.get('vox:'+vid)); if(r && await nsCall({cmd:'put', key:'v:'+vid, data:toB64(packSnd(r))})==='ok') MIR.v.add(vid); }
       const sig=mirSig(p);
       if(await nsCall({cmd:'put', key:'p:'+p.id, data:toB64(new TextEncoder().encode(JSON.stringify({p, ssig}))) })==='ok') MIR.p.set(p.id, sig);
     }
@@ -3807,11 +3996,14 @@ async function mirrorIn(){
           const s64=await nsCall({cmd:'get', key:'s:'+p.id+':'+i}); if(!s64) continue;
           try{ const r=unpackSnd(fromB64(s64)); await dbDo('sounds','readwrite',st=>st.put(r, p.id+':'+i)); MIR.s.set(p.id+':'+i, sndSig(r)); }catch(e){ console.warn('own sound copy', e); }
         }
+        for(const vid of voxIdsOf(p.data)){ const have=await dbDo('sounds','readonly',st=>st.getKey('vox:'+vid)); if(have){ MIR.v.add(vid); continue; }
+          const v64=await nsCall({cmd:'get', key:'v:'+vid}); if(v64) try{ await dbDo('sounds','readwrite',st=>st.put(unpackSnd(fromB64(v64)), 'vox:'+vid)); MIR.v.add(vid); }catch(e){ console.warn('take copy', e); } }
         for(const i of Object.keys(snd)) if(!(i in (rec.ssig||{}))) await dbDo('sounds','readwrite',st=>st.delete(p.id+':'+i)).catch(()=>{});
         MIR.p.set(p.id, mirSig(p));
         Object.entries(rec.ssig||{}).forEach(([i,g])=>MIR.s.set(p.id+':'+i, g));
       } else if(here.updated===p.updated){ MIR.p.set(p.id, mirSig(p)); Object.entries(rec.ssig||{}).forEach(([i,g])=>MIR.s.set(p.id+':'+i, g)); }
     }
+    for(const k of await nsCall({cmd:'list', prefix:'v:'})||[]) MIR.v.add(k.slice(2));
     const l=await nsCall({cmd:'get', key:'last'}); if(l) MIR.last=atob(l);
   }catch(e){ console.warn('project copy in', e); }
   MIR.ready=true; mirrorSoon();
@@ -3844,6 +4036,7 @@ function setCurrent(id){ PRJ.current=id; try{ localStorage.setItem('hcl-project'
 /* put a stored session into the app */
 function applySession(d, sounds){
   if(mic && mic.rec){ mic.cancel=true; try{ mic.rec.stop(); }catch(e){} }   // a take still running belongs to the project you leave
+  if(VXR.on){ VXR.on=false; VXR.chunks=[]; if(VXR.Ly) VXR.Ly.vrec=false; voxTeardown(); setAudioSessionType(playbackSession()); renderMicCard(); }
   SOUNDS_KEPT.clear();
   if(S.playing) stopTransport(); stopAllVoices(true);
   Object.assign(S, d.S, { playing:false, rec:false, tab:S.tab });
@@ -3859,7 +4052,7 @@ function applySession(d, sounds){
     applyLayer(Ly);
   });
   layers.forEach(ensureChords); restoreLocks();
-  setSong(d.song, true); renderParts();
+  setSong(d.song, true); renderParts(); voxLoadAll();
   if(!layers.some(l=>l.shown)) layers[0].shown=true;
   if(!layers[S.sel] || !layers[S.sel].shown) S.sel=layers.findIndex(l=>l.shown);
   master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime();
@@ -4064,7 +4257,13 @@ async function packProject(id){
   if(open) layers.forEach((Ly,i)=>{ if(Ly.inst!=='custom' || !Ly.buffer || !d.layers[i]) return;
     const b=Ly.buffer; add(i, Ly.customName, b.sampleRate, [...Array(b.numberOfChannels)].map((_,c)=>b.getChannelData(c)), Ly.czones, Ly.ckind); });
   else { const st=await soundsOf(id); Object.entries(st).forEach(([i,r])=>{ if(d.layers[i] && d.layers[i].inst==='custom' && r && r.channels) add(+i, r.name, r.sampleRate, r.channels, r.zones, r.kind); }); }
-  const head=new TextEncoder().encode(JSON.stringify({ v:1, app:'looper-for-hichord', page:PAGE_VERSION, name:p?p.name:'shared project', named:!!(p&&p.named), data:d, sounds }));
+  const vox=[];
+  for(const id of voxIdsOf(d)){
+    let t=VOX.get(id); if(!t){ try{ const r=await dbDo('sounds','readonly',st=>st.get('vox:'+id)); if(r) t=voxFromRec(r); }catch(e){} } if(!t) continue;
+    const x=t.buffer.getChannelData(0), pcm=new Int16Array(x.length); for(let n=0;n<x.length;n++){ const v=x[n]; pcm[n]=v>=1?32767:v<=-1?-32767:Math.round(v*32767); }
+    vox.push({ id, sampleRate:t.buffer.sampleRate, len:x.length, bpm:t.bpm, beats:t.beats }); bins.push(pcm);
+  }
+  const head=new TextEncoder().encode(JSON.stringify({ v:1, app:'looper-for-hichord', page:PAGE_VERSION, name:p?p.name:'shared project', named:!!(p&&p.named), data:d, sounds, vox }));
   const pre=new Uint8Array(8); pre.set([76,70,72,49]); new DataView(pre.buffer).setUint32(4, head.length, true);   // 'LFH1', header length
   const raw=new Blob([pre, head, ...bins]);
   return { file: await gz(raw,'in'), raw: raw.size, name: p?p.name:'shared project', sounds, summary: summary(d) };
@@ -4094,9 +4293,16 @@ async function unpackProject(bytes){
     const channels=[...Array(nch)].map((_,c)=>{ const f=new Float32Array(len); for(let n=0;n<len;n++) f[n]=pcm[c*len+n]/32767; return f; });
     sounds[i]={ name:String(sm.name||'sample'), sampleRate:sr, channels, zones:Array.isArray(sm.zones)?sm.zones:null, kind:sm.kind||null };
   }
+  const vox={};   // vocal takes, by id
+  for(const vm of (h.vox||[])){
+    const len=vm.len|0, sr=+vm.sampleRate, id=String(vm.id||''), bytesN=len*2;
+    if(!/^v[a-z0-9]{1,30}$/.test(id) || len<1 || len>sr*900 || !(sr>=8000 && sr<=192000) || off+bytesN>raw.length) throw new Error('a vocal take in this project is damaged');
+    const pcm=new Int16Array(raw.slice(off, off+bytesN).buffer); off+=bytesN;
+    vox[id]={ name:'take', sampleRate:sr, channels:[pcm], pcm16:true, bpm:+vm.bpm||120, beats:+vm.beats||16, sig:id };
+  }
   // this device keeps its own input and timing settings
   ['input','recOffset','followClock','sendTempo','hcTransport','metro','countIn'].forEach(k=>{ if(k in S) h.data.S[k]=S[k]; });
-  return { name:String(h.name||'shared project'), named:!!h.named, data:h.data, sounds };
+  return { name:String(h.name||'shared project'), named:!!h.named, data:h.data, sounds, vox };
 }
 
 /* share: explain, pack, upload, show the code */
@@ -4193,6 +4399,7 @@ async function xferFetch(code){
     try{
       await dbDo('projects','readwrite',st=>st.put(p));
       for(const [i,r] of Object.entries(pj.sounds)) await dbDo('sounds','readwrite',st=>st.put(soundRec(r.name, r.sampleRate, r.channels, r.zones, r.kind), p.id+':'+i));
+      for(const [id,r] of Object.entries(pj.vox||{})) await dbDo('sounds','readwrite',st=>st.put(r, 'vox:'+id));
     }catch(e){   // stored only half: take it out again, so no project without its sounds stays behind
       await dbDo('projects','readwrite',st=>st.delete(p.id)).catch(()=>{}); await dbDo('sounds','readwrite',st=>st.delete(soundRange(p.id))).catch(()=>{});
       throw e;
@@ -4237,7 +4444,7 @@ function checkParam(host,label,get,set){
 }
 const pct=v=>Math.round(v*100)+'%';
 const secs=v=>v<1?Math.round(v*1000)+' ms':v.toFixed(2)+' s';
-const instName = Ly => Ly.inst==='custom' ? Ly.customName : !isHcx(Ly.inst) && hcOn(Ly) ? HC_INST[Ly.inst][1] : LIB[Ly.inst].name;
+const instName = Ly => Ly.vocal ? (Ly.vname||'vocals') : Ly.inst==='custom' ? Ly.customName : !isHcx(Ly.inst) && hcOn(Ly) ? HC_INST[Ly.inst][1] : LIB[Ly.inst].name;
 // an instrument's name in the pickers: the HiChord's name when that instrument is played from the HiChord
 const instLabel = (k, hc) => hc && HC_INST[k] && HCI[hcKeyOf(k)] ? HC_INST[k][1] : LIB[k].name;
 
@@ -4245,9 +4452,9 @@ function renderTransport(){
   $('playBtn').classList.toggle('on',S.playing);
   $('playIcon').innerHTML = $('capPlayIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1"/>' : '<path d="M7 4l13 8-13 8z"/>';
   $('capPlay').classList.toggle('on',S.playing);
-  $('recBtn').classList.toggle('on',S.rec);
+  $('recBtn').classList.toggle('on',S.rec || !!(mic && mic.rec && !mic.onBuf));
   $('recNum').textContent=S.sel+1; $('recBtn').style.setProperty('--lc',`var(--l${S.sel})`);
-  $('recBtn').setAttribute('aria-label',`Record into layer ${S.sel+1} (R)`);
+  const sl=selLayer(); $('recBtn').setAttribute('aria-label', sl && sampleWaiting(sl) ? `Record the sample of layer ${S.sel+1} with the microphone (R)` : sl && sl.vocal ? `Record vocals into layer ${S.sel+1} (R)` : `Record into layer ${S.sel+1} (R)`);
   $('barsVis').classList.toggle('rec',S.rec);
   document.querySelectorAll('.layer').forEach(el=>el.classList.toggle('recording', S.rec));
   drawPos();
@@ -4263,7 +4470,7 @@ function renderBarsSeg(){
   $('barsVis').innerHTML = Array.from({length:S.bars},()=>'<i><u></u></i>').join('');
   $('barsMini').textContent=`${S.bars} bar${S.bars>1?'s':''}`;
 }
-const noteCount = Ly => Ly.events.length ? `${Ly.events.length} note${Ly.events.length>1?'s':''}` : 'empty';
+const noteCount = Ly => Ly.vocal ? (VXR.on && VXR.Ly===Ly ? 'singing…' : Ly.vox ? `take · ${Math.round((VOX.get(Ly.vox)||{beats:loopLen()}).beats/4)} bar${(VOX.get(Ly.vox)||{beats:loopLen()}).beats>4?'s':''}` : 'no take yet') : sampleWaiting(Ly) ? 'no sample · tap ●' : Ly.events.length ? `${Ly.events.length} note${Ly.events.length>1?'s':''}` : 'empty';
 /* pictograms: thin geometric lines, OP-1 style */
 const ICONS={
   trash:'<path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h8a1.5 1.5 0 0 0 1.5-1.5l1-12.5M9 7V4.5h6V7"/>',
@@ -4294,6 +4501,7 @@ const ICONS={
   hichord:'<rect x="3" y="7" width="18" height="11" rx="2.5"/><path d="M7 11v3M10.5 11v3M14 11v3M17.5 11v3M9 4h6"/>',
   reset:'<path d="M4 4v5h5"/><path d="M5.6 15.5A7 7 0 1 0 6.7 7.3L4 9"/>',
   mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+  vocal:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M2.5 7v5M21.5 7v5"/>',
   folder:'<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.2h7.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>',
 };
 const ic=(name,cls='ii')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]||''}</svg>`;
@@ -4301,6 +4509,7 @@ const ic=(name,cls='ii')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="
 const HC_ICON = { hc94:'drums', hc95:'drums', hc96:'drums', hc97:'drums', hc98:'drums', hc0:'sine', hc4:'keys', hc6:'lead', hc10:'horns', hc15:'keys', hc18:'keys', hc19:'guitar', hc21:'pad', hc22:'lead', hc23:'square', hc24:'horns', hc29:'pad', hc33:'keys', hc34:'keys' };
 const instIcon = (k, hc) => ic(hc && k==='ebass' && HCI[hcKeyOf(k)] ? 'triangle' : ICONS[k] ? k : HC_ICON[k] || 'keys');
 const INST_ICON=new Proxy({}, { get:(_,k)=>instIcon(k, S.hcInst) });
+const layerIcon = Ly => Ly.vocal ? ic('vocal') : (INST_ICON[Ly.inst]||'');
 const SLIDERS=ic('faders','');
 function renderLayers(){
   applyLayerColours();
@@ -4310,7 +4519,7 @@ function renderLayers(){
       <div class="top">
         <span class="num">${i+1}</span>
         <div class="nmwrap">
-          <span class="nm">${INST_ICON[Ly.inst]||''} ${instName(Ly)}</span>
+          <span class="nm">${layerIcon(Ly)} ${instName(Ly)}</span>
           <span class="meta"><span class="cnt" id="cnt${i}">${noteCount(Ly)}</span>${CAP.lock.has(i)?`<button class="tag t-lock" data-act="unlock" aria-label="Effect of layer ${i+1} locked: tap to release it">fx locked ×</button>`:''}<span class="tag t-target">● rec</span><span class="tag t-rec">● recording</span></span>
         </div>
         <button class="ms m ${Ly.mute?'on':''}" data-act="mute" aria-label="Mute layer ${i+1}">M</button>
@@ -4487,7 +4696,7 @@ function moveLayer(from, to){
   const ord=[...layers.keys()]; ord.splice(to,0,ord.splice(from,1)[0]);   // ord[new place] = old place
   const nw=o=>ord.indexOf(o), old=[...layers];
   ord.forEach((o,n)=>{ layers[n]=old[o]; });
-  SONG.parts.forEach(p=>{ const ev=[...(p.ev||[])], mu=[...(p.mute||[])]; ord.forEach((o,n)=>{ p.ev[n]=ev[o]||[]; p.mute[n]=!!mu[o]; }); });
+  SONG.parts.forEach(p=>{ const ev=[...(p.ev||[])], mu=[...(p.mute||[])], vx=[...(p.vox||[])]; p.vox=p.vox||[]; ord.forEach((o,n)=>{ p.ev[n]=ev[o]||[]; p.mute[n]=!!mu[o]; p.vox[n]=vx[o]||null; }); });
   S.sel=nw(S.sel); if(ED.li!=null) ED.li=nw(ED.li);
   CAP.touch.forEach(t=>{ clearTimeout(t.timer); clearTimeout(t.st); }); CAP.touch.clear();
   CAP.lock=new Map([...CAP.lock].map(([i,v])=>[nw(i),v])); if(CAP.lastLock!=null) CAP.lastLock=nw(CAP.lastLock);
@@ -4511,14 +4720,15 @@ function addLayer(key, own){
   Object.assign(Ly, newLayerData(idx), { inst:key, shown:true });
   setInstrument(Ly, key); Ly.q = isDrum(key) ? '1/16' : 'off';
   Ly.rev = key==='pad'||key==='strings' ? 0.35 : 0.18;
-  if(own && own.empty){ Ly.inst='custom'; Ly.customName=own.name; Ly.buffer=null; Ly.czones=null; Ly.ckind=null; Ly.mode='melodic'; Ly.slices=null; }
+  if(own && own.vocal){ Ly.vocal=true; Ly.vname=own.name; Ly.rev=0.15; Ly.q='off'; }
+  else if(own && own.empty){ Ly.inst='custom'; Ly.customName=own.name; Ly.buffer=null; Ly.czones=null; Ly.ckind=null; Ly.mode='melodic'; Ly.slices=null; }
   else if(own) setCustomSound(Ly, own.buf, own.name, own.zones, own.kind);   // a file or a recording: the layer is named after it
   applyLayer(Ly); freshInParts(idx);
   closeSheets();
   selectLayer(idx); renderLayers(); save();
   if(own && !own.empty) storeSound(idx);
-  if(own && own.empty){ S.tab='sound'; renderDetail(); openSheet('layerSheet');
-    toast(`Layer ${idx+1} · ${own.name}: tap the microphone to record (the song plays along, quieter)`); return; }
+  if(own && own.empty){ toast(`Layer ${idx+1} · ${own.name}: tap ● and make your sound (the song stays quiet)`); return; }
+  if(own && own.vocal){ toast(`Layer ${idx+1} · ${own.name}: tap ● and sing over the loop (the song plays quieter); each part gets its own take`); return; }
   toast(`Layer ${idx+1} · ${instName(Ly)} is ready — tap ● to record into it`);
 }
 function removeLayer(){
@@ -4530,11 +4740,11 @@ function removeLayer(){
   // the layers after it move up one number: layer 2 becomes layer 1, and so on (in every part)
   syncPart();
   const srcIdx=layers.map((l,k)=>k).filter(k=>k>i && layers[k].shown);
-  SONG.parts.forEach(p=>{ const ev=p.ev.slice(), mu=p.mute.slice(); for(let j=i;j<8;j++){ const k=srcIdx[j-i]; p.ev[j]= k!=null ? (ev[k]||[]) : []; p.mute[j]= k!=null ? !!mu[k] : false; } });
+  SONG.parts.forEach(p=>{ const ev=p.ev.slice(), mu=p.mute.slice(), vx=(p.vox||[]).slice(); p.vox=p.vox||[]; for(let j=i;j<8;j++){ const k=srcIdx[j-i]; p.ev[j]= k!=null ? (ev[k]||[]) : []; p.mute[j]= k!=null ? !!mu[k] : false; p.vox[j]= k!=null ? (vx[k]||null) : null; } });
   const rest=layers.slice(i+1).filter(l=>l.shown);
   const moved=rest.map(src=>({ data:JSON.parse(JSON.stringify(Object.fromEntries(LAYER_KEYS.map(k=>[k,src[k]])))), buffer:src.buffer, customName:src.customName, mode:src.mode, czones:src.czones||null, ckind:src.ckind||null, lock:CAP.lock.get(layers.indexOf(src)) }));
   for(let j=i;j<layers.length;j++){
-    const d=layers[j]; d.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05)); CAP.lock.delete(j); fxReset(d);
+    const d=layers[j]; d.voices.forEach(v=>releaseVoice(v,ctx.currentTime,0.05)); voxStopAt(d, ctx.currentTime); CAP.lock.delete(j); fxReset(d);
     const m=moved[j-i];
     if(m){ Object.assign(d, m.data);
       if(d.inst==='custom'){ d.buffer=m.buffer; d.customName=m.customName; d.mode=m.mode; d.czones=m.czones; d.ckind=m.ckind; d.slices=null; } else setInstrument(d, d.inst, true); }
@@ -4542,7 +4752,7 @@ function removeLayer(){
     applyFx(d); applyLayer(d);
     if(m && m.lock){ CAP.lock.set(j, m.lock); fxSet(d, m.lock.x, m.lock.y, m.lock.y0); }   // a locked effect moves up with its layer
   }
-  syncPart(); storeAllSounds();
+  syncPart(); storeAllSounds(); voxRestartAll();
   if(ED.li!=null && ED.li>=i){ ED.hist=[]; ED.fut=[]; ED.sel.clear(); }
   S.sel = layers[i].shown ? i : Math.max(0, layers.map(l=>l.shown).lastIndexOf(true));
   closeSheets(); renderLayers(); renderDetail(); writeSave(); toast(`layer ${i+1} removed`, 'undo', undo);
@@ -4562,7 +4772,7 @@ function duplicateLayer(){
 function openLayerMenu(i){
   selectLayer(i); const Ly=layers[i];
   $('menuTitle').textContent=`layer ${i+1} · ${instName(Ly)}`;
-  const items=[['edit','edit notes'],['mute', Ly.mute?'unmute':'mute'],['solo', Ly.solo?'unsolo':'solo'],['sound','change instrument'],...(layerNeighbour(i,-1)>=0?[['up','move up']]:[]),...(layerNeighbour(i,1)>=0?[['down','move down']]:[]),['dup','duplicate layer'],['clear','clear notes','danger'],['remove','remove layer','danger']];
+  const items=[...(Ly.vocal?[]:[['edit','edit notes']]),['mute', Ly.mute?'unmute':'mute'],['solo', Ly.solo?'unsolo':'solo'],['sound', Ly.vocal?'name and tone':'change instrument'],...(layerNeighbour(i,-1)>=0?[['up','move up']]:[]),...(layerNeighbour(i,1)>=0?[['down','move down']]:[]),['dup','duplicate layer'],['clear', Ly.vocal?'clear take':'clear notes','danger'],['remove','remove layer','danger']];
   $('menuList').innerHTML=items.map(([k,l,c])=>`<button data-m="${k}" class="${c||''}">${l}</button>`).join('');
   openSheet('menuSheet');
 }
@@ -4608,7 +4818,8 @@ function renderInstGrid(){
   $('instGrid').innerHTML = groups.filter(g=>g[1].length).map(([t,list])=>`<div class="igrp"><h4>${t}</h4><div class="igtiles">${
       list.map(k=>`<button class="inst${isHcx(k)?' hcx':''}" data-k="${k}">${instIcon(k,S.hcInst)}<span>${instLabel(k,S.hcInst)}</span></button>`).join('')}</div></div>`).join('')
     + `<div class="ownrow"><span>your own</span><button class="inst own" data-own="file" aria-label="New layer from an audio file in Files">${ic('upload')}audio file</button>`
-    + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New layer from the microphone">${ic('mic')}<span class="ml">microphone</span><span class="micmeter"><i></i></span></button></div>`;
+    + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New sample layer: record a sound with the microphone">${ic('mic')}<span class="ml">sample</span><span class="micmeter"><i></i></span></button>`
+    + `<button class="inst own" data-own="vocal" aria-label="New vocal layer: sing over the loop">${ic('vocal')}vocals</button></div>`;
   renderNewMic();
 }
 renderInstGrid();
@@ -4664,12 +4875,13 @@ document.querySelectorAll('.close[data-close]').forEach(b=>b.innerHTML=ic('close
 $('instGrid').onclick=e=>{ const b=e.target.closest('.inst'); if(!b) return;
   if(b.dataset.own==='file'){ $('newFileIn').click(); return; }
   if(b.dataset.own==='hc'){ closeSheets(); hcsOpen('new'); return; }
-  if(b.dataset.own==='mic'){ if(mic) return; addLayer('keys',{empty:true, name:sampleName()}); return; }   // an empty sample layer: you record into it from its instrument page
+  if(b.dataset.own==='mic'){ if(mic) return; addLayer('keys',{empty:true, name:sampleName()}); return; }   // an empty sample layer: ● records its sample
+  if(b.dataset.own==='vocal'){ addLayer('pad',{vocal:true, name:vocalName()}); return; }
   addLayer(b.dataset.k); };
 $('newFileIn').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return;
   try{ addLayer('keys',{buf:await decodeFile(f), name:fileSoundName(f)}); }catch(err){ toast('This file cannot be read as audio'); } };
 function renderNewMic(){ const t=$('newMicTile'); if(!t) return; const on=!!(mic && mic.onBuf);
-  t.classList.toggle('micrec',on); t.querySelector('.ml').textContent = on ? 'stop' : 'microphone';
+  t.classList.toggle('micrec',on); t.querySelector('.ml').textContent = on ? 'stop' : 'sample';
   t.setAttribute('aria-label', on ? 'Stop recording' : 'New layer from the microphone'); }
 // closing the sheet while it records drops the recording
 { const cs=closeSheets; closeSheets=function(...a){ if(mic && mic.onBuf){ mic.cancel=true; mic.rec.stop(); } return cs.apply(this,a); }; }
@@ -4914,6 +5126,7 @@ function edFitPitch(){
 // the docked editor follows the selected layer
 function edSync(){
   if(!ED.dock) return;
+  $('editor').classList.toggle('isvocal', !!selLayer().vocal);   // iPad: a vocal layer has no notes; the docked editor says so
   if(ED.li!==S.sel){ ED.li=S.sel; ED.sel.clear(); ED.hist=[]; ED.fut=[]; edDefaultMode(); edFit(); edFitPitch(); }
   edRenderTools(); edDraw();
 }
@@ -4945,8 +5158,27 @@ function renderDetail(){
     host.appendChild(pg); renderPage(pg,t,Ly);
   });
 }
+/* a vocal layer's pages: timing is where the take sits, "instrument" is its name, tone and the take itself */
+function vocalPage(host, grid, tab, Ly){
+  const hint=t=>{ const h=document.createElement('p'); h.className='hint'; h.textContent=t; host.appendChild(h); };
+  if(tab==='timing'){
+    param(grid,'Nudge',()=>Ly.nudge||0,v=>{Ly.nudge=v; voxRestart(Ly); drawAll();},-150,150,1,v=>(v>0?'+':'')+v+' ms');
+    hint('A take plays as you sang it, from the start of every pass. Nudge moves it earlier or later if it sits off the beat; Settings → Sync → Recording offset sets it for all new takes.');
+    return;
+  }
+  const row=document.createElement('div'); row.className='row ownsnd';
+  row.innerHTML=`<input class="sndname" id="vocName" maxlength="40" value="${escH(instName(Ly))}" aria-label="Name of this vocal layer" enterkeyhint="done"><button id="vocClear" class="danger"${Ly.vox?'':' disabled'}>clear take</button>`;
+  grid.appendChild(row);
+  const vn=row.querySelector('#vocName'); vn.onchange=()=>{ const v=vn.value.trim().slice(0,40); if(v){ Ly.vname=v; renderLayers(); save(); } }; vn.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') vn.blur(); };
+  row.querySelector('#vocClear').onclick=()=>clearLayer();
+  const fp=param(grid,'Filter',()=>Ly.cutoff,v=>{Ly.cutoff=v;applyLayer(Ly);},0,1,0.001,v=>{const f=80*Math.pow(18000/80,v);return f>=1000?(f/1000).toFixed(f>=9950?0:1)+' kHz':Math.round(f)+' Hz';});
+  fp.classList.add('pwide');
+  param(grid,'Resonance',()=>Ly.reso,v=>{Ly.reso=v;applyLayer(Ly);},0,1,0.01,pct);
+  hint(`Tap ● to sing over the loop: the song plays quieter while the microphone listens (headphones keep it out of the take). Each part has its own take${SONG.parts.length>1?` (you are on ${partName(SONG.cur)})`:''}; undo brings back the one before.`);
+}
 function renderPage(host,tab,Ly){
   const grid=document.createElement('div'); grid.className='params'; host.appendChild(grid);
+  if(Ly.vocal && tab!=='mix'){ vocalPage(host, grid, tab, Ly); return; }
   if(tab==='timing'){
     // feel presets or the advanced XY screen, never both: the panel keeps one height
     grid.remove();
@@ -5003,7 +5235,7 @@ function renderPage(host,tab,Ly){
     param(grid,'Reverb',()=>Ly.rev,v=>{Ly.rev=v;applyLayer(Ly);},0,1,0.01,pct);
     param(grid,'Delay',()=>Ly.dly,v=>{Ly.dly=v;applyLayer(Ly);},0,1,0.01,pct);
     capFxParam(grid, Ly, S.sel);
-    segParam(grid,'Plays on',[['app','App'],['hc','HiChord'],['both','Both']],()=>Ly.out,v=>{
+    if(!Ly.vocal) segParam(grid,'Plays on',[['app','App'],['hc','HiChord'],['both','Both']],()=>Ly.out,v=>{
       Ly.out=v; if(v!=='app' && !HC.connected) toast('Connect the HiChord first, then this layer plays on it');
       if(v!=='hc') hcAllOff(); renderDetail(); });
     const h=document.createElement('p'); h.className='hint';
@@ -5101,7 +5333,13 @@ function drawRoll(Ly,i,cv){
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
   const L=loopLen(), col=cssVar('--l'+i);
   g.fillStyle=cssVar('--screen-line'); for(let b=1;b<S.bars;b++) g.fillRect(Math.round(b*4/L*W),0,1,H);
-  const evs=effEvents(Ly);
+  if(Ly.vocal){ const tk=voxTake(Ly);
+    if(tk){ const tb=Math.min(tk.beats,L), cols=Math.max(8,Math.round(tb/L*W)), pk=voxPeaks(tk, cols), mid=H/2, nud=(Ly.nudge||0)/1000*S.bpm/60/L*W;
+      g.fillStyle=col;
+      for(let r=0; r*tb<L; r++){ const x0=r*tb/L*W+nud; for(let c=0;c<cols;c++){ const x=x0+c*(tb/L*W)/cols; if(x>=W) break; const h=Math.max(1,pk[c]*(H-6)); g.fillRect(x, mid-h/2, Math.max(1,W/cols*0.8), h); } }
+    } else { g.font='500 10px IBM Plex Mono, monospace'; g.textBaseline='middle'; g.fillStyle=cssVar('--screen-ink'); g.globalAlpha=.5; g.fillText(VXR.on&&VXR.Ly===Ly?'recording…':'tap ● to sing over the loop', 6, H/2); g.globalAlpha=1; }
+  }
+  const evs=Ly.vocal ? [] : effEvents(Ly);
   if(evs.length){
     // chord names along the top (not for drums), notes underneath
     const named = Ly.mode!=='kit';
@@ -5528,9 +5766,10 @@ function songAdvance(B){
   SONG.jump=null; SONG.pos=np;
   if(changed){   // the notes change now (for the scheduler), the layers turn on or off exactly on the 1
     syncPart(); SONG.cur=k; const p=SONG.parts[k];
-    layers.forEach((Ly,i)=>{ Ly.events=p.ev[i]||(p.ev[i]=[]); Ly.mute=!!p.mute[i]; ensureChords(Ly);
+    layers.forEach((Ly,i)=>{ Ly.events=p.ev[i]||(p.ev[i]=[]); Ly.mute=!!p.mute[i]; Ly.vox=(p.vox&&p.vox[i])||null; ensureChords(Ly);
       Ly.gain.gain.setTargetAtTime(audible(Ly)?Ly.vol*Ly.vol:0, at, 0.01); });
   }
+  layers.forEach(Ly=>voxStopAt(Ly, at));   // a take playing stops on the 1 (a jump in the middle of a pass too)
   setTimeout(()=>{
     if(SPG.open){ if(changed){ renderParts(); save(); } renderSongPage(); return; }
     if(!CAP.open) return;
@@ -5702,7 +5941,7 @@ function renderCaptureMode(){
 }
 function capTile(Ly,i,roll,extra=''){ return `
     <div class="ctile ${audible(Ly)?'':'off'} ${capHas(Ly,'gate')?'hasnotes':''} ${CAP.lock.has(i)?'locked':''}" data-i="${i}" style="--lc:var(--l${i})">
-      <div class="chead"><span class="num">${i+1}</span>${INST_ICON[Ly.inst]||''}<span class="cname">${instName(Ly)}</span><button class="cfxchip" data-fxi="${i}" aria-label="Capture effects: ${capName(Ly)}. Tap to change">${capChip(Ly)} ▾</button><span class="cstate">${audible(Ly)?'on':'off'}</span>${extra}</div>
+      <div class="chead"><span class="num">${i+1}</span>${layerIcon(Ly)}<span class="cname">${instName(Ly)}</span><button class="cfxchip" data-fxi="${i}" aria-label="Capture effects: ${capName(Ly)}. Tap to change">${capChip(Ly)} ▾</button><span class="cstate">${audible(Ly)?'on':'off'}</span>${extra}</div>
       ${roll?`<canvas id="croll${i}"></canvas>`:''}
       <div class="cpad"></div>
       ${capHas(Ly,'gate') ? noteKeys(Ly,'capnotes') : ''}
@@ -5850,6 +6089,7 @@ const fmtLen = d => { const s=d*4; if(Math.abs(s-Math.round(s))>1e-6) return `${
 const edDefaultMode = () => { ED.chordMode = !MONO_INST.has(edLy().inst); };
 function openEditor(i){
   if(i!=null && i!==S.sel) selectLayer(i);
+  if(selLayer().vocal){ toast('a vocal layer is audio: it has no notes to edit'); return; }
   if(ED.dock){ setFull('ed'); return; }   // iPad: the docked editor goes full screen
   ED.li=S.sel; ED.open=true; ED.sel.clear(); ED.hist=[]; ED.fut=[];
   ED.tool='select'; edDefaultMode(); edOrient=innerWidth>innerHeight;
@@ -6017,6 +6257,7 @@ function edSetType(type){
   notes.forEach(n=>edAudition(n.note,n.vel)); edAfterChange();
 }
 function edAddNote(x,y){
+  if(edLy().vocal) return;
   const g=snapGrid(), L=loopLen();
   let b=beatOfX(x); b = g ? Math.floor(b/g)*g : b; b=clamp(b,0,L-MINLEN);
   const root=noteOfY(y);
@@ -6305,7 +6546,7 @@ function edDraw(){
 function edRenderTools(){
   const Ly=edLy(), s=edSelected();
   $('edLayer').innerHTML=layers.map((l,i)=>(l.shown||i===ED.li)?`<option value="${i}" ${i===ED.li?'selected':''}>${i+1} · ${instName(l)}</option>`:'').join('');
-  $('edLayerIcon').innerHTML=INST_ICON[Ly.inst]; $('edLayerName').textContent=`${ED.li+1} · ${instName(Ly).toLowerCase()}`;
+  $('edLayerIcon').innerHTML=layerIcon(Ly); $('edLayerName').textContent=`${ED.li+1} · ${instName(Ly).toLowerCase()}`;
   $('edSnap').innerHTML=SNAPS.map(([k,l])=>`<option value="${k}" ${k===ED.snap?'selected':''}>${l}</option>`).join('');
   $('edGridVal').textContent=SNAPS.find(x=>x[0]===ED.snap)[1].toLowerCase();
   $('edChordMode').querySelectorAll('button').forEach(b=>b.classList.toggle('on', (b.dataset.m==='1')===ED.chordMode));
@@ -6505,7 +6746,7 @@ $('playBtn').onclick=()=>{
   if(S.playing){ stopTransport(); return; }
   startTransport(false);
   // the hint points at the record key, which capture mode doesn't have: there, play just starts the loop
-  if(!CAP.open && !layers.some(Ly=>Ly.events.length && audible(Ly))) toast('Nothing recorded yet: tap ● (record), then play on the HiChord');
+  if(!CAP.open && !layers.some(Ly=>(Ly.events.length || voxTake(Ly)) && audible(Ly))) toast('Nothing recorded yet: tap ● (record), then play on the HiChord');
 };
 $('testBtn').onclick=testSound;
 $('captureBtn').onclick=()=>CAP.open?closeCapture():openCapture();
@@ -6636,7 +6877,7 @@ async function startApp(){
   if(!layers.some(Ly=>Ly.shown)) layers[S.sel].shown=true;
   layers[S.sel].shown=true;
   layers.forEach(applyLayer); layers.forEach(ensureChords);
-  setSong(saved && saved.song, true); renderParts();
+  setSong(saved && saved.song, true); renderParts(); voxLoadAll();
   restoreLocks();
   if(saved){ master.gain.value=S.volume; revOut.gain.value=S.revLevel; dlyFb.gain.value=S.dlyFb; setDrive(S.drive); buildIR(); updateDelayTime(); }
   $('metroChk').checked=S.metro; $('countChk').checked=S.countIn;
@@ -6657,7 +6898,7 @@ async function startApp(){
 async function startScreen(){
   document.body.classList.add('startmode');
   try{ await idb(); }catch(e){ STORE_OK=false; }
-  await purgeLeft().catch(()=>{}); await mirrorIn();
+  await purgeLeft().catch(()=>{}); await mirrorIn(); await voxGC();
   try{ await refreshProjects(); }catch(e){ PRJ.list=[]; }
   try{ START.last=localStorage.getItem('hcl-project'); }catch(e){}
   // the app's built-in page (no internet) has no history of its own: continue the project open last in the app

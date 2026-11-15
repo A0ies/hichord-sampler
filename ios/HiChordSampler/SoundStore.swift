@@ -27,8 +27,8 @@ final class SoundStore: NSObject, WKScriptMessageHandlerWithReply {
     }
 
     /// Only the page's own names: "hc" + preset (HiChord sounds), "p:<id>" (project), "s:<id>:<layer>" (own sound),
-    /// "x:<id>" (a deleted project) and "last" (the project open last).
-    private static let keyPattern = "^(hc[0-9]{1,3}|p:[A-Za-z0-9]{1,40}|x:[A-Za-z0-9]{1,40}|s:[A-Za-z0-9]{1,40}:[0-9]{1,3}|last)$"
+    /// "v:<id>" (a vocal take), "x:<id>" (a deleted project) and "last" (the project open last).
+    private static let keyPattern = "^(hc[0-9]{1,3}|p:[A-Za-z0-9]{1,40}|x:[A-Za-z0-9]{1,40}|s:[A-Za-z0-9]{1,40}:[0-9]{1,3}|v:[A-Za-z0-9]{1,40}|last)$"
     private func file(_ key: Any?) -> URL? {
         guard let key = key as? String, key.range(of: Self.keyPattern, options: .regularExpression) != nil else { return nil }
         return folder?.appendingPathComponent(key.replacingOccurrences(of: ":", with: "~") + ".hcs")
