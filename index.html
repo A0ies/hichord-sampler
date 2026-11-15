@@ -2017,7 +2017,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-15.117';
+const PAGE_VERSION='2026-11-15.118';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2481,7 +2481,7 @@ function liveOn(note, vel, ch){
       c.notes.push(note); qPush(Ly.live, note, null);
       const out=monoTarget(Ly, c.notes);
       if(out!==c.out){
-        const v=playNote(Ly, out, vel, ctx.currentTime, null);
+        const v=bendNew(playNote(Ly, out, vel, ctx.currentTime, null), Ly);
         swapQ(Ly.live, c.key, c.voice, v);
         if(c.voice) releaseVoice(c.voice, ctx.currentTime, 0.01);
         c.voice=v; c.out=out; if(c.held) c.held.note=out;
@@ -2490,7 +2490,7 @@ function liveOn(note, vel, ch){
     }
     c=Ly.mono={ t:now, notes:[note], key:note };
     c.out=monoTarget(Ly, c.notes);
-    c.voice=playNote(Ly, c.out, vel, ctx.currentTime, null); c.held=null;
+    c.voice=bendNew(playNote(Ly, c.out, vel, ctx.currentTime, null), Ly); c.held=null;
     qPush(Ly.live, note, c.voice);
     if(S.rec && S.playing){
       const b=Math.max(0, recBeat());
@@ -2498,7 +2498,7 @@ function liveOn(note, vel, ch){
     }
     return;
   }
-  const v=playNote(Ly, note, vel, ctx.currentTime, null);
+  const v=bendNew(playNote(Ly, note, vel, ctx.currentTime, null), Ly);
   qPush(Ly.live, note, v);
   if(S.rec && S.playing){
     const b=Math.max(0, recBeat());   // chords played during the count-in land on beat 1
@@ -2524,7 +2524,24 @@ function midiSeen(note, vel){
   if(!monT) monT=requestAnimationFrame(()=>{ monT=0;
     $('midiMon').textContent=`Notes in: ${midiCount} on / ${midiOffs} off · last ${midiLast} · ${S.rec&&S.playing?`recording into layer ${S.sel+1}`:'not recording — tap ● to record'}${allOffs?` · all-notes-off: ${allOffs}`:''}`; });
 }
+/* sustain pedal (CC 64): while it is down, the notes you let go keep sounding (and a recording keeps them going)
+   until the pedal comes up */
+const SUS={on:false, pending:[]};
+function sustain(on){ SUS.on=on; if(!on){ const p=SUS.pending; SUS.pending=[]; p.forEach(liveOffNow); } }
 function liveOff(note){
+  if(!ctx) return;
+  if(SUS.on){ SUS.pending.push(note); return; }
+  liveOffNow(note);
+}
+/* pitch bend: bends what you play live on the selected layer, ±2 semitones (the usual range of a keyboard's wheel) */
+const BEND_RANGE=2; let LIVE_BEND=0;
+function liveRate(v, Ly){ return v.rate*Math.pow(2,((Ly.bend||0)+LIVE_BEND)/12); }
+function liveBend(st){
+  LIVE_BEND=st; if(!ctx) return; const Ly=selLayer(), now=ctx.currentTime;
+  Ly.live.forEach(list=>list.forEach(v=>{ if(v && v.rate && !v.released) v.src.playbackRate.setTargetAtTime(liveRate(v,Ly), now, 0.008); }));
+}
+const bendNew = (v, Ly) => { if(v && v.rate && LIVE_BEND) v.src.playbackRate.value=liveRate(v,Ly); return v; };
+function liveOffNow(note){
   if(!ctx) return;
   const Ly=selLayer(), v=qShift(Ly.live, note);
   if(v && !v.one) releaseVoice(v, ctx.currentTime);
@@ -2577,13 +2594,15 @@ function handleMsg(d, fromHC){
   const type=st&0xF0, ch=(st&0x0F)+1;
   if(type===0xB0){
     // All Notes Off / All Sound Off from a keyboard only stops what you play live, never the loop's own notes
-    if(d[1]===123||d[1]===120){ stopLiveVoices(); allOffs++; return; }
+    if(d[1]===123||d[1]===120){ sustain(false); stopLiveVoices(); allOffs++; return; }
+    if(d[1]===64 && (S.input==='all' || String(ch)===S.input)){ sustain(d[2]>=64); return; }   // sustain pedal
     if(fromHC) hcIncomingCC(d[1],d[2]);
     return;
   }
   if(S.input!=='all' && String(ch)!==S.input) return;
   if(HCS && HCS.running) return;   // sampling the HiChord: what it plays is being recorded, not played along
   if(fromHC && (type===0x90||type===0x80) && hcIsEcho(d[1], type===0x90 && d[2]>0)) return;   // our own loop notes coming back from the HiChord
+  if(type===0xE0){ liveBend(((d[2]<<7|d[1])-8192)/8192*BEND_RANGE); return; }   // pitch bend wheel
   if(type===0x90 && d[2]>0) liveOn(d[1],d[2],ch);
   else if(type===0x80 || type===0x90) liveOff(d[1]);
 }
