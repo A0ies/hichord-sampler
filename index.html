@@ -1333,6 +1333,15 @@ body.projopen .pbar{display:none}
 .edvelpop{position:absolute;right:0;bottom:calc(100% + 8px);z-index:4;width:min(300px,100%);background:var(--bg);border-radius:12px;padding:12px 14px;box-shadow:0 0 0 1px var(--line),0 10px 30px rgba(0,0,0,.25)}
 .edvelpop label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:6px} .edvelpop label b{color:var(--ink)}
 .edvelpop input{width:100%}
+/* the chord types for the selected chord, above the keys: one tap changes it in place (same root) */
+.edtypepop{position:absolute;left:0;right:0;bottom:calc(100% + 8px);z-index:4;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;background:var(--bg);border-radius:12px;padding:8px;
+  box-shadow:0 0 0 1px var(--line),0 10px 30px rgba(0,0,0,.25)}
+.edtypepop button{min-height:40px;height:40px;padding:0 4px;font-family:var(--mono);font-size:13px;font-weight:600;text-transform:none}
+.edtypepop button::before{display:none}
+.edtypepop button.on{background:var(--acc);color:#fff}
+.edact>#edTypeBtn b{font-family:var(--mono);font-size:14px;font-weight:700;line-height:1;text-transform:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.edact>#edTypeBtn.on{background:var(--acc);color:#fff}
+.edact>#edTypeBtn[hidden]{display:none}
 .edbar{flex:none;margin:0 calc(-1 * max(12px,calc(var(--sr) + 8px))) 0 calc(-1 * max(12px,calc(var(--sl) + 8px)));background:var(--screen);color:var(--screen-ink);
   display:flex;align-items:center;gap:10px;padding:10px max(12px,calc(var(--sr) + 8px)) calc(10px + var(--sb)) max(12px,calc(var(--sl) + 8px))}
 .edbar .big{width:50px;height:50px;border-radius:12px;background:var(--screen2);color:var(--screen-ink);box-shadow:none;font-size:18px;padding:0;flex:none}
@@ -1673,7 +1682,8 @@ body[data-studio=port]:not([data-sfull=st]) .dangerkeys button.armed{width:auto;
 body.studio .dangerkeys svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 body[data-studio=port] #tabs button{padding:8px 6px 6px;letter-spacing:.02em}
 .editor.dock:not(.full) .edact>button{width:36px;padding:0;justify-content:center}
-.editor.dock:not(.full) .edvelpop{top:calc(100% + 8px);bottom:auto;right:auto;left:0}
+.editor.dock:not(.full) .edvelpop,.editor.dock:not(.full) .edtypepop{top:calc(100% + 8px);bottom:auto;right:auto;left:0}
+.editor.dock:not(.full) .edtypepop{width:min(360px,100%)}
 .editor.dock:not(.full) .edtoolkeys{margin:0}
 .editor.dock:not(.full) .edtoolkeys button,.editor.dock:not(.full) .edgrid{height:36px;border-radius:9px}
 .editor.dock:not(.full) .edtoolkeys button{width:40px}
@@ -1981,7 +1991,8 @@ body.studio .tbar .pos b{font-size:26px}
   <div class="edact">
     <span class="info" id="edInfo"></span>
     <button id="edSplit" title="Split in two on the grid"></button><button id="edDup" title="Copy after itself (⌘D)"></button><button id="edQuant" title="Snap to the grid (Q)"></button>
-    <button id="edVelBtn" title="Velocity"></button><button id="edDel" class="danger" title="Delete (⌫)"></button>
+    <button id="edTypeBtn" title="Chord type" aria-label="Chord type" aria-expanded="false"></button><button id="edVelBtn" title="Velocity"></button><button id="edDel" class="danger" title="Delete (⌫)"></button>
+    <div class="edtypepop hidden" id="edTypePop" role="group" aria-label="Chord type"></div>
     <div class="edvelpop hidden" id="edVelPop"><label><span>velocity</span><b id="edVelVal"></b></label><input type="range" id="edVel" min="1" max="127" step="1"></div>
   </div>
   <!-- bottom bar, as on the main screen: play, record, position, tools and the grid -->
@@ -2004,7 +2015,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-14.114';
+const PAGE_VERSION='2026-11-15.115';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5626,7 +5637,7 @@ function openEditor(i){
 }
 function closeEditor(){
   if(ED.dock){ setFull(sFull()==='ed'?'':'ed'); return; }   // iPad: its key toggles full screen
-  ED.open=false; ED.drag=null; ED.pointers.clear(); $('editor').classList.add('hidden'); edMenuClose(); $('edVelPop').classList.add('hidden');
+  ED.open=false; ED.drag=null; ED.pointers.clear(); $('editor').classList.add('hidden'); edMenuClose(); $('edVelPop').classList.add('hidden'); $('edTypePop').classList.add('hidden');
   renderLayers(); save();
 }
 function edResize(){
@@ -5742,15 +5753,55 @@ function edSplitSel(){
   });
   ED.sel=keep; edAfterChange();
 }
+/* the key the editor writes chords in: the HiChord's key and scale when it has told us, else the major key the
+   notes of the song fit best (a minor key has the same chords as its relative major) */
+const SCALE_IV={ 0:[0,2,4,5,7,9,11], 1:[0,2,3,5,7,8,10], 2:[0,2,3,5,7,8,11], 3:[0,2,3,5,7,9,11], 4:[0,2,4,5,7,9,11], 5:[0,2,3,5,7,8,10], 6:[0,2,3,5,7,8,10],
+  7:[0,2,3,5,7,9,10], 8:[0,2,4,5,7,9,10], 9:[0,2,4,6,7,9,11] };   // pentatonic and blues: their seven-note parent scale
+function edKeySig(){
+  if(HC.state.key!=null) return { tonic:HC.state.key, iv:SCALE_IV[HC.state.scale]||SCALE_IV[0], name:`${NOTE[HC.state.key]} ${(HC_SCALES[HC.state.scale]||'major').toLowerCase()}`, hc:true };
+  const w=new Array(12).fill(0);
+  layers.forEach(Ly=>{ if(!Ly.shown || isDrum(Ly.inst)) return; Ly.events.forEach(e=>{ w[mod(e.note,12)]+=e.dur; }); });
+  let best=0, bs=-Infinity;
+  for(let t=0;t<12;t++){ const sc=SCALE_IV[0].map(i=>mod(t+i,12)); let v=0; for(let p=0;p<12;p++) v += sc.includes(p) ? w[p] : -w[p];
+    v += 0.3*w[t] + 0.15*w[mod(t+7,12)]; if(v>bs+1e-9){ bs=v; best=t; } }
+  return { tonic:best, iv:SCALE_IV[0], name:`${NOTE[best]} major`, hc:false };
+}
+// the chord of the key on the note you tapped (moved to the nearest note of the key when it isn't in it)
+function edDiatonic(note){
+  const K=edKeySig(), pcs=K.iv.map(i=>mod(K.tonic+i,12));
+  let n=note; for(const d of [0,-1,1,-2,2]) if(pcs.includes(mod(note+d,12))){ n=note+d; break; }
+  const i=pcs.indexOf(mod(n,12)), third=mod(pcs[(i+2)%7]-pcs[i],12), fifth=mod(pcs[(i+4)%7]-pcs[i],12);
+  return { root:n, shape:[0,third,fifth] };
+}
+const CHORD_TYPES=[['maj','',[0,4,7]],['min','m',[0,3,7]],['7','7',[0,4,7,10]],['maj7','maj7',[0,4,7,11]],['m7','m7',[0,3,7,10]],['sus2','sus2',[0,2,7]],['sus4','sus4',[0,5,7]],['dim','dim',[0,3,6]]];
+// the root (as a note) and type of a chord: the first reading of its notes that is a known shape
+function chordRoot(notes){
+  const ns=notes.map(e=>e.note).sort((a,b)=>a-b), pcs=[...new Set(ns.map(n=>mod(n,12)))];
+  for(const root of [mod(ns[0],12), ...pcs.filter(p=>p!==mod(ns[0],12))]){
+    const set=[...new Set(pcs.map(p=>mod(p-root,12)))].sort((a,b)=>a-b).join(',');
+    const t=CHORD_TYPES.find(([, ,iv])=>iv.join(',')===set);
+    if(t) return { note:ns.find(n=>mod(n,12)===root), type:t[0] };
+  }
+  return { note:ns[0], type:null };
+}
+function edSelChord(){ if(!ED.chordMode || !ED.sel.size) return null; const cs=edChordBoxes().filter(c=>c.notes.some(n=>ED.sel.has(n.id))); return cs.length===1 ? cs[0] : null; }
+function edSetType(type){
+  const c=edSelChord(); if(!c) return; const t=CHORD_TYPES.find(x=>x[0]===type); if(!t) return;
+  const r=chordRoot(c.notes), vel=Math.round(c.notes.reduce((a,e)=>a+e.vel,0)/c.notes.length), first=c.notes[0];
+  edPush();
+  const ids=new Set(c.notes.map(n=>n.id)); edLy().events=edLy().events.filter(e=>!ids.has(e.id));
+  const notes=t[2].map(iv=>({ id:evId++, beat:first.beat, dur:first.dur, note:clamp(r.note+iv,0,127), vel, take:first.take||0, chord:first.chord }));
+  edLy().events.push(...notes); ED.sel=new Set(notes.map(n=>n.id));
+  notes.forEach(n=>edAudition(n.note,n.vel)); edAfterChange();
+}
 function edAddNote(x,y){
   const g=snapGrid(), L=loopLen();
   let b=beatOfX(x); b = g ? Math.floor(b/g)*g : b; b=clamp(b,0,L-MINLEN);
   const root=noteOfY(y);
   if(ED.chordMode){
-    // a new chord takes the shape of the selected (or last) chord, with its lowest note where you tapped
-    const sel=edSelected(); if(sel.length>1){ const lo=Math.min(...sel.map(e=>e.note)); ED.lastShape=[...new Set(sel.map(e=>e.note-lo))].sort((a,c)=>a-c); }
-    const cid=chordSeq++, dur=ED.lastLen>0?ED.lastLen:Math.max(g||0.25,1);
-    const notes=ED.lastShape.map(iv=>({ id:evId++, beat:b, dur, note:clamp(root+iv,0,127), vel:100, take:0, chord:cid }));
+    // a new chord is the chord of the key on the note you tapped (its root); the type key changes it afterwards
+    const dia=edDiatonic(root), cid=chordSeq++, dur=ED.lastLen>0?ED.lastLen:Math.max(g||0.25,1);
+    const notes=dia.shape.map(iv=>({ id:evId++, beat:b, dur, note:clamp(dia.root+iv,0,127), vel:100, take:0, chord:cid }));
     edLy().events.push(...notes); ED.sel=new Set(notes.map(n=>n.id));
     notes.forEach(n=>edAudition(n.note,n.vel));
     return notes[0];
@@ -6041,6 +6092,12 @@ function edRenderTools(){
   $('edUndo').disabled=!ED.hist.length; $('edRedo').disabled=!ED.fut.length;
   ['edSplit','edDup','edDel','edVelBtn'].forEach(id=>$(id).disabled=!s.length);
   if(!s.length) $('edVelPop').classList.add('hidden');
+  const sc=edSelChord(), tb=$('edTypeBtn'); tb.hidden=!ED.chordMode; tb.disabled=!sc;
+  const cur=sc ? chordRoot(sc.notes) : null;
+  tb.innerHTML = `<b>${sc ? (cur.type ? NOTE[mod(cur.note,12)]+CHORD_TYPES.find(t=>t[0]===cur.type)[1] : chordName(sc.notes)) : 'chord'}</b><small>type</small>`;
+  if(!sc) $('edTypePop').classList.add('hidden');
+  $('edTypePop').innerHTML = sc ? CHORD_TYPES.map(([k,suf])=>`<button data-type="${k}" class="${cur.type===k?'on':''}" aria-pressed="${cur.type===k}">${NOTE[mod(cur.note,12)]}${suf}</button>`).join('') : '';
+  tb.classList.toggle('on', !$('edTypePop').classList.contains('hidden')); tb.setAttribute('aria-expanded', !$('edTypePop').classList.contains('hidden'));
   $('edQuant').disabled=!Ly.events.length;
   if(s.length){ const v=Math.round(s.reduce((a,e)=>a+e.vel,0)/s.length); $('edVel').value=v; $('edVelVal').textContent=v; }
   const selChords = ED.chordMode && s.length ? edChordBoxes().filter(c=>c.notes.some(n=>ED.sel.has(n.id))) : [];
@@ -6051,8 +6108,8 @@ function edRenderTools(){
     : selChords.length>1 ? `<b>${selChords.length} chords</b>`
     : s.length===1 ? `<b>${noteName(s[0].note)}</b> ${fmtPos(s[0].beat)} · ${fmtLen(s[0].dur)}`
     : s.length ? `<b>${s.length} notes</b>`
-    : Ly.events.length ? (ED.tool==='draw' ? (touch?'tap to add':'click to add') : ED.tool==='erase' ? 'tap to erase' : (touch?'tap to select · double-tap adds':'click to select · double-click adds'))
-    : 'no notes yet: draw or record';
+    : Ly.events.length ? (ED.tool==='draw' ? (touch?'tap to add':'click to add') : ED.tool==='erase' ? 'tap to erase' : (touch?'tap to select · double-tap adds':'click to select · double-click adds'))+(ED.chordMode?` · ${edKeySig().name}`:'')
+    : 'no notes yet: draw or record'+(ED.chordMode?` · ${edKeySig().name}`:'');
   $('edBake').classList.toggle('hidden', !timingActive(Ly));
 }
 $('edDone').onclick=closeEditor; $('edDone').innerHTML=ic('close','');
@@ -6065,11 +6122,14 @@ $('edUndo').onclick=edUndo; $('edRedo').onclick=edRedo;
 $('edMore').onclick=e=>{ e.stopPropagation(); const m=$('edMenu'), open=m.classList.toggle('hidden')===false; $('edMore').setAttribute('aria-expanded',open); $('edMore').classList.toggle('on',open); };
 function edMenuClose(){ $('edMenu').classList.add('hidden'); $('edMore').classList.remove('on'); $('edMore').setAttribute('aria-expanded','false'); }
 document.addEventListener('pointerdown',e=>{ if(!e.target.closest('#edMenu,#edMore')) edMenuClose();
-  if(!e.target.closest('#edVelPop,#edVelBtn')) $('edVelPop').classList.add('hidden'); });
+  if(!e.target.closest('#edVelPop,#edVelBtn')) $('edVelPop').classList.add('hidden');
+  if(!e.target.closest('#edTypePop,#edTypeBtn,#edCanvas') && !$('edTypePop').classList.contains('hidden')){ $('edTypePop').classList.add('hidden'); if(ED.open) edRenderTools(); } });   // tapping another chord keeps the strip open
 $('edQuantAll').onclick=()=>{ ED.sel.clear(); edQuantizeSel(); edMenuClose(); };
 $('edSelAll').onclick=()=>{ ED.sel=new Set(edLy().events.map(x=>x.id)); edMenuClose(); edRenderTools(); edDraw(); };
 $('edDup').onclick=edDuplicate; $('edDel').onclick=edDeleteSel; $('edQuant').onclick=edQuantizeSel; $('edSplit').onclick=edSplitSel;
 $('edVelBtn').onclick=()=>$('edVelPop').classList.toggle('hidden');
+$('edTypeBtn').onclick=()=>{ $('edTypePop').classList.toggle('hidden'); $('edVelPop').classList.add('hidden'); edRenderTools(); };
+$('edTypePop').onclick=e=>{ const b=e.target.closest('[data-type]'); if(b) edSetType(b.dataset.type); };
 $('edBakeBtn').onclick=edBake;
 $('edPlay').onclick=()=>{ S.playing?stopTransport():startTransport(false); edRenderTools(); };
 $('edRec').onclick=()=>{ setRec(!S.rec); edRenderTools(); };
