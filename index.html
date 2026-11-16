@@ -2092,7 +2092,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-16.122';
+const PAGE_VERSION='2026-11-16.123';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3082,9 +3082,9 @@ const voxRestartAll = () => { if(S.playing) layers.forEach(voxRestart); };
 /* Headphones keep the song out of a take, so it plays at full volume; on the speaker it plays quieter and is
    taken out afterwards (echo removal). The iPhone app knows where sound goes; a computer's browser may name its
    output; otherwise the pop-up asks once (remembered until the page reloads). */
-let HP_SAID=null, HP_TOLD=false;
+let HP_SAID=null, HP_TOLD=false, HP_MIC_TOLD=false;
 const HP_PORT=/headphone|bluetooth|airpods/i, HP_NAME=/airpods|headphone|headset|buds|beats|earpods|bose|sony wh|jabra/i;
-const BT_MIC=/airpods|bluetooth|buds|beats|hands-?free|bose|jabra|wh-1000/i, OWN_MIC=/iphone|ipad|built-?in|internal|macbook|microphone array/i;
+const BT_MIC=/airpods|bluetooth|buds|beats|hands-?free|bose|jabra|wh-1000|headset|earpods|headphone/i, OWN_MIC=/iphone|ipad|built-?in|internal|macbook|microphone array/i;
 const routeKnown = () => !!(audioRoute && audioRoute.outputs && audioRoute.outputs.length);
 function headphonesOn(){
   if(routeKnown()) return audioRoute.outputs.some(o=>HP_PORT.test(o.type||'') || HP_NAME.test(o.name||''));
@@ -3102,16 +3102,23 @@ function voxSetHp(hp){
 // ● on a vocal layer: suggest headphones (once) when sound comes out of the speaker, then record
 async function voxAsk(Ly){
   let hp=headphonesOn(); if(hp==null) hp=await hpFromDevices();
+  const phone = inApp() || /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints>1);
+  const own = phone ? 'the iPhone\'s own microphone' : 'the built-in microphone';
+  // with headphones: once, say which microphone records you (the headphones' own one is never used)
+  if(hp===true && !HP_MIC_TOLD){ HP_MIC_TOLD=true;
+    return infoShow('Microphone', `<h3>headphones on: ${phone?'the phone':'the computer'} listens</h3>
+      <p>The song plays only in your headphones, at full volume. Your voice is recorded with <b>${own}</b>, not the one in your headphones${phone?', so keep the phone close: about a hand\'s width from your mouth works well':''}.</p>
+      <p>That keeps wireless headphones at full sound quality, and your take clean.</p>`,
+      [['hpNo','cancel'], ['hpGo','record','primary', ()=>voxGo(Ly, headphonesOn()!==false)]]); }
   if(hp===true || (hp===false && HP_TOLD)) return voxGo(Ly, hp);
   HP_TOLD=true;
-  const own = inApp() || /iPhone|iPad/.test(navigator.userAgent) ? 'the iPhone\'s own microphone' : 'the built-in microphone';
   const body=`<p>With headphones on, the song plays at <b>full volume</b> while you sing and none of it ends up in your take.
     Wired headphones are best; AirPods and other wireless ones work too (the app records with ${own}, so they keep their sound).</p>
     <p>On the speaker the song plays quieter, and afterwards the app takes most of it out of your take.</p>`;
   if(hp===false) infoShow('Headphones', `<h3>headphones keep the song out of your take</h3>${body}`,
     [['hpNo','cancel'], ['hpGo','record','primary', ()=>voxGo(Ly, headphonesOn()===true)]]);
   else infoShow('Headphones', `<h3>headphones on?</h3>${body}`,
-    [['hpNo','cancel'], ['hpSpk','speaker','', ()=>{ HP_SAID=false; voxGo(Ly, false); }], ['hpYes','headphones on','primary', ()=>{ HP_SAID=true; voxGo(Ly, true); }]]);
+    [['hpNo','cancel'], ['hpSpk','speaker','', ()=>{ HP_SAID=false; voxGo(Ly, false); }], ['hpYes','headphones on','primary', ()=>{ HP_SAID=true; HP_MIC_TOLD=true; voxGo(Ly, true); }]]);
 }
 function voxGo(Ly, hp){
   if(S.rec || mic || !layers.includes(Ly) || !Ly.vocal) return;
