@@ -90,8 +90,11 @@ final class AudioRouter: NSObject, WKScriptMessageHandler {
         let r = AVAudioSession.sharedInstance().currentRoute
         let outs = r.outputs.map { ["type": $0.portType.rawValue, "name": $0.portName] }
         let ins = r.inputs.map { ["type": $0.portType.rawValue, "name": $0.portName] }
+        // latencies too: WebKit may not report the output's (Bluetooth adds 0.15 s or more), which vocal takes need
+        let s = AVAudioSession.sharedInstance()
         let info: [String: Any] = ["outputs": outs, "inputs": ins, "usb": usbConnected,
-                                   "forcedSpeaker": forcedSpeaker, "allowUSB": allowUSBOutput]
+                                   "forcedSpeaker": forcedSpeaker, "allowUSB": allowUSBOutput,
+                                   "outLat": s.outputLatency, "inLat": s.inputLatency]
         print("[audio] out: \(r.outputs.map { "\($0.portName) (\($0.portType.rawValue))" }) in: \(r.inputs.map { $0.portName }) usb: \(usbConnected) speakerForced: \(forcedSpeaker)")
         guard let data = try? JSONSerialization.data(withJSONObject: info),
               let json = String(data: data, encoding: .utf8) else { return }

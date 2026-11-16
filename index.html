@@ -852,6 +852,7 @@ body.projopen .pbar{display:none}
 .miccard .mtx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .miccard .mtx b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .miccard .mtx small{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.miccard .mtx small.tap{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 .miccard .micmeter{width:64px;height:6px;border-radius:3px;background:var(--line);overflow:hidden;flex:none}
 .miccard .micmeter i{display:block;height:100%;width:0;background:var(--rec)}
 .miccard button{min-height:40px;padding:0 14px;flex:none}
@@ -2091,7 +2092,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-15.121';
+const PAGE_VERSION='2026-11-16.122';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -2127,7 +2128,7 @@ const S = { bpm:100, bars:4, playing:false, rec:false, metro:true, countIn:true,
   followClock:true, sendTempo:true, hcTransport:false, input:'all', recOffset:0,
   revSize:0.5, revLevel:0.8, dlyDiv:0.75, dlyFb:0.35, drive:0.15, volume:0.85, tab:'timing' };
 const layers = [];
-let ctx, preFx, tape, master, limiter, recDest, revIn, convolver, revOut, dlyIn, delay, dlyFb, dlyLp, dlyOut;
+let ctx, preFx, tape, master, limiter, recDest, refTap, revIn, convolver, revOut, dlyIn, delay, dlyFb, dlyLp, dlyOut;
 
 /* ============ instruments (multisampled from openly licensed sample sets, or synthesised: see CREDITS.md) ============
    Each instrument is one compressed file in sounds/ with a note recorded every 3 semitones;
@@ -2227,6 +2228,7 @@ function initAudio(){
   limiter.threshold.value=-3; limiter.knee.value=6; limiter.ratio.value=12; limiter.attack.value=0.003; limiter.release.value=0.15;
   preFx.connect(tape).connect(master).connect(limiter).connect(ctx.destination);
   recDest = ctx.createMediaStreamDestination(); limiter.connect(recDest);
+  refTap = ctx.createGain(); limiter.connect(refTap);   // everything that goes to the speaker: the reference for echo removal
   revIn=ctx.createGain(); convolver=ctx.createConvolver(); revOut=ctx.createGain(); revOut.gain.value=S.revLevel;
   revIn.connect(convolver).connect(revOut).connect(preFx); buildIR();
   dlyIn=ctx.createGain(); delay=ctx.createDelay(4); dlyFb=ctx.createGain(); dlyLp=ctx.createBiquadFilter(); dlyOut=ctx.createGain();
@@ -2428,8 +2430,7 @@ function setRec(on){
   const Ly=selLayer();
   if(on && sampleWaiting(Ly)){ toggleMic(); return; }
   // a vocal layer: ● records your voice over the loop
-  if(on && Ly.vocal){ if(mic){ toast('the microphone is busy'); return; }
-    S.rec=true; voxRecStart(Ly); if(!S.playing) startTransport(S.countIn); renderTransport(); renderLayers(); return; }
+  if(on && Ly.vocal){ if(mic){ toast('the microphone is busy'); return; } voxAsk(Ly); return; }
   if(!on && VXR.on){ S.rec=false; voxRecStop(); renderTransport(); renderLayers(); return; }
   if(on){
     S.rec=true; Ly.takes=(Ly.takes||0)+1; S.curTake=Ly.takes;
@@ -2499,9 +2500,9 @@ function click(t, accent, countIn){
   if(t < ctx.currentTime) return;
   const o=ctx.createOscillator(), g=ctx.createGain();
   o.frequency.value = accent ? 1760 : 1180;
-  const lvl = (countIn?0.5:0.28)*(accent?1:0.7)*Math.min(1,S.volume)*(VXR.on?MIC_DUCK:1);
+  const lvl = (countIn?0.5:0.28)*(accent?1:0.7)*Math.min(1,S.volume)*(VXR.on && !VXR.hp?MIC_DUCK:1);
   g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(lvl,t+0.002); g.gain.exponentialRampToValueAtTime(0.0001,t+0.05);
-  o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+0.06);   // straight out: a monitor, not part of what rec out records
+  o.connect(g).connect(ctx.destination); if(refTap) g.connect(refTap); o.start(t); o.stop(t+0.06);   // straight out: a monitor, not part of what rec out records
 }
 
 /* ============ timing: what you played is kept, playback is shaped live ============ */
@@ -2936,7 +2937,7 @@ function hcAllOff(){ if(HC.connected && hcHeld.size){ hcHeld.forEach(n=>hcSend([
 let audioRoute=null;
 const inApp = () => !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.audio);
 window.__nativeAudio = {
-  route(r){ audioRoute=r; renderAudioStatus(); },
+  route(r){ audioRoute=r; renderAudioStatus(); if(VXR.on) voxSetHp(headphonesOn()===true); },
   resume(){ if(ctx && ctx.state!=='running') ctx.resume().then(renderAudioStatus); },
 };
 const AUD={ tried:false };
@@ -3020,8 +3021,13 @@ function renderMicCard(){
   c.classList.toggle('hidden', !smp && !vx); if(!smp && !vx) return;
   c.classList.toggle('vox', !!vx);
   if(smp){ $('micTitle').textContent=`mic listening · ${mic.Ly.customName||'sample'}`; $('micSub').textContent='make your sound, then tap ●'; $('micStop').hidden=false; }
-  else { $('micTitle').textContent=`recording · ${instName(VXR.Ly)} · ${partName(SONG.cur)}`; $('micSub').textContent='sing with the loop · ● keeps the take'; $('micStop').hidden=false; }
+  else { $('micTitle').textContent=`recording · ${instName(VXR.Ly)} · ${partName(SONG.cur)}`; $('micStop').hidden=false;
+    const ch=!routeKnown();   // the browser can't tell: you can
+    $('micSub').textContent = VXR.hp ? 'headphones · full volume' : 'speaker · song removed after';
+    $('micSub').title = ch ? `tap if you are on ${VXR.hp?'the speaker':'headphones'}` : ''; }
+  $('micSub').classList.toggle('tap', !!(vx && !routeKnown()));
 }
+$('micSub').onclick=()=>{ if(!VXR.on || routeKnown()) return; HP_SAID=!VXR.hp; voxSetHp(HP_SAID); };
 $('micStop').onclick=()=>{ if(mic && mic.rec) mic.rec.stop(); else if(VXR.on) setRec(false); };
 
 /* ============ vocal layers: your voice as audio, one take per song part ============
@@ -3033,10 +3039,12 @@ $('micStop').onclick=()=>{ if(mic && mic.rec) mic.rec.stop(); else if(VXR.on) se
 const VOX=new Map();   // take id -> {buffer, bpm, beats, peaks}
 const VXR={ on:false, chunks:[] };
 const voxTake = Ly => Ly && Ly.vocal && Ly.vox ? VOX.get(Ly.vox)||null : null;
+// input 0: the microphone; input 1: what goes to the speaker at the same moment (for echo removal)
 const VOX_WORKLET=`registerProcessor('vox-tap', class extends AudioWorkletProcessor{
-  constructor(){ super(); this.b=new Float32Array(2048); this.n=0; this.t=0; }
-  process(ins){ const x=ins[0]&&ins[0][0]; if(x){ if(this.n===0) this.t=currentTime; this.b.set(x,this.n); this.n+=x.length;
-    if(this.n>=2048){ this.port.postMessage({t:this.t, d:this.b}); this.b=new Float32Array(2048); this.n=0; } } return true; } });`;
+  constructor(){ super(); this.b=new Float32Array(2048); this.r=new Float32Array(2048); this.n=0; this.t=0; }
+  process(ins){ const x=ins[0]&&ins[0][0]; if(x){ const y=ins[1]&&ins[1][0]; if(this.n===0) this.t=currentTime;
+    this.b.set(x,this.n); if(y) this.r.set(y,this.n); this.n+=x.length;
+    if(this.n>=2048){ this.port.postMessage({t:this.t, d:this.b, r:this.r}); this.b=new Float32Array(2048); this.r=new Float32Array(2048); this.n=0; } } return true; } });`;
 function voxStopAt(Ly, t){
   if(!Ly.vsrc || !Ly.vsrc.length) return;
   Ly.vsrc.forEach(x=>{ if(x.end<=t) return; try{ x.g.gain.cancelScheduledValues(t); x.g.gain.setTargetAtTime(0, t, 0.004); x.src.stop(t+0.03); }catch(e){} });
@@ -3071,28 +3079,80 @@ function voxRestart(Ly){
   const nb=beatAt(ctx.currentTime+0.02); if(schedBeat>nb) schedVox(Ly, nb, schedBeat, true);
 }
 const voxRestartAll = () => { if(S.playing) layers.forEach(voxRestart); };
-async function voxRecStart(Ly){
-  Object.assign(VXR,{ on:true, Ly, chunks:[], bpm:S.bpm, L:loopLen(), peak:0, level:0 });
+/* Headphones keep the song out of a take, so it plays at full volume; on the speaker it plays quieter and is
+   taken out afterwards (echo removal). The iPhone app knows where sound goes; a computer's browser may name its
+   output; otherwise the pop-up asks once (remembered until the page reloads). */
+let HP_SAID=null, HP_TOLD=false;
+const HP_PORT=/headphone|bluetooth|airpods/i, HP_NAME=/airpods|headphone|headset|buds|beats|earpods|bose|sony wh|jabra/i;
+const BT_MIC=/airpods|bluetooth|buds|beats|hands-?free|bose|jabra|wh-1000/i, OWN_MIC=/iphone|ipad|built-?in|internal|macbook|microphone array/i;
+const routeKnown = () => !!(audioRoute && audioRoute.outputs && audioRoute.outputs.length);
+function headphonesOn(){
+  if(routeKnown()) return audioRoute.outputs.some(o=>HP_PORT.test(o.type||'') || HP_NAME.test(o.name||''));
+  return HP_SAID;
+}
+async function hpFromDevices(){   // a computer's browser names its outputs once the microphone was allowed
+  try{ const d=(await navigator.mediaDevices.enumerateDevices()).find(x=>x.kind==='audiooutput' && x.deviceId==='default' && x.label);
+    if(!d) return null; if(HP_NAME.test(d.label)) return true; if(/speaker|built-?in|internal|macbook|display/i.test(d.label)) return false; }catch(e){}
+  return null;
+}
+function voxSetHp(hp){
+  if(!VXR.on || VXR.hp===hp) return; VXR.hp=hp;
+  master.gain.setTargetAtTime(S.volume*(hp?1:MIC_DUCK), ctx.currentTime, 0.08); renderMicCard();
+}
+// ● on a vocal layer: suggest headphones (once) when sound comes out of the speaker, then record
+async function voxAsk(Ly){
+  let hp=headphonesOn(); if(hp==null) hp=await hpFromDevices();
+  if(hp===true || (hp===false && HP_TOLD)) return voxGo(Ly, hp);
+  HP_TOLD=true;
+  const own = inApp() || /iPhone|iPad/.test(navigator.userAgent) ? 'the iPhone\'s own microphone' : 'the built-in microphone';
+  const body=`<p>With headphones on, the song plays at <b>full volume</b> while you sing and none of it ends up in your take.
+    Wired headphones are best; AirPods and other wireless ones work too (the app records with ${own}, so they keep their sound).</p>
+    <p>On the speaker the song plays quieter, and afterwards the app takes most of it out of your take.</p>`;
+  if(hp===false) infoShow('Headphones', `<h3>headphones keep the song out of your take</h3>${body}`,
+    [['hpNo','cancel'], ['hpGo','record','primary', ()=>voxGo(Ly, headphonesOn()===true)]]);
+  else infoShow('Headphones', `<h3>headphones on?</h3>${body}`,
+    [['hpNo','cancel'], ['hpSpk','speaker','', ()=>{ HP_SAID=false; voxGo(Ly, false); }], ['hpYes','headphones on','primary', ()=>{ HP_SAID=true; voxGo(Ly, true); }]]);
+}
+function voxGo(Ly, hp){
+  if(S.rec || mic || !layers.includes(Ly) || !Ly.vocal) return;
+  S.rec=true; voxRecStart(Ly, !!hp); if(!S.playing) startTransport(S.countIn); renderTransport(); renderLayers();
+}
+async function voxRecStart(Ly, hp){
+  Object.assign(VXR,{ on:true, Ly, hp, chunks:[], bpm:S.bpm, L:loopLen(), peak:0, level:0 });
   Ly.vrec=true; voxStopAt(Ly, ctx.currentTime);
-  master.gain.setTargetAtTime(S.volume*MIC_DUCK, ctx.currentTime, 0.08);   // the song plays along, quieter, so less of it ends up in the take
+  if(!hp) master.gain.setTargetAtTime(S.volume*MIC_DUCK, ctx.currentTime, 0.08);   // on the speaker the song plays quieter, so less of it ends up in the take
   renderMicCard();
   setAudioSessionType('play-and-record');
   let stream=null;
   try{
-    stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    const raw={echoCancellation:false,noiseSuppression:false,autoGainControl:false};
+    stream=await navigator.mediaDevices.getUserMedia({audio:raw});
+    // a Bluetooth headset's microphone turns its sound into phone-call quality: use the built-in one instead
+    const tr=stream.getAudioTracks()[0];
+    if(tr && BT_MIC.test(tr.label||'')){
+      try{ const own=(await navigator.mediaDevices.enumerateDevices()).find(d=>d.kind==='audioinput' && d.label && OWN_MIC.test(d.label) && !BT_MIC.test(d.label));
+        if(own){ const s2=await navigator.mediaDevices.getUserMedia({audio:{...raw, deviceId:{exact:own.deviceId}}}); stream.getTracks().forEach(t=>t.stop()); stream=s2; } }catch(e){ console.warn('built-in mic', e); }
+    }
     if(!VXR.on || VXR.Ly!==Ly){ stream.getTracks().forEach(t=>t.stop()); return; }   // stopped while asking
     const src=ctx.createMediaStreamSource(stream), sink=ctx.createGain(); sink.gain.value=0;
-    const onBlock=(t,d)=>{ if(!VXR.on) return;
-      const lat=(ctx.outputLatency||0)+(ctx.baseLatency||0)+S.recOffset/1000;
-      VXR.chunks.push({ b:beatAt(t-lat), d }); let p=0; for(let i=0;i<d.length;i+=4) p=Math.max(p,Math.abs(d[i])); VXR.level=p; VXR.peak=Math.max(VXR.peak,p); };
+    const onBlock=(t,d,r)=>{ if(!VXR.on) return;
+      // the iPhone app reports the output latency when the browser engine doesn't (Bluetooth adds a lot), and the input's
+      const nat=audioRoute && typeof audioRoute.outLat==='number' ? audioRoute : null;
+      const lat=(ctx.outputLatency>0 ? ctx.outputLatency : nat ? nat.outLat : 0)+(nat ? nat.inLat||0 : 0)+(ctx.baseLatency||0)+S.recOffset/1000;
+      VXR.chunks.push({ b:beatAt(t-lat), d, r }); let p=0; for(let i=0;i<d.length;i+=4) p=Math.max(p,Math.abs(d[i])); VXR.level=p; VXR.peak=Math.max(VXR.peak,p); };
     let node;
     if(ctx.audioWorklet && window.AudioWorkletNode){
       if(!VXR.mod) VXR.mod=ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([VOX_WORKLET],{type:'application/javascript'})));
       await VXR.mod;
-      node=new AudioWorkletNode(ctx,'vox-tap',{numberOfInputs:1,numberOfOutputs:1,channelCount:1,channelCountMode:'explicit'});
-      node.port.onmessage=e=>onBlock(e.data.t, e.data.d);
-    } else { node=ctx.createScriptProcessor(2048,1,1); node.onaudioprocess=e=>onBlock(e.playbackTime-2048/ctx.sampleRate, e.inputBuffer.getChannelData(0).slice()); }
-    src.connect(node); node.connect(sink); sink.connect(ctx.destination);
+      node=new AudioWorkletNode(ctx,'vox-tap',{numberOfInputs:2,numberOfOutputs:1,channelCount:1,channelCountMode:'explicit'});
+      node.port.onmessage=e=>onBlock(e.data.t, e.data.d, e.data.r);
+      src.connect(node,0,0); refTap.connect(node,0,1);
+    } else {
+      const mg=ctx.createChannelMerger(2); node=ctx.createScriptProcessor(2048,2,1);
+      node.onaudioprocess=e=>onBlock(e.playbackTime-2048/ctx.sampleRate, e.inputBuffer.getChannelData(0).slice(), e.inputBuffer.getChannelData(1).slice());
+      src.connect(mg,0,0); refTap.connect(mg,0,1); mg.connect(node); VXR.mg=mg;
+    }
+    node.connect(sink); sink.connect(ctx.destination);
     Object.assign(VXR,{ stream, src, node, sink });
     if(!VXR.on) voxTeardown();
     const meter=()=>{ if(!VXR.on) return; document.querySelectorAll('#micCard .micmeter i').forEach(m=>m.style.width=Math.min(100,VXR.level*140)+'%'); requestAnimationFrame(meter); }; meter();
@@ -3101,7 +3161,9 @@ async function voxRecStart(Ly){
     renderMicCard(); renderTransport(); renderLayers(); toast('No access to the microphone'); }
 }
 function voxTeardown(){
-  try{ VXR.src && VXR.src.disconnect(); VXR.node && VXR.node.disconnect(); VXR.sink && VXR.sink.disconnect(); }catch(e){}
+  try{ VXR.src && VXR.src.disconnect(); VXR.node && VXR.node.disconnect(); VXR.sink && VXR.sink.disconnect(); VXR.mg && VXR.mg.disconnect(); }catch(e){}
+  try{ VXR.node && refTap.disconnect(VXR.mg || VXR.node); }catch(e){}
+  VXR.mg=null;
   if(VXR.node && VXR.node.port) VXR.node.port.onmessage=null;
   if(VXR.stream) VXR.stream.getTracks().forEach(t=>t.stop());
   VXR.src=VXR.node=VXR.sink=VXR.stream=null;
@@ -3117,6 +3179,25 @@ function voxRecStop(){
   const first=Math.max(0,ch[0].b), last=ch[ch.length-1], endB=last.b+last.d.length/sr*bpm/60;
   let n=Math.floor(endB/L); if(endB-n*L<4 && n-1>=Math.floor(first/L)) n--;
   if(n<0) return done('Nothing was recorded: sing after the count-in');
+  const clean = !VXR.hp && Ly.vclean!==false && ch.some(c=>c.r);
+  if(!clean) return voxKeep(Ly, ch, n, L, bpm, sr, false);
+  toast('taking the song out of your take…');
+  setTimeout(()=>{
+    let gone=false;
+    try{
+      const from=n*L-8*bpm/60, to=(n+1)*L, use=ch.filter(c=>c.r && c.b+c.d.length/sr*bpm/60>=from && c.b<=to);
+      const tot=use.reduce((a,c)=>a+c.d.length,0), m=new Float32Array(tot), r=new Float32Array(tot);
+      let o=0; for(const c of use){ m.set(c.d,o); r.set(c.r,o); o+=c.d.length; }
+      const res=echoClean(m, r, sr);
+      if(!res.none){ o=0; for(const c of use){ c.d=res.out.slice(o, o+c.d.length); o+=c.d.length; } gone=true; }
+    }catch(e){ console.warn('echo removal', e); }
+    voxKeep(Ly, ch, n, L, bpm, sr, gone);
+  }, 40);
+}
+// build the take from the pass sung (n) and keep it
+function voxKeep(Ly, ch, n, L, bpm, sr, cleaned){
+  const done = msg => { toast(msg); voxRestart(Ly); };
+  if(!layers.includes(Ly)) return;
   const len=Math.round(L*60/bpm*sr), out=new Float32Array(len);
   for(const c of ch){ const o=Math.round((c.b-n*L)*60/bpm*sr); for(let k=0;k<c.d.length;k++){ const q=o+k; if(q>=0 && q<len) out[q]=c.d[k]; } }
   let pk=0; for(let k=0;k<len;k+=4) pk=Math.max(pk,Math.abs(out[k]));
@@ -3126,8 +3207,130 @@ function voxRecStop(){
   const id='v'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   VOX.set(id,{ buffer:buf, bpm, beats:L }); voxStore(id);
   Ly.vox=id; syncPart(); renderLayers(); renderDetail(); writeSave(); voxRestart(Ly);
-  toast(`take kept in ${partName(SONG.cur)} · undo brings back the one before`, 'undo', undo);
+  toast(`take kept in ${partName(SONG.cur)}${cleaned?', song taken out':''} · undo brings back the one before`, 'undo', undo);
 }
+/* ============ echo removal: the song out of a take sung over the speaker ============
+   While you sing, the app keeps what it sent to the speaker (the reference) next to what the microphone heard.
+   Afterwards: 1) find how much later the song reaches the microphone (cross-correlation), 2) learn how the room
+   and speaker colour it (an adaptive filter, ~120 ms long, run twice: the second run starts from what the first
+   learned and slows down while you sing), 3) subtract that estimate, 4) turn down what is left of the song where
+   your voice isn't (a gentle per-frequency gain). Your voice is never filtered by more than that last step. */
+const FFT_T={};
+function fftTables(n){
+  if(FFT_T[n]) return FFT_T[n];
+  const rev=new Uint32Array(n), bits=Math.log2(n), cos=new Float64Array(n>>1), sin=new Float64Array(n>>1);
+  for(let i=0;i<n;i++){ let r=0; for(let b=0;b<bits;b++) r|=((i>>b)&1)<<(bits-1-b); rev[i]=r; }
+  for(let i=0;i<n>>1;i++){ cos[i]=Math.cos(2*Math.PI*i/n); sin[i]=Math.sin(2*Math.PI*i/n); }
+  return FFT_T[n]={rev,cos,sin};
+}
+// in place, complex; inv: inverse (scaled by 1/n)
+function fft(re, im, inv){
+  const n=re.length, {rev,cos,sin}=fftTables(n);
+  for(let i=0;i<n;i++){ const j=rev[i]; if(j>i){ let t=re[i]; re[i]=re[j]; re[j]=t; t=im[i]; im[i]=im[j]; im[j]=t; } }
+  for(let size=2; size<=n; size<<=1){
+    const half=size>>1, step=n/size;
+    for(let i=0;i<n;i+=size) for(let j=0,k=0;j<half;j++,k+=step){
+      const a=i+j, b=a+half, wr=cos[k], wi=inv?sin[k]:-sin[k];
+      const tr=re[b]*wr-im[b]*wi, ti=re[b]*wi+im[b]*wr;
+      re[b]=re[a]-tr; im[b]=im[a]-ti; re[a]+=tr; im[a]+=ti;
+    }
+  }
+  if(inv) for(let i=0;i<n;i++){ re[i]/=n; im[i]/=n; }
+}
+// how many samples later the reference shows up in the microphone (0 when it can't be told)
+function echoDelay(m, r, sr){
+  const D=Math.max(1, Math.round(sr/12000)), len=Math.floor(Math.min(m.length, r.length)/D);
+  const dm=new Float64Array(len), dr=new Float64Array(len);
+  for(let i=0;i<len;i++){ let a=0,b=0; for(let k=0;k<D;k++){ a+=m[i*D+k]; b+=r[i*D+k]; } dm[i]=a; dr[i]=b; }
+  const F=8192, N=16384, maxLag=Math.min(F-1, Math.round(0.6*sr/D)), cr=new Float64Array(N), ci=new Float64Array(N);
+  const mr=new Float64Array(N), mi=new Float64Array(N), rr=new Float64Array(N), ri=new Float64Array(N);
+  let frames=0;
+  for(let s=0; s+F<=len || (frames===0 && s<len); s+=F>>1){
+    mr.fill(0); mi.fill(0); rr.fill(0); ri.fill(0);
+    for(let i=0;i<F && s+i<len;i++){ mr[i]=dm[s+i]; rr[i]=dr[s+i]; }
+    fft(mr,mi,false); fft(rr,ri,false);
+    for(let k=0;k<N;k++){ cr[k]+=mr[k]*rr[k]+mi[k]*ri[k]; ci[k]+=mi[k]*rr[k]-mr[k]*ri[k]; }
+    frames++;
+  }
+  for(let k=0;k<N;k++){ const a=Math.hypot(cr[k],ci[k])+1e-12; cr[k]/=a; ci[k]/=a; }   // PHAT: only the timing, not the colour
+  fft(cr,ci,true);
+  let best=0, at=0, sum=0;
+  for(let l=0;l<=maxLag;l++){ const v=cr[l]; sum+=Math.abs(v); if(v>best){ best=v; at=l; } }
+  const sharp=best/(sum/(maxLag+1)+1e-12);
+  return { lag: at*D, sure: sharp>6 };
+}
+/* m: microphone, r: reference (same length, same clock). Returns the cleaned microphone signal. */
+function echoClean(m, r, sr){
+  const n=Math.min(m.length, r.length);
+  const B = sr>32000 ? 512 : 256, N=2*B, H=N/2+1, P=Math.max(2, Math.ceil(0.12*sr/B));
+  const dl=echoDelay(m, r, sr), d=Math.max(0, dl.lag-Math.round(0.004*sr));   // start the filter a little before the echo
+  const ref = i => { const j=i-d; return j>=0 && j<n ? r[j] : 0; };
+  const blocks=Math.ceil(n/B), yh=new Float32Array(blocks*B), e=new Float32Array(blocks*B);
+  const Wr=[], Wi=[], Xr=[], Xi=[]; for(let p=0;p<P;p++){ Wr.push(new Float64Array(H)); Wi.push(new Float64Array(H)); Xr.push(new Float64Array(H)); Xi.push(new Float64Array(H)); }
+  const tr=new Float64Array(N), ti=new Float64Array(N), pw=new Float64Array(H);
+  let floor=1e-9; for(let i=0;i<n;i+=7) floor+=r[i]*r[i]; floor=floor/(n/7)*N*1e-4+1e-10;   // regularisation, from the song's level
+  const run = (second) => {
+    for(let p=0;p<P;p++){ Xr[p].fill(0); Xi[p].fill(0); } pw.fill(floor);
+    for(let k=0;k<blocks;k++){
+      // the newest two blocks of the reference, into the spectrum history
+      const xr=Xr.pop(), xi=Xi.pop(); tr.fill(0); ti.fill(0);
+      for(let i=0;i<N;i++) tr[i]=ref((k-1)*B+i);
+      fft(tr,ti,false); for(let h=0;h<H;h++){ xr[h]=tr[h]; xi[h]=ti[h]; pw[h]=0.9*pw[h]+0.1*(tr[h]*tr[h]+ti[h]*ti[h]); }
+      Xr.unshift(xr); Xi.unshift(xi);
+      // the echo estimate for this block
+      const Yr=new Float64Array(H), Yi=new Float64Array(H);
+      for(let p=0;p<P;p++){ const a=Xr[p], b=Xi[p], c=Wr[p], q=Wi[p]; for(let h=0;h<H;h++){ Yr[h]+=a[h]*c[h]-b[h]*q[h]; Yi[h]+=a[h]*q[h]+b[h]*c[h]; } }
+      tr.fill(0); ti.fill(0); for(let h=0;h<H;h++){ tr[h]=Yr[h]; ti[h]=Yi[h]; if(h>0 && h<H-1){ tr[N-h]=Yr[h]; ti[N-h]=-Yi[h]; } }
+      fft(tr,ti,true);
+      let ey=0, ee=0;
+      for(let i=0;i<B;i++){ const s=k*B+i, y=tr[B+i], mv=s<n?m[s]:0, er=mv-y; yh[s]=y; e[s]=er; ey+=y*y; ee+=er*er; }
+      // learn: fast in the first run; in the second, slower while something else (your voice) is in the error
+      const mu = second ? 0.5*Math.min(1, Math.max(0.02, ey/(ee+1e-12))) : 0.3;
+      tr.fill(0); ti.fill(0); for(let i=0;i<B;i++) tr[B+i]=e[k*B+i];
+      fft(tr,ti,false);
+      const g=mu/P;
+      for(let p=0;p<P;p++){ const a=Xr[p], b=Xi[p], c=Wr[p], q=Wi[p];
+        for(let h=0;h<H;h++){ const s=g/(pw[h]); c[h]+=s*(a[h]*tr[h]+b[h]*ti[h]); q[h]+=s*(a[h]*ti[h]-b[h]*tr[h]); } }
+      // keep one partition (in turn) a proper filter: its second half in time stays zero
+      const p=k%P, c=Wr[p], q=Wi[p], ur=new Float64Array(N), ui=new Float64Array(N);
+      for(let h=0;h<H;h++){ ur[h]=c[h]; ui[h]=q[h]; if(h>0 && h<H-1){ ur[N-h]=c[h]; ui[N-h]=-q[h]; } }
+      fft(ur,ui,true); for(let i=B;i<N;i++){ ur[i]=0; ui[i]=0; } fft(ur,ui,false);
+      for(let h=0;h<H;h++){ c[h]=ur[h]; q[h]=ui[h]; }
+    }
+  };
+  run(false); run(true);
+  // hardly any song in the microphone (headphones after all): leave the take as it was
+  let em=0, eyh=0; for(let i=0;i<n;i++){ em+=m[i]*m[i]; eyh+=yh[i]*yh[i]; }
+  if(!(eyh > em*0.02)) return { out: Float32Array.from(m.subarray(0,n)), lag: dl.lag, sure: false, leak: 0, none: true };
+  // what is left of the song: turned down per frequency where the echo estimate outweighs the rest
+  const F = sr>32000 ? 1024 : 512, hop=F/2, FH=F/2+1, win=new Float64Array(F);
+  for(let i=0;i<F;i++) win[i]=Math.sqrt(0.5-0.5*Math.cos(2*Math.PI*i/F));
+  const frames=Math.max(1, Math.ceil(n/hop)+1);
+  // how much of the echo estimate is still in the error (global; the voice doesn't correlate with it)
+  const fe=new Float64Array(frames), fy=new Float64Array(frames);
+  for(let f=0;f<frames;f++){ const s=(f-1)*hop; let a=0,b=0; for(let i=0;i<F;i++){ const j=s+i; if(j>=0 && j<n){ a+=e[j]*e[j]; b+=yh[j]*yh[j]; } } fe[f]=a; fy[f]=b; }
+  let me=0,my=0; for(let f=0;f<frames;f++){ me+=fe[f]; my+=fy[f]; } me/=frames; my/=frames;
+  let cov=0,vy=0; for(let f=0;f<frames;f++){ cov+=(fe[f]-me)*(fy[f]-my); vy+=(fy[f]-my)**2; }
+  const leak=Math.min(0.5, Math.max(0.01, vy>0 ? cov/vy : 0.05));
+  const out=new Float32Array(n), Er=new Float64Array(F), Ei=new Float64Array(F), Yr=new Float64Array(F), Yi=new Float64Array(F);
+  const See=new Float64Array(FH), Syy=new Float64Array(FH), G=new Float64Array(FH).fill(1);
+  for(let f=0;f<frames;f++){
+    const s=(f-1)*hop; Ei.fill(0); Yi.fill(0);
+    for(let i=0;i<F;i++){ const j=s+i, ok=j>=0 && j<n; Er[i]=ok?e[j]*win[i]:0; Yr[i]=ok?yh[j]*win[i]:0; }
+    fft(Er,Ei,false); fft(Yr,Yi,false);
+    for(let h=0;h<FH;h++){
+      const pe=Er[h]*Er[h]+Ei[h]*Ei[h], py=Yr[h]*Yr[h]+Yi[h]*Yi[h];
+      See[h]=0.6*See[h]+0.4*pe; Syy[h]=0.6*Syy[h]+0.4*py;
+      const target=Math.max(0.12, 1-leak*Syy[h]/(See[h]+1e-12));
+      G[h] = target<G[h] ? target : 0.5*G[h]+0.5*target;   // down at once, back up gently
+      Er[h]*=G[h]; Ei[h]*=G[h]; if(h>0 && h<FH-1){ Er[F-h]=Er[h]; Ei[F-h]=-Ei[h]; }
+    }
+    fft(Er,Ei,true);
+    for(let i=0;i<F;i++){ const j=s+i; if(j>=0 && j<n) out[j]+=Er[i]*win[i]; }
+  }
+  return { out, lag: dl.lag, sure: dl.sure, leak };
+}
+/* ============ end echo removal ============ */
 /* stored apart from the project, by id ('vox:<id>', 16-bit); takes no project uses are cleared when the app starts */
 function voxStore(id){
   const t=VOX.get(id); if(!t) return;
@@ -3725,7 +3928,7 @@ function drawCapRec(){
 
 /* ============ the session is kept between visits ============ */
 const SAVE_KEY='hichord-looper-v1';
-const LAYER_KEYS=['vocal','vname','vox','inst','customName','root','snd','fx','cfx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown','fxs','gateDiv','hc'];
+const LAYER_KEYS=['vocal','vname','vox','vclean','inst','customName','root','snd','fx','cfx','events','takes','q','strength','swing','nudge','gate','oct','semis','humanize','a','d','s','r','cutoff','reso','vol','pan','rev','dly','mute','solo','out','shown','fxs','gateDiv','hc'];
 let saveT;
 function sessionData(){
   return { v:1,
@@ -4531,6 +4734,7 @@ function renderLayers(){
     </div>`).join('') +
     (layers.some(Ly=>!Ly.shown) ? '<button class="newlayer" id="newLayerBtn">+ New layer</button>' : '');
   $('detailTitle').textContent = `Layer ${S.sel+1} · ${instName(selLayer())}`;
+  $('editBtn').hidden = !!(selLayer() && selLayer().vocal);   // a take has no notes
   $('layUp').disabled=layerNeighbour(S.sel,-1)<0; $('layDown').disabled=layerNeighbour(S.sel,1)<0;
   renderPrevSolo();
   const nb=$('newLayerBtn'); if(nb) nb.onclick=()=>openSheet('newSheet');
@@ -5174,7 +5378,10 @@ function vocalPage(host, grid, tab, Ly){
   const fp=param(grid,'Filter',()=>Ly.cutoff,v=>{Ly.cutoff=v;applyLayer(Ly);},0,1,0.001,v=>{const f=80*Math.pow(18000/80,v);return f>=1000?(f/1000).toFixed(f>=9950?0:1)+' kHz':Math.round(f)+' Hz';});
   fp.classList.add('pwide');
   param(grid,'Resonance',()=>Ly.reso,v=>{Ly.reso=v;applyLayer(Ly);},0,1,0.01,pct);
-  hint(`Tap ● to sing over the loop: the song plays quieter while the microphone listens (headphones keep it out of the take). Each part has its own take${SONG.parts.length>1?` (you are on ${partName(SONG.cur)})`:''}; undo brings back the one before.`);
+  const cl=document.createElement('label'); cl.className='check'; cl.style.gridColumn='1/-1';
+  cl.innerHTML=`<input type="checkbox" id="vocClean"${Ly.vclean===false?'':' checked'}> Take the song out of speaker takes`;
+  cl.querySelector('input').onchange=e=>{ Ly.vclean=e.target.checked; save(); }; grid.appendChild(cl);
+  hint(`Tap ● to sing over the loop. With headphones the song plays at full volume; on the speaker it plays quieter and is taken out of the take afterwards. Each part has its own take${SONG.parts.length>1?` (you are on ${partName(SONG.cur)})`:''}; undo brings back the one before.`);
 }
 function renderPage(host,tab,Ly){
   const grid=document.createElement('div'); grid.className='params'; host.appendChild(grid);
