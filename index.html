@@ -859,7 +859,9 @@ body.projopen .pbar{display:none}
 @media (max-width:420px){ .miccard .micmeter{width:36px} }
 @media (orientation:landscape) and (max-height:560px){ .miccard{top:calc(var(--st) + 8px)} }
 /* first steps: a card near the top, the key it talks about pulses */
-.guide{position:fixed;left:0;right:0;top:calc(var(--st) + 64px);z-index:34;display:flex;justify-content:center;padding:0 16px;pointer-events:none}
+.guide{position:fixed;inset:0;z-index:34;pointer-events:none}   /* the card sits next to what the step highlights (guidePlace) */
+.guide .gbox{position:absolute;left:16px;top:calc(var(--st) + 64px);width:min(400px,calc(100% - 32px));transition:left .25s ease,top .25s ease}
+.gsafe{position:fixed;visibility:hidden;pointer-events:none;top:var(--st);bottom:var(--sb);left:var(--sl);right:var(--sr)}
 .guide.hidden{display:none}
 .gbox{pointer-events:auto;width:min(400px,100%);background:var(--panel);border-radius:18px;padding:16px 18px;box-shadow:0 0 0 2px var(--acc),0 20px 50px rgba(0,0,0,.3);
   display:flex;flex-direction:column;gap:8px;box-sizing:border-box}
@@ -871,7 +873,7 @@ body.projopen .pbar{display:none}
 .ghl.ghl-in{outline-offset:-3px;animation-name:ghlin}   /* against the edge of a panel that cuts off: drawn inside, so all of it shows */
 @keyframes ghlin{50%{outline-color:color-mix(in srgb,var(--acc) 40%,transparent)}}
 @keyframes ghl{50%{outline-offset:7px;outline-color:color-mix(in srgb,var(--acc) 40%,transparent)}}
-@media (orientation:landscape) and (max-height:560px){ .guide{top:50%;transform:translateY(-50%);justify-content:flex-end;padding-right:calc(16px + var(--sr))} .gbox{width:min(340px,100%);padding:12px 14px;gap:6px} .gbox p{font-size:12px}
+@media (orientation:landscape) and (max-height:560px){ .guide .gbox{width:min(340px,calc(100% - 32px))} .gbox{padding:12px 14px;gap:6px} .gbox p{font-size:12px}
   .keys{grid-template-columns:auto 1fr auto 1fr;gap:4px 10px;font-size:11px} }
 /* share / receive with a code */
 .xfer .xcode{font-family:var(--mono);font-size:clamp(30px,10vw,44px);font-weight:600;letter-spacing:.14em;text-align:center;background:var(--screen);color:var(--screen-ink);
@@ -2094,7 +2096,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-20.125';
+const PAGE_VERSION='2026-11-20.126';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -6960,12 +6962,33 @@ function showKeys(){
 const GUIDE=[
   { t:'connect', id:'midiChip', x:'Plug your HiChord into this device over USB-C: it connects by itself. Any MIDI keyboard works too. This chip shows what is connected; tap it for your MIDI devices.' },
   { t:'record a layer', id:'recBtn', x:'Pick a layer, tap ● and play. What you play keeps looping; every layer has its own instrument. Tap ● again to stop recording; add more with "+ new layer".' },
-  { t:'layer settings', id:'setBtn', alt:'tabs', x:'The sliders key sets up the selected layer: Timing (quantize, swing), Instrument and Mix (volume, effects).',
+  { t:'layer settings', id:'setBtn', alt:'tabs', card:true, x:'The sliders key sets up the selected layer: Timing (quantize, swing), Instrument and Mix (volume, effects).',
     xs:'This panel sets up the selected layer: Timing (quantize, swing), Instrument and Mix (volume, effects).' },
   { t:'song parts', id:'partBar', x:'A song has parts, like a verse and a chorus, each with its own notes. Add one with "+ part"; tap the part you are in to line the parts up on the song page.' },
   { t:'capture mode', id:'captureBtn', x:'Capture turns your layers into pads. Slide a finger over a pad to play with its effects; hold still to lock them.' },
 ];
 const GD={ n:0 };
+// put the card next to the highlight: under it, else above, else beside it, kept on screen (and off the notch)
+function guidePlace(){
+  const g=$('guide'); if(g.classList.contains('hidden')) return;
+  const box=g.querySelector('.gbox'), el=document.querySelector('.ghl');
+  let sf=document.querySelector('.gsafe'); if(!sf){ sf=document.createElement('div'); sf.className='gsafe'; document.body.appendChild(sf); }
+  const S=sf.getBoundingClientRect(), m=12, gap=16;
+  const L=S.left+m, T=S.top+m, R=S.right-m, B=S.bottom-m, bw=box.offsetWidth, bh=box.offsetHeight;
+  const cx=(x0,x1)=>clamp((x0+x1)/2-bw/2, L, Math.max(L, R-bw)), cy=(y0,y1)=>clamp((y0+y1)/2-bh/2, T, Math.max(T, B-bh));
+  let x=cx(L,R), y=T+52;
+  if(el){
+    const r=el.getBoundingClientRect(), o=el.classList.contains('ghl-in') ? 0 : 10;   // the outline pulses out to 10 px
+    const below=r.bottom+o+gap, above=r.top-o-gap-bh, right=r.right+o+gap, left=r.left-o-gap-bw;
+    if(below+bh<=B){ x=cx(r.left,r.right); y=below; }
+    else if(above>=T){ x=cx(r.left,r.right); y=above; }
+    else if(right+bw<=R){ x=right; y=cy(r.top,r.bottom); }
+    else if(left>=L){ x=left; y=cy(r.top,r.bottom); }
+    else { x=cx(r.left,r.right); y = r.top-T > B-r.bottom ? T : B-bh; }   // no room anywhere: the side with more space
+  }
+  box.style.left=Math.round(x)+'px'; box.style.top=Math.round(y)+'px';
+}
+addEventListener('resize', ()=>requestAnimationFrame(guidePlace));
 function guideOpen(){ GD.n=0; $('guide').classList.remove('hidden'); guideShow(); try{ localStorage.setItem('hcl-guide','1'); }catch(e){} }
 function guideClose(){ $('guide').classList.add('hidden'); document.querySelectorAll('.ghl').forEach(x=>x.classList.remove('ghl','ghl-in')); }
 // would the outline around the element (up to 10 px out) be cut off by a panel around it (or the screen)?
@@ -6981,12 +7004,17 @@ function ghlClipped(el){
 function guideShow(){
   const g=GUIDE[GD.n], last=GD.n===GUIDE.length-1;
   document.querySelectorAll('.ghl').forEach(x=>x.classList.remove('ghl','ghl-in'));
-  const vis=id=>{ const e=id && $(id); return e && e.offsetParent ? e : null; };
-  const el=vis(g.id) || vis(g.alt); if(el){ el.classList.add('ghl'); if(ghlClipped(el)) el.classList.add('ghl-in'); }
+  // shown and on screen (the layer tabs of a closed sheet on a phone are below the screen)
+  const onScreen=e=>{ if(!e || !e.offsetParent) return null; const r=e.getBoundingClientRect(); return r.width>8 && r.height>8 && r.bottom>0 && r.top<innerHeight && r.right>0 && r.left<innerWidth ? e : null; };
+  const vis=id=>onScreen(id && $(id));
+  // on a phone: the settings key on the selected layer's card
+  const cardKey = () => g.card ? onScreen(document.querySelector(`#layers button[aria-label="Settings of layer ${S.sel+1}"]`)) : null;
+  const el=vis(g.id) || vis(g.alt) || cardKey(); if(el){ el.classList.add('ghl'); if(ghlClipped(el)) el.classList.add('ghl-in'); }
   $('gTitle').textContent=`${GD.n+1}. ${g.t}`;
-  $('gText').textContent=(!vis(g.id) && g.xs ? g.xs : g.x)+(last && matchMedia('(pointer:fine)').matches ? ' Press ? for all keyboard shortcuts.' : '');
+  $('gText').textContent=(el && g.alt && el.id===g.alt && g.xs ? g.xs : g.x)+(last && matchMedia('(pointer:fine)').matches ? ' Press ? for all keyboard shortcuts.' : '');
   $('gDots').innerHTML=GUIDE.map((_,k)=>`<i class="${k===GD.n?'on':''}"></i>`).join('');
   $('gBack').disabled=GD.n===0; $('gNext').textContent=last?'done':'next'; $('gSkip').hidden=last;
+  guidePlace(); setTimeout(guidePlace, 350);   // and again once a sheet that opened for the step has slid in
 }
 $('gNext').onclick=()=>{ if(GD.n>=GUIDE.length-1) guideClose(); else { GD.n++; guideShow(); } };
 $('gBack').onclick=()=>{ if(GD.n>0){ GD.n--; guideShow(); } };

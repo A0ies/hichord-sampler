@@ -6,7 +6,7 @@ A looper for the HiChord pocket synth, in the spirit of [fm1-sampler](https://gi
 
 Open it at https://a0ies.github.io/hichord-sampler/ (Chrome or Edge), or use the iPhone app in `ios/`. In a browser that lacks something the app needs (no Web MIDI: Safari, Firefox, any browser on iPhone and iPad; no storage in private browsing; no microphone), a card on the start screen says what won't work and what does, with “continue” and “don't show again”.
 
-The first time the app starts, five short cards walk through it (connect, record a layer, layer settings, song parts, capture mode), each pointing at its key; “?” at the top of Settings shows them again. On a computer, ? shows the keyboard shortcuts. Audio starts with your first tap anywhere; the “audio is paused” bar only shows if that didn't work.
+The first time the app starts, five short cards walk through it (connect, record a layer, layer settings, song parts, capture mode), each pointing at its key with an orange outline and sitting right next to it (under it, else above or beside it; an outline against the edge of a panel is drawn just inside, so all of it shows); “?” at the top of Settings shows them again. On a computer, ? shows the keyboard shortcuts. Audio starts with your first tap anywhere; the “audio is paused” bar only shows if that didn't work.
 
 ## How it works
 
