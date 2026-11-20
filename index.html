@@ -2092,7 +2092,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-16.123';
+const PAGE_VERSION='2026-11-20.124';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -6449,6 +6449,27 @@ function edDiatonic(note){
   const i=pcs.indexOf(mod(n,12)), third=mod(pcs[(i+2)%7]-pcs[i],12), fifth=mod(pcs[(i+4)%7]-pcs[i],12);
   return { root:n, shape:[0,third,fifth] };
 }
+/* Moving a chord up or down in chord mode works like the HiChord's chord buttons: it steps through the chords of
+   the key (C → Dm → Em → F → G → Am → Bdim in C major). Every note moves the same number of steps along the scale,
+   so a Cmaj7 becomes Dm7, Em7, Fmaj7, G7 and an inversion stays an inversion; a note outside the key (a chord
+   you changed by hand) lands on the scale with it, so the chord fits again. Note mode moves notes by semitones. */
+function degOf(note, K){   // the note's place on the scale (a note outside it: the scale note under it)
+  const rel=note-K.tonic, oct=Math.floor(rel/12), r=mod(rel,12); let i=0;
+  for(let k=0;k<7;k++) if(K.iv[k]<=r) i=k;
+  return oct*7+i;
+}
+const noteOfDeg = (d, K) => K.tonic+12*Math.floor(d/7)+K.iv[mod(d,7)];
+// the scale steps between two notes, by where the pointer is (the nearest scale note)
+function degSteps(from, to, K){
+  const pcs=K.iv.map(i=>mod(K.tonic+i,12)); let t=to;
+  for(const d of [0,-1,1]) if(pcs.includes(mod(to+d,12))){ t=to+d; break; }
+  return degOf(t,K)-degOf(from,K);
+}
+// move notes k scale steps; null when one would leave the keyboard
+function diaMove(origNotes, k, K){
+  const out=origNotes.map(n=>noteOfDeg(degOf(n,K)+k, K));
+  return out.every(n=>n>=0 && n<=127) ? out : null;
+}
 const CHORD_TYPES=[['maj','',[0,4,7]],['min','m',[0,3,7]],['7','7',[0,4,7,10]],['maj7','maj7',[0,4,7,11]],['m7','m7',[0,3,7,10]],['sus2','sus2',[0,2,7]],['sus4','sus4',[0,5,7]],['dim','dim',[0,3,6]]];
 // the root (as a note) and type of a chord: the first reading of its notes that is a known shape
 function edChordRoot(notes){
@@ -6503,9 +6524,13 @@ function edQuantizeSel(){
 function edNudgeSel(db, dn){
   const s=edSelected(); if(!s.length) return; edPush();
   const L=loopLen();
+  if(dn && ED.chordMode && Math.abs(dn)!==12){   // chord mode: one step through the chords of the key
+    const nn=diaMove(s.map(e=>e.note), Math.sign(dn), edKeySig()); if(nn) s.forEach((e,i)=>e.note=nn[i]);
+    edAudition(s[0].note, s[0].vel); s.forEach(e=>e!==s[0] && edAudition(e.note, e.vel));
+  } else
   if(dn && s.every(e=>e.note+dn>=0 && e.note+dn<=127)) s.forEach(e=>e.note+=dn);
   if(db && s.every(e=>e.beat+db>=0 && e.beat+db<L)) s.forEach(e=>e.beat+=db);
-  if(dn && s.length) edAudition(s[0].note, s[0].vel);
+  if(dn && s.length && !(ED.chordMode && Math.abs(dn)!==12)) edAudition(s[0].note, s[0].vel);
   edAfterChange();
 }
 function edBake(){
@@ -6564,7 +6589,7 @@ edCv.addEventListener('pointerdown', e=>{
       const map=new Map(edSelected().map((s,k)=>[s.id,copies[k]])); anchor=map.get(hit.e.id);
       ED.sel=new Set(copies.map(c=>c.id));
     }
-    ED.drag={ type:hit.zone, anchor, x0:x, y0:y, pushed:true, changed:false, lastDn:0, copies, before,
+    ED.drag={ type:hit.zone, anchor, x0:x, y0:y, pushed:true, changed:false, lastDn:0, copies, before, key: ED.chordMode ? edKeySig() : null,
       orig:new Map(edSelected().map(s=>[s.id,{beat:s.beat,dur:s.dur,note:s.note}])) };
     edAudition(anchor.note, anchor.vel); edRenderTools(); edDraw(); return;
   }
@@ -6610,9 +6635,13 @@ edCv.addEventListener('pointermove', e=>{
     let dn=d.timeOnly ? 0 : Math.round(-(y-d.y0)/ED.rowH);
     const os=sel.map(s=>d.orig.get(s.id));
     db=clamp(db, -Math.min(...os.map(q=>q.beat)), L-MINLEN-Math.max(...os.map(q=>q.beat)));
-    dn=clamp(dn, -Math.min(...os.map(q=>q.note)), 127-Math.max(...os.map(q=>q.note)));
-    sel.forEach(s=>{ const q=d.orig.get(s.id); s.beat=q.beat+db; s.note=q.note+dn; });
-    if(dn!==d.lastDn){ d.lastDn=dn; edAudition(d.anchor.note, d.anchor.vel); }
+    let nn=null;
+    if(d.key && dn){   // chord mode: through the chords of the key, following the pointer
+      const k=degSteps(o.note, o.note+dn, d.key); nn=diaMove(os.map(q=>q.note), k, d.key); dn=k;
+      if(!nn){ nn=os.map(q=>q.note); dn=d.lastDn; }
+    } else dn=clamp(dn, -Math.min(...os.map(q=>q.note)), 127-Math.max(...os.map(q=>q.note)));
+    sel.forEach((s,i)=>{ const q=d.orig.get(s.id); s.beat=q.beat+db; s.note=nn ? nn[i] : q.note+dn; });
+    if(dn!==d.lastDn){ d.lastDn=dn; if(nn) sel.forEach(s=>edAudition(s.note, s.vel)); else edAudition(d.anchor.note, d.anchor.vel); }
     if(db||dn) d.changed=true;
   } else if(d.type==='resize-r'){
     const g=snapGrid(), min=(g&&!free)?g:MINLEN;
