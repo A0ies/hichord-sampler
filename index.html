@@ -641,6 +641,11 @@ body:not(.studio) .ownsnd .instdef .lbl{display:inline}
 #instGrid .igtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
 #instGrid .igtiles .inst{min-height:54px;padding:6px 4px;gap:4px;font-size:11px;border-radius:10px;line-height:1.15}
 #instGrid .igtiles .inst .ii{width:22px;height:22px}
+/* each group in its instruments' colour (the colour its layer gets): the icon, a dot before the title, a line under the key */
+#instGrid .igrp h4::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gc);margin-right:6px;vertical-align:1px}
+#instGrid .igtiles .inst .ii{color:var(--gc)}
+#instGrid .igtiles .inst{box-shadow:0 1px 0 var(--key-edge),inset 0 -3px 0 var(--gc)}
+#instGrid .igtiles .inst:active{box-shadow:inset 0 -3px 0 var(--gc)}
 @media (max-width:639px){ #instGrid .igtiles{gap:5px} #instGrid .igtiles .inst{min-height:48px;padding:5px 3px;gap:3px} #instGrid .igtiles .inst .ii{width:20px;height:20px} }
 #instGrid .ownrow{display:flex;align-items:center;gap:8px;margin-top:3px;padding-top:9px;border-top:1px solid var(--line)}
 #instGrid .ownrow>span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);white-space:nowrap}
@@ -2096,7 +2101,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-20.126';
+const PAGE_VERSION='2026-11-20.127';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -5030,7 +5035,7 @@ function instGroups(keys){
 function renderInstGrid(){
   // your own sound apart, below
   const groups=instGroups(instKeys());
-  $('instGrid').innerHTML = groups.filter(g=>g[1].length).map(([t,list])=>`<div class="igrp"><h4>${t}</h4><div class="igtiles">${
+  $('instGrid').innerHTML = groups.filter(g=>g[1].length).map(([t,list])=>`<div class="igrp" style="--gc:${GROUP_COL[t]||GROUP_COL.More}"><h4>${t}</h4><div class="igtiles">${
       list.map(k=>`<button class="inst${isHcx(k)?' hcx':''}" data-k="${k}">${instIcon(k,S.hcInst)}<span>${instLabel(k,S.hcInst)}</span></button>`).join('')}</div></div>`).join('')
     + `<div class="ownrow"><span>your own</span><button class="inst own" data-own="file" aria-label="New layer from an audio file in Files">${ic('upload')}audio file</button>`
     + `<button class="inst own" data-own="mic" id="newMicTile" aria-label="New sample layer: record a sound with the microphone">${ic('mic')}<span class="ml">sample</span><span class="micmeter"><i></i></span></button>`
