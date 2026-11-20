@@ -868,6 +868,8 @@ body.projopen .pbar{display:none}
 .gbox .row{display:flex;gap:8px;align-items:center} .gbox .row span{flex:1} .gbox .row button{min-height:40px;padding:0 14px}
 .gdots{display:flex;gap:5px} .gdots i{width:6px;height:6px;border-radius:3px;background:var(--line)} .gdots i.on{background:var(--acc);width:16px}
 .ghl{outline:3px solid var(--acc);outline-offset:3px;animation:ghl 1.2s ease-in-out infinite}
+.ghl.ghl-in{outline-offset:-3px;animation-name:ghlin}   /* against the edge of a panel that cuts off: drawn inside, so all of it shows */
+@keyframes ghlin{50%{outline-color:color-mix(in srgb,var(--acc) 40%,transparent)}}
 @keyframes ghl{50%{outline-offset:7px;outline-color:color-mix(in srgb,var(--acc) 40%,transparent)}}
 @media (orientation:landscape) and (max-height:560px){ .guide{top:50%;transform:translateY(-50%);justify-content:flex-end;padding-right:calc(16px + var(--sr))} .gbox{width:min(340px,100%);padding:12px 14px;gap:6px} .gbox p{font-size:12px}
   .keys{grid-template-columns:auto 1fr auto 1fr;gap:4px 10px;font-size:11px} }
@@ -2092,7 +2094,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-20.124';
+const PAGE_VERSION='2026-11-20.125';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -6965,12 +6967,22 @@ const GUIDE=[
 ];
 const GD={ n:0 };
 function guideOpen(){ GD.n=0; $('guide').classList.remove('hidden'); guideShow(); try{ localStorage.setItem('hcl-guide','1'); }catch(e){} }
-function guideClose(){ $('guide').classList.add('hidden'); document.querySelectorAll('.ghl').forEach(x=>x.classList.remove('ghl')); }
+function guideClose(){ $('guide').classList.add('hidden'); document.querySelectorAll('.ghl').forEach(x=>x.classList.remove('ghl','ghl-in')); }
+// would the outline around the element (up to 10 px out) be cut off by a panel around it (or the screen)?
+function ghlClipped(el){
+  const r=el.getBoundingClientRect(), m=10;   // the outline pulses out to 7 px, plus its 3 px
+  if(r.left-m<0 || r.top-m<0 || r.right+m>innerWidth || r.bottom+m>innerHeight) return true;
+  for(let a=el.parentElement; a && a!==document.body; a=a.parentElement){
+    const cs=getComputedStyle(a); if(!/(hidden|auto|scroll|clip)/.test(cs.overflowX+cs.overflowY)) continue;
+    const q=a.getBoundingClientRect(); if(r.left-m<q.left || r.top-m<q.top || r.right+m>q.right || r.bottom+m>q.bottom) return true;
+  }
+  return false;
+}
 function guideShow(){
   const g=GUIDE[GD.n], last=GD.n===GUIDE.length-1;
-  document.querySelectorAll('.ghl').forEach(x=>x.classList.remove('ghl'));
+  document.querySelectorAll('.ghl').forEach(x=>x.classList.remove('ghl','ghl-in'));
   const vis=id=>{ const e=id && $(id); return e && e.offsetParent ? e : null; };
-  const el=vis(g.id) || vis(g.alt); if(el) el.classList.add('ghl');
+  const el=vis(g.id) || vis(g.alt); if(el){ el.classList.add('ghl'); if(ghlClipped(el)) el.classList.add('ghl-in'); }
   $('gTitle').textContent=`${GD.n+1}. ${g.t}`;
   $('gText').textContent=(!vis(g.id) && g.xs ? g.xs : g.x)+(last && matchMedia('(pointer:fine)').matches ? ' Press ? for all keyboard shortcuts.' : '');
   $('gDots').innerHTML=GUIDE.map((_,k)=>`<i class="${k===GD.n?'on':''}"></i>`).join('');
