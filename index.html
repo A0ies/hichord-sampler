@@ -2101,7 +2101,7 @@ body.studio .tbar .pos b{font-size:26px}
 
 <script>
 "use strict";
-const PAGE_VERSION='2026-11-20.127';
+const PAGE_VERSION='2026-11-20.128';
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
 const NOTE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -3955,14 +3955,17 @@ function sessionData(){
 /* history: what counts as a change for undo (not which layer or tab you look at) */
 /* notes and on/off live per part in the song, so switching parts is not a change */
 function histData(d){ const S2={...d.S}; delete S2.sel; delete S2.tab; delete S2.metro; delete S2.countIn;
-  const L=d.layers.map(l=>{ const c={...l}; delete c.events; delete c.mute; delete c.lock; delete c.vox; return c; });   // takes live per part, in the song   // locking an effect is playing, not an edit to undo
+  const L=d.layers.map(l=>{ const c={...l}; delete c.events; delete c.mute; delete c.vox;   // takes live per part, in the song
+    c.lock = l.lock ? {x:l.lock.x, y:l.lock.y, y0:l.lock.y0, fx:l.lock.fx, fy:l.lock.fy} : null; return c; });   // locking and releasing an effect: a step to undo
   const sg = d.song ? {parts:d.song.parts, order:d.song.order} : null;
   return JSON.stringify({S:S2, layers:L, song:sg}); }
+// what makes a new step: the same, but a locked effect only by being locked or not (moving the locked point is playing)
+function histKey(j){ const o=JSON.parse(j); o.layers.forEach(l=>{ l.lock=!!l.lock; }); return JSON.stringify(o); }
 const HIST={undo:[],redo:[],last:null,applying:false};
 function commitHistory(d){
   const snap=histData(d);
   if(HIST.applying || S.rec) return;          // a whole take becomes one step when recording stops
-  if(HIST.last!==null && snap!==HIST.last){ HIST.undo.push(HIST.last); if(HIST.undo.length>120) HIST.undo.shift(); HIST.redo=[]; }
+  if(HIST.last!==null && snap!==HIST.last && histKey(snap)!==histKey(HIST.last)){ HIST.undo.push(HIST.last); if(HIST.undo.length>120) HIST.undo.shift(); HIST.redo=[]; }
   HIST.last=snap; renderUndo();
 }
 function writeSave(){
@@ -3995,6 +3998,7 @@ function describeChange(aJ,bJ){
     if(JSON.stringify(pa.map(p=>p.vox&&p.vox[i]))!==JSON.stringify(pb.map(p=>p.vox&&p.vox[i]))) return `vocal take of layer ${i+1}`;
     if(mx!==my) return `layer ${i+1} on/off`;
     if(x.inst!==y.inst) return `instrument of layer ${i+1}`;
+    if(!!x.lock!==!!y.lock) return `effect of layer ${i+1} ${y.lock?'locked':'released'}`;
     return `layer ${i+1} settings`;
   }
   return 'room settings';
@@ -4021,6 +4025,8 @@ function applySnapshot(json){
     applyLayer(Ly);
   });
   if(d.song) setSong({...d.song, cur:Math.min(SONG.cur, d.song.parts.length-1), follow:SONG.follow}, false);
+  restoreLocks();   // the locked effects of that step (each layer's lock came in with it)
+  if(document.body.dataset.studio && typeof sPadRender==='function') sPadRender();
   voxLoadAll(); voxRestartAll();
   storeAllSounds();
   if(!layers[S.sel].shown){ const n=layers.findIndex(l=>l.shown); if(n>=0) S.sel=n; }
