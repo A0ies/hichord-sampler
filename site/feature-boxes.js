@@ -279,9 +279,15 @@
   }
 
   /* ================= 2 · change it later: move whole chords, drag their start and end ================= */
+  /* As in the app's chords mode (and on the HiChord's chord buttons), moving a chord up or down steps through the
+     chords of the key, here C major / A minor: every note moves the same number of scale steps (C → Dm → Em → F …).
+     A chord's `shift` counts those steps. */
+  const SCALE = [0, 2, 4, 5, 7, 9, 11];
+  const degOf = n => { const o = Math.floor(n / 12), r = mod(n, 12); let i = 0; for (let k = 0; k < 7; k++) if (SCALE[k] <= r) i = k; return o * 7 + i; };
+  const noteOfDeg = dg => 12 * Math.floor(dg / 7) + SCALE[mod(dg, 7)];
+  const stepNote = (n, k) => noteOfDeg(degOf(n) + k);
   function editorBox(box) {
     const LO = 57, HI = 79, ROWS = HI - LO + 1, BLACK = [1, 3, 6, 8, 10];
-    const ROOT = { Am: [9, 'm'], F: [5, ''], C: [0, ''], G: [7, ''] };
     const original = () => {
       const map = new Map();
       SONG[0].forEach(e => {
@@ -294,11 +300,13 @@
     // on a phone or tablet, as in the app: tap a chord to select it, drag it to move it, and trim it in the lane under the notes
     const narrow = matchMedia('(max-width:560px), (pointer:coarse)');
     const hintEl = box.host.querySelector('.fb-hint');
-    const setHint = () => { hintEl.textContent = narrow.matches ? 'tap a chord to select it · drag it to move it · drag the handles in the trim lane to change where it starts and ends' : 'drag a chord to move it · drag its edges to change where it starts and ends'; };
+    const setHint = () => { hintEl.textContent = narrow.matches ? 'tap a chord to select it · drag it up or down to step through the chords of the key · drag the handles in the trim lane to change where it starts and ends' : 'drag a chord up or down to step through the chords of the key · drag its edges to change where it starts and ends'; };
     (narrow.addEventListener ? narrow.addEventListener('change', setHint) : narrow.addListener(setHint)); setHint();
-    const label = c => { const [pc, q] = ROOT[c.name]; return NAMES[mod(pc + c.shift, 12)] + q; };
-    const lowest = c => Math.min(...c.notes) + c.shift, highest = c => Math.max(...c.notes) + c.shift;
-    const play = c => c.notes.forEach(n => blip(box, 0, 'keys', n + c.shift));
+    const notesOf = c => c.notes.map(n => stepNote(n, c.shift));
+    const label = c => { const ns = notesOf(c).sort((a, b) => a - b), t = mod(ns[1] - ns[0], 12), f = mod(ns[2] - ns[0], 12);
+      return NAMES[mod(ns[0], 12)] + (t === 3 ? (f === 6 ? 'dim' : 'm') : ''); };
+    const lowest = c => Math.min(...notesOf(c)), highest = c => Math.max(...notesOf(c));
+    const play = c => notesOf(c).forEach(n => blip(box, 0, 'keys', n));
 
     const cv = canvas(box.body, 'eroll', 'Piano roll of the electric piano: drag a chord to move it, drag its edges to change where it starts and ends');
     cv.dataset.grab = '';
@@ -380,8 +388,14 @@
       const c = drag.c, dB = snap((x - drag.x0) / G.bw), g0 = GRIDS[t.grid][0];
       if (drag.zone === 'move') {
         c.beat = clamp(drag.beat0 + dB, 0, LOOP - c.dur);
-        const lo = Math.min(...c.notes), hi = Math.max(...c.notes);
-        const shift = drag.timeOnly ? c.shift : clamp(drag.shift0 - Math.round((y - drag.y0) / G.rh), LO - lo, HI - hi);
+        let shift = c.shift;
+        if (!drag.timeOnly) {   // the note under the pointer, on the scale: that many steps through the key
+          const lo = Math.min(...c.notes), from = stepNote(lo, drag.shift0);
+          let to = from - Math.round((y - drag.y0) / G.rh); if (!SCALE.includes(mod(to, 12))) to--;
+          shift = drag.shift0 + degOf(to) - degOf(from);
+          while (Math.min(...c.notes.map(n => stepNote(n, shift))) < LO) shift++;
+          while (Math.max(...c.notes.map(n => stepNote(n, shift))) > HI) shift--;
+        }
         if (shift !== c.shift) { c.shift = shift; play(c); }
       } else if (drag.zone === 'start') {
         const end = drag.beat0 + drag.dur0; c.beat = clamp(drag.beat0 + dB, 0, end - Math.min(g0, drag.dur0)); c.dur = end - c.beat;
@@ -396,7 +410,7 @@
     box.events = (b1, b2, emit) => {
       if (t.stopped) return;
       const o = t.origin;   // the loop starts where you last pressed play
-      loopEvents(b1 - o, b2 - o, st.chords, c => c.beat, (c, b) => c.notes.forEach(n => emit(0, 'keys', n + c.shift, c.vel, b + o, c.dur)));
+      loopEvents(b1 - o, b2 - o, st.chords, c => c.beat, (c, b) => notesOf(c).forEach(n => emit(0, 'keys', n, c.vel, b + o, c.dur)));
       loopEvents(b1 - o, b2 - o, SONG[1], plain, (e, b) => emit(1, 'bass', e.note, e.vel, b + o, e.dur));
       loopEvents(b1 - o, b2 - o, SONG[3], plain, (e, b) => emit(3, 'drums', e.note, e.vel, b + o, e.dur));
     };
@@ -418,10 +432,10 @@
       for (const c of st.chords) {
         const r = rect(c, G), hot = c === hv || c === held || c === picked;
         g.fillStyle = hot ? 'rgba(91,143,240,.24)' : 'rgba(47,111,224,.10)'; g.fillRect(r.x, r.y, Math.max(4 * d, r.w - 2 * d), r.h);   // the chord's shading
-        for (const n of c.notes) {
-          const y = top + (HI - n - c.shift) * rh, w = Math.max(4 * d, r.w - 2 * d);
+        for (const n of notesOf(c)) {
+          const y = top + (HI - n) * rh, w = Math.max(4 * d, r.w - 2 * d);
           g.fillStyle = c === held ? '#7aa6ff' : hot ? '#5b8ff0' : '#2f6fe0'; g.fillRect(r.x, y + d, w, rh - 2 * d);
-          if (w > 26 * d && rh > 11 * d) { g.fillStyle = '#fff'; g.font = `600 ${Math.min(10, rh / d - 4) * d}px "IBM Plex Mono",monospace`; g.fillText(noteName(n + c.shift), r.x + 3 * d, y + rh / 2); }
+          if (w > 26 * d && rh > 11 * d) { g.fillStyle = '#fff'; g.font = `600 ${Math.min(10, rh / d - 4) * d}px "IBM Plex Mono",monospace`; g.fillText(noteName(n), r.x + 3 * d, y + rh / 2); }
         }
         if (hot) {
           g.strokeStyle = '#fff'; g.lineWidth = 1.5 * d; g.strokeRect(r.x - d, r.y - d, Math.max(4 * d, r.w - 2 * d) + 2 * d, r.h + 2 * d);
@@ -763,7 +777,7 @@
   /* ---------- the boxes ---------- */
   const SPEC = {
     layers: { title: 'layers', hint: 'M mute · S solo · tap a sound to swap it', build: layersBox },
-    editor: { title: '1 · electric piano', hint: 'drag a chord to move it · drag its edges to change where it starts and ends', build: editorBox },
+    editor: { title: '1 · electric piano', hint: 'drag a chord up or down to step through the chords of the key · drag its edges to change where it starts and ends', build: editorBox },
     capture: { title: 'capture mode', hint: 'tap: on/off · hold and drag across the grid: effect · hold still: lock', build: captureBox },
     song: { title: 'song', hint: 'drag parts onto the tape · drag blocks to move them, or off the tape to remove · tap a block to go there', build: songBox },
   };
